@@ -65,11 +65,9 @@ ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
 		$(LOCAL_PATH)/pixman/pixman-arm-neon-asm.S \
 		$(LOCAL_PATH)/pixman/pixman-arm-neon-asm-bilinear.S
 else ifeq ($(TARGET_ARCH_ABI), arm64-v8a)
-	LOCAL_CFLAGS += -DUSE_ARM_NEON -DUSE_ARM_A64_NEON
-	LOCAL_SRC_FILES += \
-		$(LOCAL_PATH)/pixman/pixman-arm-neon.c \
-		$(LOCAL_PATH)/pixman/pixman-arma64-neon-asm.S \
-		$(LOCAL_PATH)/pixman/pixman-arma64-neon-asm-bilinear.S
+	# Sin ensamblador NEON: el de pixman 0.42 no compila con el ensamblador
+	# integrado de clang (NDK 23+). Se usa la versión en C; mkxp-z dibuja casi
+	# todo por OpenGL, así que el impacto es mínimo.
 else ifeq ($(TARGET_ARCH_ABI), x86)
 	LOCAL_CFLAGS += -DUSE_X86_MMX -DUSE_SSE2 -DUSE_SSSE3
 	LOCAL_SRC_FILES += \
