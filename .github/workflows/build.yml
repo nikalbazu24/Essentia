@@ -88,6 +88,12 @@ jobs:
           # no pisen las variables internas de Ruby al compilar sus extensiones.
           ARCH=linux-x86_64 make -j"$(nproc)"
 
+      - name: Incrustar ícono, fuentes y shaders en el motor
+        working-directory: app/jni/mkxp-z
+        run: |
+          command -v xxd || sudo apt-get install -y xxd
+          sh ./make_xxd.sh
+
       - name: Compilar el APK
         run: ./gradlew --no-daemon assembleDebug
 
