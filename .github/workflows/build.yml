@@ -84,7 +84,9 @@ jobs:
         if: steps.deps-cache.outputs.cache-hit != 'true'
         working-directory: app/jni
         run: |
-          make ARCH=linux-x86_64 HOST=$HOST TARGET=$TARGET ABI=$ABI API=$API
+          # Las variables van por entorno (no en la línea de make) para que
+          # no pisen las variables internas de Ruby al compilar sus extensiones.
+          ARCH=linux-x86_64 make -j"$(nproc)"
 
       - name: Compilar el APK
         run: ./gradlew --no-daemon assembleDebug
