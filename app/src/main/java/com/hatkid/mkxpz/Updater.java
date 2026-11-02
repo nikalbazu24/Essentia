@@ -42,8 +42,11 @@ public final class Updater
 
     private Updater() { }
 
-    /** Checks for an update; calls {@code then} on the UI thread when the user can continue. */
-    public static void check(Activity activity, Done then)
+    /**
+     * Checks for an update; calls {@code then} on the UI thread when the user can continue.
+     * With {@code manual}, also tells the user when there is nothing new (or the check failed).
+     */
+    public static void check(Activity activity, Done then, boolean manual)
     {
         Handler ui = new Handler(Looper.getMainLooper());
 
@@ -59,9 +62,14 @@ public final class Updater
             ui.post(() -> {
                 if (activity.isFinishing()) return;
 
-                if (result == null
-                    || !result.optBoolean("signed", false)
+                if (result == null) {
+                    if (manual) Toast.makeText(activity, R.string.update_check_failed, Toast.LENGTH_LONG).show();
+                    then.run();
+                    return;
+                }
+                if (!result.optBoolean("signed", false)
                     || result.optInt("versionCode", 0) <= BuildConfig.VERSION_CODE) {
+                    if (manual) Toast.makeText(activity, R.string.update_latest, Toast.LENGTH_LONG).show();
                     then.run();
                     return;
                 }
@@ -121,7 +129,6 @@ public final class Updater
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                     try {
                         activity.startActivity(install);
-                        activity.finish();
                     } catch (Exception e) {
                         Log.e(TAG, "Could not open installer", e);
                         Toast.makeText(activity, R.string.update_failed, Toast.LENGTH_LONG).show();

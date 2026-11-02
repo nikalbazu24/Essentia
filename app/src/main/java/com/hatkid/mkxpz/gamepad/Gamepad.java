@@ -104,19 +104,24 @@ public class Gamepad
         ViewUtils.changeOpacity(mGamepadLayout, mGamepadConfig.opacity);
     }
 
-    private void setGamepadButtonKey(GamepadButton gpadBtn, Integer keycode)
+    private void setGamepadButtonKey(GamepadButton gpadBtn, Integer keycode, String label)
     {
-        // Prepare label for gamepad button
-        String btnLabel = KeyEvent.keyCodeToString(keycode)
-            .replace("KEYCODE_", "")
-            .replace("_LEFT", "")
-            .replace("_RIGHT", "");
+        if (gpadBtn == null) return;
 
         // Set gamepad button
-        gpadBtn.setForegroundText(btnLabel);
+        gpadBtn.setForegroundText(label);
         gpadBtn.setKey(keycode);
         gpadBtn.setOnKeyDownListener(key -> mOnKeyDownListener.onKeyDown(key));
         gpadBtn.setOnKeyUpListener(key -> mOnKeyUpListener.onKeyUp(key));
+    }
+
+    /** Essentia: remove the on-screen controls completely ("never" mode). */
+    public void detach()
+    {
+        if (mGamepadLayout != null) {
+            mGamepadLayout.clearAnimation();
+            mGamepadLayout.setVisibility(android.view.View.GONE);
+        }
     }
 
     public void showView()
@@ -144,17 +149,18 @@ public class Gamepad
 
     private void initGamepadButtons()
     {
-        setGamepadButtonKey(gpadBtnA, mGamepadConfig.keycodeA);
-        setGamepadButtonKey(gpadBtnB, mGamepadConfig.keycodeB);
-        setGamepadButtonKey(gpadBtnC, mGamepadConfig.keycodeC);
-        setGamepadButtonKey(gpadBtnX, mGamepadConfig.keycodeX);
-        setGamepadButtonKey(gpadBtnY, mGamepadConfig.keycodeY);
-        setGamepadButtonKey(gpadBtnZ, mGamepadConfig.keycodeZ);
-        setGamepadButtonKey(gpadBtnL, mGamepadConfig.keycodeL);
-        setGamepadButtonKey(gpadBtnR, mGamepadConfig.keycodeR);
-        setGamepadButtonKey(gpadBtnCTRL, mGamepadConfig.keycodeCTRL);
-        setGamepadButtonKey(gpadBtnALT, mGamepadConfig.keycodeALT);
-        setGamepadButtonKey(gpadBtnSHIFT, mGamepadConfig.keycodeSHIFT);
+        GamepadConfig c = mGamepadConfig;
+        setGamepadButtonKey(gpadBtnA, c.keycodeA, c.labelA);
+        setGamepadButtonKey(gpadBtnB, c.keycodeB, c.labelB);
+        setGamepadButtonKey(gpadBtnC, c.keycodeC, c.labelC);
+        setGamepadButtonKey(gpadBtnX, c.keycodeX, c.labelX);
+        setGamepadButtonKey(gpadBtnY, c.keycodeY, c.labelY);
+        setGamepadButtonKey(gpadBtnZ, c.keycodeZ, c.labelZ);
+        setGamepadButtonKey(gpadBtnL, c.keycodeL, c.labelL);
+        setGamepadButtonKey(gpadBtnR, c.keycodeR, c.labelR);
+        setGamepadButtonKey(gpadBtnCTRL, c.keycodeCTRL, c.labelCTRL);
+        setGamepadButtonKey(gpadBtnALT, c.keycodeALT, c.labelALT);
+        setGamepadButtonKey(gpadBtnSHIFT, c.keycodeSHIFT, c.labelSHIFT);
     }
 
     /**

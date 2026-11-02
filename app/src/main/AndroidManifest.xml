@@ -52,14 +52,13 @@
         android:allowBackup="true"
         android:requestLegacyExternalStorage="true"
     >
-        <!-- Essentia: entry point. Picks the game folder (or receives it from a frontend)
-             and starts the engine. Frontends launch it explicitly:
-             io.github.nikalbazu24.essentia/com.hatkid.mkxpz.LauncherActivity -->
+        <!-- Essentia: home screen (game library) -->
         <activity
-            android:name=".LauncherActivity"
+            android:name=".LibraryActivity"
             android:label="@string/app_name"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:theme="@style/AppTheme"
             android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"
             android:exported="true"
         >
             <intent-filter>
@@ -68,6 +67,23 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Essentia: settings -->
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/lib_settings"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+
+        <!-- Essentia: entry point for frontends (Díptico, ES-DE, Daijishō...).
+             Receives the game path and starts the engine:
+             io.github.nikalbazu24.essentia/com.hatkid.mkxpz.LauncherActivity -->
+        <activity
+            android:name=".LauncherActivity"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="true" />
 
         <!-- Main activity -->
         <activity

@@ -489,16 +489,37 @@ void EventThread::process(RGSSThreadData &rtData)
 						break;
 
 					case REQUEST_WINRESIZE:
+#ifdef MKXPZ_BUILD_ANDROID
+					{
+						// Essentia: on Android the window is always the whole screen.
+						// Games ask for e.g. 512x384 (their resolution); resizing the SDL
+						// window would make the engine draw into a small corner. Keep the
+						// real size and re-announce it, so the new game resolution gets
+						// scaled to fill the screen.
+						int realW, realH, drwW, drwH;
+						SDL_GetWindowSize(win, &realW, &realH);
+						SDL_GL_GetDrawableSize(win, &drwW, &drwH);
+						windowSizeMsg.post(Vec2i(realW, realH));
+						drawableSizeMsg.post(Vec2i(drwW, drwH));
+					}
+#else
 						SDL_SetWindowSize(win, event.window.data1, event.window.data2);
+#endif
 						rtData.rqWindowAdjust.clear();
 						break;
 
 					case REQUEST_WINREPOSITION:
+#ifndef MKXPZ_BUILD_ANDROID
 						SDL_SetWindowPosition(win, event.window.data1, event.window.data2);
+#endif
 						rtData.rqWindowAdjust.clear();
 						break;
 
 					case REQUEST_WINCENTER:
+#ifdef MKXPZ_BUILD_ANDROID
+						rtData.rqWindowAdjust.clear();
+						break;
+#endif
 						rc = SDL_GetDesktopDisplayMode(SDL_GetWindowDisplayIndex(win), &dm);
 
 						if (!rc)

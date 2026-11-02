@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="lib_added">
+        <item quantity="one">Se agregó %d juego</item>
+        <item quantity="other">Se agregaron %d juegos</item>
+    </plurals>
+</resources>

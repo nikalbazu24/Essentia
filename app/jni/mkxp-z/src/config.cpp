@@ -5,6 +5,7 @@
 //  Created by ゾロアーク on 11/21/20.
 //
 
+#include <stdlib.h>
 #include "config.h"
 #include <SDL_filesystem.h>
 #include <assert.h>
@@ -290,6 +291,13 @@ try { exp } catch (...) {}
     fillStringVec(opts["preloadScript"], preloadScripts);
 
 #ifdef MKXPZ_BUILD_ANDROID
+    // Essentia: smooth scaling chosen in Essentia's settings
+    {
+        const char *smooth = getenv("ESSENTIA_SMOOTH_SCALING");
+        if (smooth && *smooth)
+            smoothScaling = (smooth[0] == '1');
+    }
+
     // Essentia: if the game doesn't bring its own preload scripts, load the bundled
     // compatibility scripts (from the APK assets) so older games that call Windows
     // functions (Win32API / kernel32 / user32) or Ruby 1.8 methods keep working.

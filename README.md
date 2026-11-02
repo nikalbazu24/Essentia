@@ -8,9 +8,9 @@ Essentia es una app libre para Android que ejecuta fan games hechos con **RPG Ma
 
 En desarrollo temprano. Plan por etapas:
 
-1. **Que arranque:** compilar automáticamente y abrir un fan game moderno (Essentials v20 o más nuevo). ← *estamos aquí*
+1. **Que arranque:** compilar automáticamente y abrir un fan game moderno (Essentials v20 o más nuevo). ✅
 2. **Que se abra desde afuera:** recibir la ruta del juego desde Díptico, ES-DE o Daijishō. ← *base lista, falta probar con cada frontend*
-3. **Que se juegue bien:** controles, pantalla completa, guardado, sonido y fluidez.
+3. **Que se juegue bien:** controles, pantalla completa, guardado, sonido y fluidez. ← *estamos aquí*
 4. **Que corran los antiguos:** compatibilidad con juegos de Essentials anteriores a la v20.
 5. **Para la comunidad:** lista de juegos probados e integración con frontends.
 
@@ -20,7 +20,11 @@ El APK más reciente está en **[Releases → dev](../../releases/tag/dev)**. Po
 
 ## Cómo se usa
 
-- **Desde su ícono:** Essentia abre el selector de carpetas de Android. Elige la carpeta del juego (la que tiene `Game.exe` o `Game.ini`), esté donde esté: memoria interna o tarjeta SD. La próxima vez el selector parte en esa misma carpeta.
+- **Biblioteca:** al abrir Essentia aparece tu biblioteca. Con **+ Agregar juegos** eliges la carpeta de un juego (la que tiene `Game.exe` o `Game.ini`), o una carpeta con varios juegos, y Essentia los encuentra todos, con su nombre y su portada.
+- **Controles:** A confirma (Enter), B cancela o abre el menú (Esc), Start abre el menú, X es Shift y L/R pasan de página. En el juego, **Atrás** o **Select + Start** abren el menú para salir.
+- **Controles en pantalla:** para celulares y tablets. En *Ajustes* se eligen el modo (automático, siempre visibles o desactivados), el tamaño y la opacidad.
+- **Dos pantallas:** en equipos como la AYN Thor, la segunda pantalla muestra la portada del juego elegido. Se puede desactivar en *Ajustes*.
+- **Actualizaciones:** Essentia avisa sola cuando hay una versión nueva y se actualiza desde la propia app.
 - **Desde un frontend:** lanza la actividad `io.github.nikalbazu24.essentia/com.hatkid.mkxpz.LauncherActivity` con la ruta del juego, ya sea como dato (`file://` o `content://` del almacenamiento) o como extra de texto `path`. Puede ser la carpeta del juego o cualquier archivo dentro de ella, como `Game.ini`.
 
 La primera vez, Essentia pide el permiso **acceso a todos los archivos**, necesario para leer los juegos desde cualquier carpeta.

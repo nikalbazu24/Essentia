@@ -37,6 +37,7 @@
 #include <stack>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <vector>
 
@@ -449,6 +450,31 @@ struct CacheEnumData {
   }
 };
 
+static bool looksLikeGameFile(const char *fname) {
+  static const char *const exts[] = {
+    "png", "jpg", "jpeg", "bmp", "gif", "webp",
+    "ogg", "oga", "mp3", "wav", "mid", "midi", "wma", "flac", "opus", "m4a",
+    "ogv", "mp4", "webm", "avi", "mpg", "wmv",
+    "rxdata", "rvdata", "rvdata2", "dat", "txt", "json", "ini", "log", "csv",
+    "ttf", "otf", "ttc", "fon", "fnt",
+    "rb", "rbs", "exe", "dll", "so", "zip", "lnk", "db", "pbs", "sav",
+    "rgssad", "rgss2a", "rgss3a", "xml", "html", "md", "pdf", "ico", "cfg", "bak",
+    NULL
+  };
+  const char *dot = strrchr(fname, '.');
+  if (!dot || dot == fname || !dot[1] || strlen(dot + 1) > 7)
+    return false;
+  char ext[8];
+  size_t n = 0;
+  for (const char *c = dot + 1; *c && n < sizeof(ext) - 1; ++c)
+    ext[n++] = (char)tolower((unsigned char)*c);
+  ext[n] = 0;
+  for (int i = 0; exts[i]; ++i)
+    if (!strcmp(ext, exts[i]))
+      return true;
+  return false;
+}
+
 static PHYSFS_EnumerateCallbackResult cacheEnumCB(void *d, const char *origdir,
                                                   const char *fname) {
   CacheEnumData &data = *static_cast<CacheEnumData *>(d);
@@ -466,10 +492,20 @@ static PHYSFS_EnumerateCallbackResult cacheEnumCB(void *d, const char *origdir,
   std::string lowerCase = mixedCase;
   strTolower(lowerCase);
 
-  PHYSFS_Stat stat;
-  PHYSFS_stat(fullPath, &stat);
+  /* Essentia: asking the filesystem whether each entry is a folder (stat) is very
+   * slow on Android's shared storage, and big games have thousands of files.
+   * Entries with a typical game-file extension are files for sure, so skip the
+   * stat for them; anything else (folders, extensionless files) is still checked. */
+  bool isDir;
+  if (looksLikeGameFile(fname)) {
+    isDir = false;
+  } else {
+    PHYSFS_Stat stat;
+    PHYSFS_stat(fullPath, &stat);
+    isDir = (stat.filetype == PHYSFS_FILETYPE_DIRECTORY);
+  }
 
-  if (stat.filetype == PHYSFS_FILETYPE_DIRECTORY) {
+  if (isDir) {
     /* Create a new list for this directory */
     std::vector<std::string> &list = data.p->fileLists[lowerCase];
 

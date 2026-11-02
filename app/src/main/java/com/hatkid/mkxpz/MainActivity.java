@@ -58,6 +58,7 @@ public class MainActivity extends SDLActivity
     // In-screen gamepad
     private final Gamepad mGamepad = new Gamepad();
     private boolean mGamepadInvisible = false;
+    private String mOscMode = EssentiaSettings.OSC_AUTO;
 
     private void runSDLThread()
     {
@@ -125,6 +126,14 @@ public class MainActivity extends SDLActivity
             GAME_PATH = requestedPath;
         }
 
+        // Essentia: settings read by the native engine through the environment
+        try {
+            android.system.Os.setenv("ESSENTIA_SMOOTH_SCALING",
+                EssentiaSettings.smoothScaling(this) ? "1" : "0", true);
+        } catch (Exception e) {
+            Log.w(TAG, "Could not pass settings to the engine: " + e);
+        }
+
         super.onCreate(savedInstanceState);
 
         mMainHandler = new Handler(getMainLooper());
@@ -158,14 +167,25 @@ public class MainActivity extends SDLActivity
             }
         }
 
-        // Setup in-screen gamepad
-        mGamepadInvisible = (isAndroidTV() || isChromebook());
+        // Setup in-screen gamepad (Essentia: mode, size and opacity from settings)
+        mOscMode = EssentiaSettings.oscMode(this);
+        if (EssentiaSettings.OSC_NEVER.equals(mOscMode)) {
+            mGamepadInvisible = true;
+        } else if (EssentiaSettings.OSC_ALWAYS.equals(mOscMode)) {
+            mGamepadInvisible = false;
+        } else {
+            mGamepadInvisible = isAndroidTV() || isChromebook()
+                || EssentiaSettings.hasPhysicalController(this);
+        }
+
         GamepadConfig gpadConfig = new GamepadConfig();
+        gpadConfig.opacity = EssentiaSettings.oscOpacity(this);
+        gpadConfig.scale = EssentiaSettings.oscScale(this);
         mGamepad.init(gpadConfig, mGamepadInvisible);
         mGamepad.setOnKeyDownListener(SDLActivity::onNativeKeyDown);
         mGamepad.setOnKeyUpListener(SDLActivity::onNativeKeyUp);
 
-        if (mLayout != null) {
+        if (mLayout != null && !EssentiaSettings.OSC_NEVER.equals(mOscMode)) {
             mGamepad.attachTo(this, mLayout);
         }
 
@@ -276,8 +296,8 @@ public class MainActivity extends SDLActivity
             code != KeyEvent.KEYCODE_VOLUME_MUTE &&
             code != KeyEvent.KEYCODE_HEADSETHOOK
         ) {
-            // Hide gamepad view on key events when visible
-            if (!mGamepadInvisible) {
+            // Hide gamepad view on key events when visible (only in "auto" mode)
+            if (!mGamepadInvisible && EssentiaSettings.OSC_AUTO.equals(mOscMode)) {
                 mGamepad.hideView();
                 mGamepadInvisible = true;
             }
@@ -292,8 +312,8 @@ public class MainActivity extends SDLActivity
     @Override
     public boolean dispatchTouchEvent(MotionEvent evt)
     {
-        // Show gamepad view on touch when hidden
-        if (mGamepadInvisible) {
+        // Show gamepad view on touch when hidden (not in "never" mode)
+        if (mGamepadInvisible && !EssentiaSettings.OSC_NEVER.equals(mOscMode)) {
             mGamepad.showView();
             mGamepadInvisible = false;
         }
