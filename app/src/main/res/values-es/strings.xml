@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="perm_title">Acceso a tus juegos</string>
+    <string name="perm_message">Essentia necesita \"Acceso a todos los archivos\" para abrir juegos desde cualquier carpeta del equipo o de la tarjeta SD. Solo lee tus juegos y escribe sus partidas guardadas.</string>
+    <string name="perm_grant">Permitir</string>
+    <string name="cancel">Cancelar</string>
+    <string name="close">Cerrar</string>
+    <string name="choose_folder">Elegir carpeta</string>
+    <string name="pick_hint">Elige la carpeta del juego (la que tiene Game.exe / Game.ini)</string>
+    <string name="err_not_a_game">No encontré un juego de RPG Maker en:\n%1$s\n\nElige la carpeta que contiene Game.exe o Game.ini.</string>
+    <string name="err_no_picker">Este equipo no tiene selector de carpetas. Abre Essentia desde un frontend.</string>
+</resources>

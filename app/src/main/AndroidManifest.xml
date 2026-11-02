@@ -49,6 +49,23 @@
         android:allowBackup="true"
         android:requestLegacyExternalStorage="true"
     >
+        <!-- Essentia: entry point. Picks the game folder (or receives it from a frontend)
+             and starts the engine. Frontends launch it explicitly:
+             io.github.nikalbazu24.essentia/com.hatkid.mkxpz.LauncherActivity -->
+        <activity
+            android:name=".LauncherActivity"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:launchMode="singleTask"
+            android:exported="true"
+        >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <!-- Main activity -->
         <activity
             android:name=".MainActivity"
@@ -60,16 +77,9 @@
             android:immersive="true"
             android:resizeableActivity="true"
             android:preferMinimalPostProcessing="true"
-            android:exported="true"
+            android:process=":game"
+            android:exported="false"
         >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-
-                <!-- Let Android know that we can handle some USB devices and should receive this event -->
-                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-            </intent-filter>
 
             <!-- mkxp-z Activity metadata -->
             <meta-data android:name="mkxp_debug" android:value="false" />
@@ -79,15 +89,5 @@
             <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />
         </activity>
 
-        <!-- Main activity + Debug mode -->
-        <!-- You can remove or disable this if not needed -->
-        <activity-alias
-            android:name="MainDebugActivity"
-            android:label="mkxp-z (Debug)"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-        >
-            <meta-data android:name="mkxp_debug" android:value="true" />
-        </activity-alias>
     </application>
 </manifest>

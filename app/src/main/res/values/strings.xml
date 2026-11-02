@@ -2,4 +2,14 @@
 <resources>
     <!-- Main application name -->
     <string name="app_name">Essentia</string>
+
+    <string name="perm_title">Access to your games</string>
+    <string name="perm_message">Essentia needs \"All files access\" to open games from any folder on your device or SD card. It only reads your games and writes their save files.</string>
+    <string name="perm_grant">Allow</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="choose_folder">Choose folder</string>
+    <string name="pick_hint">Choose the game folder (the one with Game.exe / Game.ini)</string>
+    <string name="err_not_a_game">No RPG Maker game was found in:\n%1$s\n\nPick the folder that contains Game.exe or Game.ini.</string>
+    <string name="err_no_picker">This device has no folder picker. Open Essentia from a frontend instead.</string>
 </resources>

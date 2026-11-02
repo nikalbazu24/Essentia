@@ -38,6 +38,9 @@ public class MainActivity extends SDLActivity
     // Put your Java-side stuff here.
 
     private static final String TAG = "mkxp-z[Activity]";
+
+    /** Intent extra with the absolute path of the game folder (set by LauncherActivity). */
+    public static final String EXTRA_GAME_PATH = "essentia.GAME_PATH";
     private static final String GAME_PATH_DEFAULT = Environment.getExternalStorageDirectory() + "/mkxp-z";
     private static String GAME_PATH = GAME_PATH_DEFAULT;
     private static String OBB_MAIN_FILENAME;
@@ -114,6 +117,13 @@ public class MainActivity extends SDLActivity
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
+        // Essentia: the game folder comes from LauncherActivity. It must be set before
+        // SDL starts the native thread, which reads GAME_PATH through JNI.
+        String requestedPath = getIntent() != null ? getIntent().getStringExtra(EXTRA_GAME_PATH) : null;
+        if (requestedPath != null && !requestedPath.isEmpty()) {
+            GAME_PATH = requestedPath;
+        }
+
         super.onCreate(savedInstanceState);
 
         mMainHandler = new Handler(getMainLooper());
@@ -135,14 +145,15 @@ public class MainActivity extends SDLActivity
             e.printStackTrace();
         }
 
-        // Check for all files access permission (Android 11+)
+        // Check for all files access permission (Android 11+).
+        // Essentia: LauncherActivity asks for it; if it is missing, go back there.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
-                // Request all files access permission
-                // TODO: AlertDialog: polite notice that mkxp-z requires All Files Access permission.
-                Uri uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID);
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri);
-                startActivityForResult(intent, 110);
+                Intent intent = new Intent(this, LauncherActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+                return;
             }
         }
 
