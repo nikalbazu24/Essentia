@@ -31,6 +31,7 @@ Essentia se basa en:
 
 - [mkxp-z](https://github.com/mkxp-z/mkxp-z), la reimplementación libre de RPG Maker XP/VX/VX Ace.
 - [mkxp-z-android](https://github.com/thehatkid/mkxp-z-android), el port para Android de thehatkid (Sasha Ermohin).
+- Los scripts de compatibilidad de mkxp-z (`win32_wrap.rb`, `mkxp_wrap.rb`, `ruby_classic_wrap.rb`), de Ancurio, Splendide Imaginarius y WaywardHeart, en dominio público (CC0). Essentia los carga automáticamente para que funcionen juegos más antiguos, salvo que el juego traiga los suyos en su `mkxp.json`.
 
 Se distribuye bajo la licencia **GNU GPL v2**, igual que mkxp-z (ver [LICENSE](LICENSE)).
 

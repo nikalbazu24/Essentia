@@ -288,6 +288,17 @@ try { exp } catch (...) {}
     SET_OPT(useScriptNames, boolean);
     
     fillStringVec(opts["preloadScript"], preloadScripts);
+
+#ifdef MKXPZ_BUILD_ANDROID
+    // Essentia: if the game doesn't bring its own preload scripts, load the bundled
+    // compatibility scripts (from the APK assets) so older games that call Windows
+    // functions (Win32API / kernel32 / user32) or Ruby 1.8 methods keep working.
+    if (preloadScripts.empty()) {
+        preloadScripts.push_back("essentia_preload/ruby_classic_wrap.rb");
+        preloadScripts.push_back("essentia_preload/mkxp_wrap.rb");
+        preloadScripts.push_back("essentia_preload/win32_wrap.rb");
+    }
+#endif
     fillStringVec(opts["RTP"], rtps);
     fillStringVec(opts["fontSub"], fontSubs);
     fillStringVec(opts["rubyLoadpath"], rubyLoadpaths);
