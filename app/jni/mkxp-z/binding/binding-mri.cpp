@@ -283,6 +283,18 @@ static void mriBindingInit()
 	rb_str_freeze(vers);
 	rb_define_const(mod, "VERSION", vers);
 
+	// Essentia (backported from upstream mkxp-z): load zlib automatically, since
+	// games like Pokémon Essentials v21 use Zlib without requiring it. Ruby is
+	// built with static extensions, so this needs no external zlib.so.
+	{
+		int state = 0;
+		rb_eval_string_protect("require('zlib') if !Kernel.const_defined?(:Zlib)", &state);
+		if (state) {
+			Debug() << "Could not load Zlib (Ruby extension missing)";
+			rb_set_errinfo(Qnil);
+		}
+	}
+
 	// Set $stdout and its ilk accordingly on Windows
 	// I regret teaching you that word
 #ifdef __WIN32__
