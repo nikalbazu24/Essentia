@@ -97,6 +97,9 @@ jobs:
       - name: Compilar el APK
         run: ./gradlew --no-daemon assembleDebug
 
+      - name: Dar al APK un nombre fijo
+        run: cp app/build/outputs/apk/debug/*.apk essentia.apk
+
       - name: Guardar el APK como artefacto
         uses: actions/upload-artifact@v4
         with:
@@ -113,5 +116,5 @@ jobs:
           make_latest: false
           body: |
             Compilación automática del último cambio (${{ github.sha }}).
-            Descarga el archivo .apk de abajo e instálalo en tu equipo Android de 64 bits.
-          files: app/build/outputs/apk/debug/*.apk
+            Descarga essentia.apk e instálalo en tu equipo Android de 64 bits.
+          files: essentia.apk
