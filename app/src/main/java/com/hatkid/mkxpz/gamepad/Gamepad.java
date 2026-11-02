@@ -157,6 +157,42 @@ public class Gamepad
         setGamepadButtonKey(gpadBtnSHIFT, mGamepadConfig.keycodeSHIFT);
     }
 
+    /**
+     * Essentia: physical controller buttons -> keyboard keys that RPG Maker games
+     * understand. The engine only reads these keycodes as keyboard keys, so raw
+     * gamepad keycodes (BUTTON_A...) would otherwise do nothing in game.
+     *
+     *   A -> Enter (confirm)          B -> Esc (cancel / menu)
+     *   X -> Shift (RGSS "A")         Y -> A key (RGSS "X")
+     *   L1 -> Q (L)   R1 -> W (R)     L2 -> S (Y)   R2 -> D (Z)
+     *   Start -> Esc (menu)           L3 -> S      R3 -> D
+     *   Select: modifier (Select + Start = exit menu, handled by MainActivity)
+     *
+     * Returns the keyboard keycode to send, or the same keycode if it isn't a
+     * gamepad button, or -1 if the button must be swallowed.
+     */
+    public static int mapControllerKey(int keycode)
+    {
+        switch (keycode) {
+            case KeyEvent.KEYCODE_BUTTON_A:      return KeyEvent.KEYCODE_ENTER;
+            case KeyEvent.KEYCODE_BUTTON_B:      return KeyEvent.KEYCODE_ESCAPE;
+            case KeyEvent.KEYCODE_BUTTON_X:      return KeyEvent.KEYCODE_SHIFT_LEFT;
+            case KeyEvent.KEYCODE_BUTTON_Y:      return KeyEvent.KEYCODE_A;
+            case KeyEvent.KEYCODE_BUTTON_L1:     return KeyEvent.KEYCODE_Q;
+            case KeyEvent.KEYCODE_BUTTON_R1:     return KeyEvent.KEYCODE_W;
+            case KeyEvent.KEYCODE_BUTTON_L2:     return KeyEvent.KEYCODE_S;
+            case KeyEvent.KEYCODE_BUTTON_R2:     return KeyEvent.KEYCODE_D;
+            case KeyEvent.KEYCODE_BUTTON_THUMBL: return KeyEvent.KEYCODE_S;
+            case KeyEvent.KEYCODE_BUTTON_THUMBR: return KeyEvent.KEYCODE_D;
+            case KeyEvent.KEYCODE_BUTTON_START:  return KeyEvent.KEYCODE_ESCAPE;
+            case KeyEvent.KEYCODE_BUTTON_SELECT: return -1;
+            case KeyEvent.KEYCODE_BUTTON_MODE:   return -1;
+            case KeyEvent.KEYCODE_BUTTON_C:      return KeyEvent.KEYCODE_C;
+            case KeyEvent.KEYCODE_BUTTON_Z:      return KeyEvent.KEYCODE_D;
+            default:                             return keycode;
+        }
+    }
+
     public boolean processGamepadEvent(KeyEvent evt)
     {
         InputDevice device = evt.getDevice();
@@ -168,26 +204,70 @@ public class Gamepad
 
         if (
             ((sources & InputDevice.SOURCE_GAMEPAD) != InputDevice.SOURCE_GAMEPAD) &&
-            ((sources & InputDevice.SOURCE_DPAD) != InputDevice.SOURCE_DPAD)
+            ((sources & InputDevice.SOURCE_DPAD) != InputDevice.SOURCE_DPAD) &&
+            !KeyEvent.isGamepadButton(evt.getKeyCode())
         )
             return false;
 
-        int keycode = evt.getKeyCode();
+        int keycode = mapControllerKey(evt.getKeyCode());
+
+        if (keycode < 0)
+            return true; // swallowed (e.g. Select)
+
+        if (evt.getRepeatCount() > 0)
+            return true; // the game handles held keys itself
 
         switch (evt.getAction())
         {
-            case MotionEvent.ACTION_DOWN:
+            case KeyEvent.ACTION_DOWN:
                 mOnKeyDownListener.onKeyDown(keycode);
                 break;
 
-            case MotionEvent.ACTION_CANCEL:
-            case MotionEvent.ACTION_UP:
+            case KeyEvent.ACTION_UP:
                 mOnKeyUpListener.onKeyUp(keycode);
                 break;
         }
 
         return true;
     }
+
+    // Analog stick -> arrow keys (Essentia)
+    private static final float STICK_THRESHOLD = 0.5f;
+    private int mStickX = 0; // -1 left, 0 center, 1 right
+    private int mStickY = 0; // -1 up, 0 center, 1 down
+
+    private void updateStickAxis(int oldDir, int newDir, int negKey, int posKey)
+    {
+        if (oldDir == newDir) return;
+        if (oldDir < 0) mOnKeyUpListener.onKeyUp(negKey);
+        if (oldDir > 0) mOnKeyUpListener.onKeyUp(posKey);
+        if (newDir < 0) mOnKeyDownListener.onKeyDown(negKey);
+        if (newDir > 0) mOnKeyDownListener.onKeyDown(posKey);
+    }
+
+    public boolean processStickEvent(MotionEvent evt)
+    {
+        if ((evt.getSource() & InputDevice.SOURCE_JOYSTICK) != InputDevice.SOURCE_JOYSTICK
+            || evt.getAction() != MotionEvent.ACTION_MOVE)
+            return false;
+
+        float x = evt.getAxisValue(MotionEvent.AXIS_X);
+        float y = evt.getAxisValue(MotionEvent.AXIS_Y);
+
+        int newX = x <= -STICK_THRESHOLD ? -1 : (x >= STICK_THRESHOLD ? 1 : 0);
+        int newY = y <= -STICK_THRESHOLD ? -1 : (y >= STICK_THRESHOLD ? 1 : 0);
+
+        updateStickAxis(mStickX, newX, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT);
+        updateStickAxis(mStickY, newY, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN);
+        mStickX = newX;
+        mStickY = newY;
+
+        return true;
+    }
+
+    // D-pad reported as hat axes (Essentia: track state, MOVE events carry the changes)
+    private int mHatX = 0;
+    private int mHatY = 0;
 
     public boolean processDPadEvent(MotionEvent evt)
     {
@@ -198,37 +278,23 @@ public class Gamepad
 
         int sources = device.getSources();
 
-        if (((sources & InputDevice.SOURCE_DPAD) != InputDevice.SOURCE_DPAD))
+        if (((sources & InputDevice.SOURCE_DPAD) != InputDevice.SOURCE_DPAD)
+            && ((sources & InputDevice.SOURCE_JOYSTICK) != InputDevice.SOURCE_JOYSTICK))
             return false;
 
         float xAxis = evt.getAxisValue(MotionEvent.AXIS_HAT_X);
         float yAxis = evt.getAxisValue(MotionEvent.AXIS_HAT_Y);
 
-        Integer keycode = null;
+        int newX = xAxis <= -0.5f ? -1 : (xAxis >= 0.5f ? 1 : 0);
+        int newY = yAxis <= -0.5f ? -1 : (yAxis >= 0.5f ? 1 : 0);
 
-        if (Float.compare(yAxis, -1.0f) == 0)
-            keycode = KeyEvent.KEYCODE_DPAD_UP;
-        else if (Float.compare(yAxis, 1.0f) == 0)
-            keycode = KeyEvent.KEYCODE_DPAD_DOWN;
-        else if (Float.compare(xAxis, -1.0f) == 0)
-            keycode = KeyEvent.KEYCODE_DPAD_LEFT;
-        else if (Float.compare(xAxis, 1.0f) == 0)
-            keycode = KeyEvent.KEYCODE_DPAD_RIGHT;
-
-        if (keycode == null)
+        if (newX == mHatX && newY == mHatY)
             return false;
 
-        switch (evt.getAction())
-        {
-            case MotionEvent.ACTION_DOWN:
-                mOnKeyDownListener.onKeyDown(keycode);
-                break;
-
-            case MotionEvent.ACTION_CANCEL:
-            case MotionEvent.ACTION_UP:
-                mOnKeyUpListener.onKeyUp(keycode);
-                break;
-        }
+        updateStickAxis(mHatX, newX, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT);
+        updateStickAxis(mHatY, newY, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN);
+        mHatX = newX;
+        mHatY = newY;
 
         return true;
     }

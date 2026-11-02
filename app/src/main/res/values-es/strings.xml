@@ -9,4 +9,14 @@
     <string name="pick_hint">Elige la carpeta del juego (la que tiene Game.exe / Game.ini)</string>
     <string name="err_not_a_game">No encontré un juego de RPG Maker en:\n%1$s\n\nElige la carpeta que contiene Game.exe o Game.ini.</string>
     <string name="err_no_picker">Este equipo no tiene selector de carpetas. Abre Essentia desde un frontend.</string>
+    <string name="exit_title">¿Salir del juego?</string>
+    <string name="exit_message">Se perderá lo que no hayas guardado dentro del juego.</string>
+    <string name="exit_confirm">Salir</string>
+    <string name="exit_cancel">Seguir jugando</string>
+    <string name="update_title">Hay una versión nueva</string>
+    <string name="update_message">Essentia %1$s está lista (tienes la %2$s). ¿Descargarla e instalarla ahora?</string>
+    <string name="update_now">Actualizar</string>
+    <string name="update_later">Ahora no</string>
+    <string name="update_downloading">Descargando la versión nueva…</string>
+    <string name="update_failed">No se pudo descargar la actualización. Inténtalo más tarde.</string>
 </resources>

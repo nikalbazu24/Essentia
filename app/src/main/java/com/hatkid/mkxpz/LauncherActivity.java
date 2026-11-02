@@ -90,9 +90,17 @@ public class LauncherActivity extends Activity
             return;
         }
 
-        // Opened from the app icon: let the user pick the game folder.
-        openFolderPicker();
+        // Opened from the app icon: look for a new version first (only here, so
+        // frontends always launch games instantly), then pick the game folder.
+        if (!mUpdateChecked) {
+            mUpdateChecked = true;
+            Updater.check(this, this::openFolderPicker);
+        } else {
+            openFolderPicker();
+        }
     }
+
+    private boolean mUpdateChecked = false;
 
     private void startGame(File gameDir)
     {

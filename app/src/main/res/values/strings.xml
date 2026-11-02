@@ -12,4 +12,14 @@
     <string name="pick_hint">Choose the game folder (the one with Game.exe / Game.ini)</string>
     <string name="err_not_a_game">No RPG Maker game was found in:\n%1$s\n\nPick the folder that contains Game.exe or Game.ini.</string>
     <string name="err_no_picker">This device has no folder picker. Open Essentia from a frontend instead.</string>
+    <string name="exit_title">Exit game?</string>
+    <string name="exit_message">Anything you have not saved in the game will be lost.</string>
+    <string name="exit_confirm">Exit</string>
+    <string name="exit_cancel">Keep playing</string>
+    <string name="update_title">New version available</string>
+    <string name="update_message">Essentia %1$s is ready (you have %2$s). Download and install it now?</string>
+    <string name="update_now">Update</string>
+    <string name="update_later">Not now</string>
+    <string name="update_downloading">Downloading the new version…</string>
+    <string name="update_failed">The update could not be downloaded. Try again later.</string>
 </resources>

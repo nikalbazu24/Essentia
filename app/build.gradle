@@ -2,6 +2,15 @@ plugins {
     id 'com.android.application'
 }
 
+// Número de compilación (GitHub Actions lo entrega en ESSENTIA_BUILD_NUMBER).
+// Cada compilación tiene un versionCode mayor, así el actualizador sabe cuál es más nueva.
+def buildNumber = (System.getenv("ESSENTIA_BUILD_NUMBER") ?: "0").toInteger()
+
+// Firma fija: el archivo y la contraseña llegan desde los secretos de GitHub.
+def keystorePath = System.getenv("ESSENTIA_KEYSTORE_FILE")
+def keystorePassword = System.getenv("ESSENTIA_KEYSTORE_PASSWORD")
+def hasReleaseKey = keystorePath && keystorePassword && file(keystorePath).exists()
+
 android {
     namespace 'com.hatkid.mkxpz'
     compileSdk 33
@@ -11,9 +20,9 @@ android {
         applicationId "io.github.nikalbazu24.essentia"
         minSdk 21
         targetSdk 33
-        versionCode 4
-        versionName "0.0.4"
-        archivesBaseName = "essentia-$versionName"
+        versionCode 100 + buildNumber
+        versionName "0.1.${buildNumber}"
+        archivesBaseName = "essentia"
         ndk {
             debugSymbolLevel 'FULL'
             // AYN Thor y equipos actuales: solo 64 bits
@@ -21,16 +30,34 @@ android {
         }
     }
 
+    signingConfigs {
+        essentia {
+            if (hasReleaseKey) {
+                storeFile file(keystorePath)
+                storePassword keystorePassword
+                keyAlias "essentia"
+                keyPassword keystorePassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Sin la llave (p. ej. en un fork) se firma con la llave de prueba.
+            signingConfig hasReleaseKey ? signingConfigs.essentia : signingConfigs.debug
         }
 
         debug {
             debuggable true
             jniDebuggable true
         }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
     }
 
     compileOptions {

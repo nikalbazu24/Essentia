@@ -2,6 +2,7 @@ package com.hatkid.mkxpz;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -216,15 +217,64 @@ public class MainActivity extends SDLActivity
         System.exit(0);
     }
 
+    // Essentia: exit menu (Android Back button, or Select + Start)
+    private boolean mSelectHeld = false;
+    private boolean mStartSwallowed = false;
+    private AlertDialog mExitDialog = null;
+
+    private void showExitDialog()
+    {
+        if (mExitDialog != null && mExitDialog.isShowing())
+            return;
+
+        mExitDialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(R.string.exit_title)
+            .setMessage(R.string.exit_message)
+            .setPositiveButton(R.string.exit_confirm, (d, w) -> finish())
+            .setNegativeButton(R.string.exit_cancel, (d, w) -> d.dismiss())
+            .create();
+        mExitDialog.show();
+    }
+
+    @Override
+    public void onBackPressed()
+    {
+        showExitDialog();
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent evt)
     {
+        int code = evt.getKeyCode();
+        boolean down = evt.getAction() == KeyEvent.ACTION_DOWN;
+
+        // Android Back (navigation bar, Thor's back key...) -> exit menu
+        if (code == KeyEvent.KEYCODE_BACK) {
+            if (!down && !evt.isCanceled())
+                showExitDialog();
+            return true;
+        }
+
+        // Select + Start -> exit menu (Start is not sent to the game in that case)
+        if (code == KeyEvent.KEYCODE_BUTTON_SELECT) {
+            mSelectHeld = down;
+        } else if (code == KeyEvent.KEYCODE_BUTTON_START) {
+            if (down && mSelectHeld) {
+                mStartSwallowed = true;
+                showExitDialog();
+                return true;
+            }
+            if (!down && mStartSwallowed) {
+                mStartSwallowed = false;
+                return true;
+            }
+        }
+
         if (
-            evt.getKeyCode() != KeyEvent.KEYCODE_BACK &&
-            evt.getKeyCode() != KeyEvent.KEYCODE_VOLUME_UP &&
-            evt.getKeyCode() != KeyEvent.KEYCODE_VOLUME_DOWN &&
-            evt.getKeyCode() != KeyEvent.KEYCODE_VOLUME_MUTE && 
-            evt.getKeyCode() != KeyEvent.KEYCODE_HEADSETHOOK
+            code != KeyEvent.KEYCODE_VOLUME_UP &&
+            code != KeyEvent.KEYCODE_VOLUME_DOWN &&
+            code != KeyEvent.KEYCODE_VOLUME_MUTE &&
+            code != KeyEvent.KEYCODE_HEADSETHOOK
         ) {
             // Hide gamepad view on key events when visible
             if (!mGamepadInvisible) {
@@ -252,12 +302,16 @@ public class MainActivity extends SDLActivity
     }
 
     @Override
-    public boolean onGenericMotionEvent(MotionEvent evt)
+    public boolean dispatchGenericMotionEvent(MotionEvent evt)
     {
-        if (mGamepad.processDPadEvent(evt))
+        // Essentia: handle the d-pad hat and the left stick before SDL's view does,
+        // so they always arrive as arrow keys (and never twice).
+        boolean handled = mGamepad.processDPadEvent(evt);
+        handled |= mGamepad.processStickEvent(evt);
+        if (handled)
             return true;
 
-        return super.onGenericMotionEvent(evt);
+        return super.dispatchGenericMotionEvent(evt);
     }
 
     /**

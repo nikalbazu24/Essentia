@@ -20,6 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  ESSENTIA_BUILD_NUMBER: ${{ github.run_number }}
   NDK_VERSION: 25.2.9519653
   ABI: arm64-v8a
   HOST: aarch64-linux-android
@@ -100,17 +101,46 @@ jobs:
           command -v xxd || sudo apt-get install -y xxd
           sh ./make_xxd.sh
 
-      - name: Compilar el APK
-        run: ./gradlew --no-daemon assembleDebug
+      - name: Preparar la firma de Essentia
+        env:
+          KS_B64: ${{ secrets.ESSENTIA_KEYSTORE_B64 }}
+          KS_PASSWORD: ${{ secrets.ESSENTIA_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASSWORD" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/essentia.jks"
+            echo "ESSENTIA_KEYSTORE_FILE=$RUNNER_TEMP/essentia.jks" >> "$GITHUB_ENV"
+            echo "ESSENTIA_KEYSTORE_PASSWORD=$KS_PASSWORD" >> "$GITHUB_ENV"
+            echo "ESSENTIA_SIGNED=true" >> "$GITHUB_ENV"
+            echo "Firma fija: sí"
+          else
+            echo "ESSENTIA_SIGNED=false" >> "$GITHUB_ENV"
+            echo "::warning::Sin los secretos ESSENTIA_KEYSTORE_*: el APK usa una firma de prueba y no se podrá actualizar encima."
+          fi
 
-      - name: Dar al APK un nombre fijo
-        run: cp app/build/outputs/apk/debug/*.apk essentia.apk
+      - name: Compilar el APK (versión optimizada)
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Preparar archivos para publicar
+        run: |
+          cp app/build/outputs/apk/release/*.apk essentia.apk
+          cat > version.json <<JSON
+          {
+            "versionCode": $((100 + ESSENTIA_BUILD_NUMBER)),
+            "versionName": "0.1.${ESSENTIA_BUILD_NUMBER}",
+            "signed": ${ESSENTIA_SIGNED},
+            "apk": "essentia.apk",
+            "commit": "${GITHUB_SHA}"
+          }
+          JSON
+          cat version.json
 
       - name: Guardar el APK como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: essentia-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            essentia.apk
+            version.json
 
       - name: Publicar en Releases (versión dev)
         if: github.event_name != 'pull_request'
@@ -123,4 +153,7 @@ jobs:
           body: |
             Compilación automática del último cambio (${{ github.sha }}).
             Descarga essentia.apk e instálalo en tu equipo Android de 64 bits.
-          files: essentia.apk
+            Desde la versión 0.1 Essentia avisa sola cuando hay una versión nueva.
+          files: |
+            essentia.apk
+            version.json

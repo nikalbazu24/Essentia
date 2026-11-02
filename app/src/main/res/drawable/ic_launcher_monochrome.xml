@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Essentia: frasco de esencia (generado por make_icon.py) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FF000000" android:pathData="M45.64,29.80H58.84V38.60H45.64Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M45.64,29.80H58.84V32.44H45.64Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M45.64,38.60H58.84V47.40H45.64Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M36.84,47.40H67.64V51.80H36.84Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M32.44,51.80H72.04V73.80H32.44Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M36.84,73.80H67.64V78.20H36.84Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M36.84,56.20H67.64V60.60H36.84Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M36.84,60.60H67.64V73.80H36.84Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M41.24,73.80H63.24V75.56H41.24Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M36.84,51.80H41.24V56.20H36.84Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M58.84,65.00H63.24V69.40H58.84Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M50.04,54.00H52.68V56.64H50.04Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M67.64,34.20H71.16V37.72H67.64Z"/>
+    <path android:fillColor="#FF000000" android:pathData="M72.92,28.92H75.56V31.56H72.92Z"/>
+</vector>
