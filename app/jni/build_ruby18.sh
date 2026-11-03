@@ -68,6 +68,9 @@ for e in ext/*/; do
     esac
 done
 rm -rf ext/digest/rmd160 ext/digest/sha1 ext/digest/sha2 ext/digest/bubblebabble
+# Missing prototype (used before its declaration; -Werror catches these)
+grep -q "essentia: prototype" eval.c || \
+    sed -i '0,/^#include "ruby.h"/s//#include "ruby.h"\nint rb_thread_join _((VALUE, double)); \/* essentia: prototype *\//' eval.c
 cd ..
 
 # ------------------------------------------------------------ host Ruby 1.8
@@ -110,7 +113,7 @@ export LDFLAGS="-lz -lm -ldl"
     ac_cv_func_memcmp_working=yes rb_cv_negative_time_t=yes rb_cv_binary_elf=yes \
     ac_cv_func_getcontext=no ac_cv_func_setcontext=no > configure.log 2>&1 || { tail -60 configure.log; exit 1; }
 
-make -j"$NPROC" libruby-static.a > make.log 2>&1 || { grep -n "error" make.log | head -40; tail -40 make.log; exit 1; }
+make -k -j"$NPROC" libruby-static.a > make.log 2>&1 || { grep -n -B2 "error:" make.log | head -120; tail -20 make.log; exit 1; }
 make -j"$NPROC" exts > make-ext.log 2>&1 || make -j"$NPROC" > make-ext.log 2>&1 || { grep -n "error" make-ext.log | head -40; tail -60 make-ext.log; exit 1; }
 
 # ------------------------------------------------------------ collect
