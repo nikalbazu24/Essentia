@@ -20,7 +20,8 @@ import java.nio.charset.StandardCharsets;
 public final class Cloud
 {
     /** Where reports go when the user hasn't set another database. Filled when deployed. */
-    public static final String DEFAULT_URL = "";
+    public static final String DEFAULT_URL =
+        "https://script.google.com/macros/s/AKfycbyV8BV8HQV4LTorF04vlTts_t7FVCHnMYFSvY1KksedvIwv0w4Uh5wr3MA20StGXKjwgA/exec";
 
     private static final String KEY_URL = "cloud_url";
     private static final String KEY_BACKUP_KEY = "cloud_backup_key";
