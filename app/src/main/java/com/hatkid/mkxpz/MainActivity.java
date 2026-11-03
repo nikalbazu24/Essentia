@@ -159,13 +159,14 @@ public class MainActivity extends SDLActivity
             // Faster loading: give Ruby a bigger memory heap from the start, so it doesn't
             // stop to clean up memory thousands of times while the game loads its data.
             if (EssentiaSettings.flag(this, EssentiaSettings.PERF_FAST_LOAD, true)) {
-                android.system.Os.setenv("RUBY_GC_HEAP_INIT_SLOTS", "800000", true);
-                android.system.Os.setenv("RUBY_GC_HEAP_FREE_SLOTS", "200000", true);
-                android.system.Os.setenv("RUBY_GC_HEAP_GROWTH_FACTOR", "1.6", true);
-                android.system.Os.setenv("RUBY_GC_MALLOC_LIMIT", "67108864", true);
-                android.system.Os.setenv("RUBY_GC_MALLOC_LIMIT_MAX", "268435456", true);
-                android.system.Os.setenv("RUBY_GC_OLDMALLOC_LIMIT", "67108864", true);
-                android.system.Os.setenv("RUBY_GC_OLDMALLOC_LIMIT_MAX", "268435456", true);
+                // (balanced with memory use: big enough to load fast, not more)
+                android.system.Os.setenv("RUBY_GC_HEAP_INIT_SLOTS", "600000", true);
+                android.system.Os.setenv("RUBY_GC_HEAP_FREE_SLOTS", "150000", true);
+                android.system.Os.setenv("RUBY_GC_HEAP_GROWTH_FACTOR", "1.4", true);
+                android.system.Os.setenv("RUBY_GC_MALLOC_LIMIT", "50331648", true);
+                android.system.Os.setenv("RUBY_GC_MALLOC_LIMIT_MAX", "201326592", true);
+                android.system.Os.setenv("RUBY_GC_OLDMALLOC_LIMIT", "50331648", true);
+                android.system.Os.setenv("RUBY_GC_OLDMALLOC_LIMIT_MAX", "201326592", true);
             }
             // Quick actions (panel buttons, turbo, screenshots) and their answers
             GameLink.reset(this);

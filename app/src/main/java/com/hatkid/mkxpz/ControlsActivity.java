@@ -172,4 +172,18 @@ public class ControlsActivity extends ControllerActivity
         }
         return super.dispatchGenericMotionEvent(e);
     }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+        MusicPlayer.resume(this);
+    }
+
+    @Override
+    protected void onPause()
+    {
+        super.onPause();
+        MusicPlayer.pause();
+    }
 }

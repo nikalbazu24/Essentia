@@ -159,7 +159,7 @@ public final class GameUpdater
 
     // ------------------------------------------------------------ update
 
-    /** Downloads, extracts and installs the new version. Returns the saves backup folder. */
+    /** Downloads and installs the new version. Returns the saves backup folder (or null). */
     public static File install(File gameDir, String link, File backupRoot, Progress p) throws Exception
     {
         File work = new File(gameDir.getParentFile(), "." + gameDir.getName() + ".essentia-update");
@@ -170,22 +170,9 @@ public final class GameUpdater
             File archive = download(link, work, p);
             if (p.cancelled()) return null;
             String lower = archive.getName().toLowerCase(Locale.ROOT);
-            if (!lower.endsWith(".zip")) {
-                throw new UnsupportedFormat(archive.getName());
-            }
-            long free = new StatFs(gameDir.getAbsolutePath()).getAvailableBytes();
-            if (free < archive.length() * 2) throw new NoSpace(archive.length() * 2);
+            if (!lower.endsWith(".zip")) throw new UnsupportedFormat(archive.getName());
 
-            // 2. extract
-            File out = new File(work, "files");
-            extract(archive, out, p);
-            //noinspection ResultOfMethodCallIgnored
-            archive.delete();
-            if (p.cancelled()) return null;
-            File newGame = findGame(out, 0);
-            if (newGame == null) throw new IOException("no game in the download");
-
-            // 3. back up the saves, then copy the new files over the game
+            // 2. back up the saves, then 3. install straight from the zip
             File backup = backupSaves(gameDir, backupRoot);
             List<String> ignored = new ArrayList<>();
             File cfg = configFile(gameDir);
@@ -194,8 +181,7 @@ public final class GameUpdater
                 if (s != null) for (String f : s.split(",")) if (!f.trim().isEmpty()) ignored.add(f.trim().toLowerCase(Locale.ROOT));
             }
             if (ignored.isEmpty()) ignored.add("fotos");
-            p.update(2, -1, "");
-            copyOver(newGame, gameDir, ignored, p);
+            installFromZip(archive, gameDir, ignored, p);
             return backup;
         } finally {
             deleteTree(work);
@@ -385,56 +371,146 @@ public final class GameUpdater
 
     // ------------------------------------------------------------ files
 
-    private static void extract(File zip, File out, Progress p) throws Exception
+    private static ZipFile openZip(File zip) throws IOException
     {
-        ZipFile z;
-        if (android.os.Build.VERSION.SDK_INT < 24) {
-            z = new ZipFile(zip);
-        } else try {
-            z = new ZipFile(zip, StandardCharsets.UTF_8);
+        if (android.os.Build.VERSION.SDK_INT < 24) return new ZipFile(zip);
+        try {
+            ZipFile z = new ZipFile(zip, StandardCharsets.UTF_8);
             // names that aren't valid UTF-8 throw while listing: use the old DOS encoding then
             for (Enumeration<? extends ZipEntry> e = z.entries(); e.hasMoreElements(); ) e.nextElement();
+            return z;
         } catch (IllegalArgumentException | java.util.zip.ZipException e) {
-            z = new ZipFile(zip, Charset.forName("CP437"));
-        }
-        try (ZipFile zf = z) {
-            String root = out.getCanonicalPath() + File.separator;
-            int total = zf.size(), i = 0;
-            for (Enumeration<? extends ZipEntry> e = zf.entries(); e.hasMoreElements(); ) {
-                if (p.cancelled()) return;
-                ZipEntry entry = e.nextElement();
-                File f = new File(out, entry.getName());
-                if (!f.getCanonicalPath().startsWith(root)) continue; // never outside the folder
-                if (entry.isDirectory()) {
-                    //noinspection ResultOfMethodCallIgnored
-                    f.mkdirs();
-                } else {
-                    //noinspection ResultOfMethodCallIgnored
-                    f.getParentFile().mkdirs();
-                    try (InputStream in = zf.getInputStream(entry); OutputStream o = new FileOutputStream(f)) {
-                        byte[] buf = new byte[1 << 16];
-                        int n;
-                        while ((n = in.read(buf)) > 0) o.write(buf, 0, n);
-                    }
-                }
-                if (++i % 20 == 0) p.update(1, (float) i / Math.max(1, total), i + " / " + total);
-            }
+            return new ZipFile(zip, Charset.forName("CP437"));
         }
     }
 
-    private static File findGame(File dir, int depth)
+    private static final String[] GAME_MARKERS = {
+        "game.ini", "game.exe", "mkxp.json", "game.rgssad", "game.rgss2a", "game.rgss3a"
+    };
+
+    /** The folder inside the zip that holds the game ("" or "Pokemon Anil/"). */
+    private static String gameRoot(ZipFile z)
     {
-        if (Games.isGameFolder(dir)) return dir;
-        if (depth > 4) return null;
-        File[] kids = dir.listFiles();
-        if (kids == null) return null;
-        for (File k : kids) {
-            if (k.isDirectory() && !k.getName().toLowerCase(Locale.ROOT).contains("poke_updater")) {
-                File g = findGame(k, depth + 1);
-                if (g != null) return g;
+        String best = null;
+        for (Enumeration<? extends ZipEntry> e = z.entries(); e.hasMoreElements(); ) {
+            String n = e.nextElement().getName().replace('\\', '/');
+            String low = n.toLowerCase(Locale.ROOT);
+            if (low.contains("poke_updater/")) continue;
+            String base = low.substring(low.lastIndexOf('/') + 1);
+            for (String m : GAME_MARKERS) {
+                if (base.equals(m)) {
+                    String prefix = n.substring(0, n.length() - base.length());
+                    if (best == null || prefix.length() < best.length()) best = prefix;
+                }
             }
         }
-        return null;
+        return best;
+    }
+
+    /**
+     * Writes the new files straight into the game folder, in one pass:
+     * files that didn't change (same size and checksum) are skipped, saves and
+     * ignored folders are never touched, folder listings are read only once.
+     */
+    private static void installFromZip(File zip, File gameDir, List<String> ignored, Progress p) throws Exception
+    {
+        try (ZipFile z = openZip(zip)) {
+            String root = gameRoot(z);
+            if (root == null) throw new IOException("no game in the download");
+            String canonicalGame = gameDir.getCanonicalPath() + File.separator;
+            Map<String, Map<String, String>> listings = new java.util.HashMap<>();
+
+            // what will be written, and the space it needs
+            List<ZipEntry> todo = new ArrayList<>();
+            long needed = 0;
+            for (Enumeration<? extends ZipEntry> e = z.entries(); e.hasMoreElements(); ) {
+                ZipEntry entry = e.nextElement();
+                if (entry.isDirectory()) continue;
+                String n = entry.getName().replace('\\', '/');
+                if (!n.startsWith(root)) continue;
+                String rel = n.substring(root.length());
+                if (rel.isEmpty()) continue;
+                String first = rel.contains("/") ? rel.substring(0, rel.indexOf('/')).toLowerCase(Locale.ROOT) : "";
+                if (ignored.contains(first) || first.contains("poke_updater")) continue;
+                if (!rel.contains("/") && Saves.looksLikeSave(rel)) continue; // never replace saves
+                todo.add(entry);
+                File dest = resolve(gameDir, rel, listings, false);
+                if (dest == null || !dest.exists()) needed += Math.max(0, entry.getSize());
+            }
+            long free = new StatFs(gameDir.getAbsolutePath()).getAvailableBytes();
+            if (free < needed + 32L * 1024 * 1024) throw new NoSpace(needed + 32L * 1024 * 1024);
+
+            byte[] buf = new byte[1 << 16];
+            int done = 0, written = 0;
+            long last = 0;
+            for (ZipEntry entry : todo) {
+                if (p.cancelled()) return;
+                String rel = entry.getName().replace('\\', '/').substring(root.length());
+                File dest = resolve(gameDir, rel, listings, true);
+                if (dest != null && dest.getCanonicalPath().startsWith(canonicalGame)) {
+                    if (!(dest.isFile() && dest.length() == entry.getSize() && entry.getCrc() != -1
+                          && crc(dest, buf) == entry.getCrc())) {
+                        try (InputStream in = z.getInputStream(entry);
+                             OutputStream out = new java.io.BufferedOutputStream(new FileOutputStream(dest), 1 << 16)) {
+                            int n;
+                            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                        }
+                        written++;
+                    }
+                }
+                done++;
+                long now = System.currentTimeMillis();
+                if (now - last > 400) {
+                    last = now;
+                    p.update(1, (float) done / todo.size(), done + " / " + todo.size());
+                }
+            }
+            p.update(1, 1f, written + " / " + todo.size());
+        }
+    }
+
+    private static long crc(File f, byte[] buf) throws IOException
+    {
+        java.util.zip.CRC32 c = new java.util.zip.CRC32();
+        try (InputStream in = new FileInputStream(f)) {
+            int n;
+            while ((n = in.read(buf)) > 0) c.update(buf, 0, n);
+        }
+        return c.getValue();
+    }
+
+    /**
+     * The file in the game folder for a path from the zip, keeping the letter
+     * case the game folder already uses (Graphics vs graphics). Folder listings
+     * are read once and remembered.
+     */
+    private static File resolve(File gameDir, String rel, Map<String, Map<String, String>> listings, boolean create)
+    {
+        String[] parts = rel.split("/");
+        File dir = gameDir;
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            if (part.isEmpty() || part.equals(".") || part.equals("..")) return null;
+            Map<String, String> names = listings.get(dir.getPath());
+            if (names == null) {
+                names = new java.util.HashMap<>();
+                String[] list = dir.list();
+                if (list != null) for (String n : list) names.put(n.toLowerCase(Locale.ROOT), n);
+                listings.put(dir.getPath(), names);
+            }
+            String actual = names.get(part.toLowerCase(Locale.ROOT));
+            if (actual == null) {
+                actual = part;
+                if (create) names.put(part.toLowerCase(Locale.ROOT), part);
+            }
+            File next = new File(dir, actual);
+            if (i < parts.length - 1 && create && !next.isDirectory()) {
+                //noinspection ResultOfMethodCallIgnored
+                next.mkdirs();
+            }
+            dir = next;
+        }
+        return dir;
     }
 
     private static File backupSaves(File gameDir, File backupRoot) throws IOException
@@ -446,33 +522,6 @@ public final class GameUpdater
         if (!dest.mkdirs() && !dest.isDirectory()) throw new IOException("can't back up saves");
         for (File s : saves) copyFile(s, new File(dest, s.getName()));
         return dest;
-    }
-
-    private static void copyOver(File from, File to, List<String> ignored, Progress p) throws IOException
-    {
-        File[] kids = from.listFiles();
-        if (kids == null) return;
-        for (File k : kids) {
-            String low = k.getName().toLowerCase(Locale.ROOT);
-            if (k.isDirectory()) {
-                if (ignored.contains(low) || low.contains("poke_updater")) continue;
-                File d = new File(to, existingName(to, k.getName()));
-                //noinspection ResultOfMethodCallIgnored
-                d.mkdirs();
-                copyOver(k, d, ignored, p);
-            } else {
-                if (Saves.looksLikeSave(k.getName())) continue; // never replace saves
-                copyFile(k, new File(to, existingName(to, k.getName())));
-            }
-        }
-    }
-
-    /** Keeps the letter case already used in the game folder (Graphics vs graphics). */
-    private static String existingName(File dir, String name)
-    {
-        String[] names = dir.list();
-        if (names != null) for (String n : names) if (n.equalsIgnoreCase(name)) return n;
-        return name;
     }
 
     private static void copyFile(File a, File b) throws IOException

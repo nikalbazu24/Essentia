@@ -105,6 +105,12 @@ public final class EssentiaSettings
     public static final String PERF_SUSTAINED = "perf_sustained";
     public static final String PERF_60HZ = "perf_60hz";
     public static final String DEBUG_INPUT = "debug_input";
+    /** Essentia's own music in the library (on by default). */
+    public static final String MUSIC = "app_music";
+    private static final String KEY_MUSIC_VOLUME = "app_music_volume";
+    public static int musicVolume(Context c) { return prefs(c).getInt(KEY_MUSIC_VOLUME, 45); }
+    public static void setMusicVolume(Context c, int v) { prefs(c).edit().putInt(KEY_MUSIC_VOLUME, v).apply(); }
+
     /** Offer new official versions of games (PokéUpdater) before opening them. */
     public static final String AUTO_UPDATE = "auto_game_updates";
     /** Move diagonally when two directions are held (off by default). */

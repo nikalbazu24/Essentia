@@ -112,6 +112,7 @@ public class LibraryActivity extends ControllerActivity
             Games.askAllFilesAccess(this, REQ_ALL_FILES, this::finish);
         } else if (savedInstanceState == null) {
             Updater.check(this, () -> { }, false);
+            com.hatkid.mkxpz.ui.WhatsNew.showIfNew(this);
         }
     }
 
@@ -119,6 +120,8 @@ public class LibraryActivity extends ControllerActivity
     protected void onResume()
     {
         super.onResume();
+        MusicPlayer.resume(this);
+        UpdateService.setListener(() -> runOnUiThread(this::refreshUpdates));
         reload();
         showSecondScreen();
     }
@@ -127,6 +130,8 @@ public class LibraryActivity extends ControllerActivity
     protected void onPause()
     {
         super.onPause();
+        MusicPlayer.pause();
+        UpdateService.setListener(null);
         if (mSecond != null) {
             mSecond.dismiss();
             mSecond = null;
@@ -184,7 +189,8 @@ public class LibraryActivity extends ControllerActivity
         mShelfScroll = new HorizontalScrollView(this);
         mShelfScroll.setHorizontalScrollBarEnabled(false);
         mShelfScroll.setClipToPadding(false);
-        mShelfScroll.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), Ui.dp(this, 4), Ui.dp(this, 14));
+        // room around the cards for the zoomed one and its highlight
+        mShelfScroll.setPadding(Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16));
         mShelf = new LinearLayout(this);
         mShelf.setOrientation(LinearLayout.HORIZONTAL);
         mShelf.setGravity(Gravity.CENTER_VERTICAL);
@@ -289,10 +295,9 @@ public class LibraryActivity extends ControllerActivity
     {
         GridView g = new GridView(this);
         g.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
-        g.setPadding(Ui.dp(this, 6), Ui.dp(this, 12), Ui.dp(this, 6), Ui.dp(this, 12));
+        g.setPadding(Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16));
         g.setClipToPadding(false);
-        g.setDrawSelectorOnTop(true);
-        g.setSelector(selectorDrawable());
+        g.setSelector(new ColorDrawable(0x00000000)); // the card draws its own highlight
         g.setFocusable(true);
         mAdapter = new GamesAdapter();
         g.setAdapter(mAdapter);
@@ -423,14 +428,21 @@ public class LibraryActivity extends ControllerActivity
         return b;
     }
 
+    /**
+     * Highlight of the selected card. The outline sits fully inside the card (a
+     * stroke is drawn half outside its edge, where the rounded card would cut it).
+     */
     private Drawable selectorDrawable()
     {
-        GradientDrawable focus = Ui.rounded(this, 0x00000000, 16);
-        focus.setStroke(Ui.dp(this, 3), Ui.ACCENT_LIGHT);
+        int stroke = Ui.dp(this, 3);
+        GradientDrawable ring = Ui.rounded(this, 0x00000000, 14);
+        ring.setStroke(stroke, Ui.ACCENT_LIGHT);
+        Drawable focus = new android.graphics.drawable.InsetDrawable(ring, stroke / 2);
         GradientDrawable press = Ui.rounded(this, 0x408A5CF6, 16);
         StateListDrawable s = new StateListDrawable();
         s.addState(new int[]{android.R.attr.state_pressed}, press);
         s.addState(new int[]{android.R.attr.state_focused}, focus);
+        s.addState(new int[]{android.R.attr.state_activated}, focus);
         s.addState(new int[]{}, new ColorDrawable(0x00000000));
         return s;
     }
@@ -489,10 +501,12 @@ public class LibraryActivity extends ControllerActivity
     {
         if (mZoomed != null && mZoomed != v) {
             mZoomed.animate().scaleX(1f).scaleY(1f).translationZ(0).setDuration(120).start();
+            mZoomed.setActivated(false);
         }
         mZoomed = null;
         if (v != null && !isList()) {
-            v.animate().scaleX(1.07f).scaleY(1.07f).translationZ(Ui.dp(this, 8)).setDuration(150).start();
+            v.animate().scaleX(1.06f).scaleY(1.06f).translationZ(Ui.dp(this, 6)).setDuration(150).start();
+            v.setActivated(true); // the highlight grows with the card
             mZoomed = v;
         }
     }
@@ -501,6 +515,12 @@ public class LibraryActivity extends ControllerActivity
 
     private String detailOf(Library.Entry e)
     {
+        UpdateService.State up = UpdateService.stateFor(e.path);
+        if (up != null) {
+            int pct = up.percent();
+            return getString(up.step == 0 ? R.string.upd_downloading : R.string.upd_installing)
+                + (pct >= 0 ? "  " + pct + "%" : "");
+        }
         String when = e.lastPlayed == 0 ? getString(R.string.lib_never_played)
             : getString(R.string.lib_played, DateUtils.getRelativeTimeSpanString(e.lastPlayed,
                 System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString());
@@ -560,6 +580,8 @@ public class LibraryActivity extends ControllerActivity
         Holder h = (Holder) card.getTag();
         h.title.setText(e.displayTitle());
         String mode = screenLabel(e.screenMode);
+        UpdateService.State up = UpdateService.stateFor(e.path);
+        if (up != null) mode = "\u2193 " + (up.percent() >= 0 ? up.percent() + "%" : "…");
         h.badge.setText(mode == null ? "" : mode);
         h.badge.setVisibility(mode == null ? View.GONE : View.VISIBLE);
         mCovers.load(e.path, e.cover, h.cover, R.drawable.ic_launcher_foreground);
@@ -617,7 +639,11 @@ public class LibraryActivity extends ControllerActivity
                 mCovers.load(e.path, e.cover, h.cover, R.drawable.ic_launcher_foreground);
                 return convert;
             }
-            if (convert == null) convert = newCard();
+            if (convert == null) {
+                convert = newCard();
+                convert.setForeground(selectorDrawable());
+            }
+            convert.setActivated(false);
             int w = mGrid.getColumnWidth() > 0 ? mGrid.getColumnWidth() : mBaseColumn;
             convert.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, w * 3 / 4));
             convert.setScaleX(1f);
@@ -671,6 +697,28 @@ public class LibraryActivity extends ControllerActivity
             mGrid.setSelection(pos);
             mGrid.requestFocus();
         }
+    }
+
+    /** While a game runs, the library gives back the memory it doesn't need. */
+    @Override
+    public void onTrimMemory(int level)
+    {
+        super.onTrimMemory(level);
+        if (level >= TRIM_MEMORY_UI_HIDDEN && mCovers != null) mCovers.trim();
+    }
+
+    /** A game update in the background moved on: show its progress on the cards. */
+    private void refreshUpdates()
+    {
+        if (isFinishing()) return;
+        if (isShelf()) {
+            for (int i = 0; i < mShelf.getChildCount() && i < mGames.size(); i++) {
+                bindCard(mShelf.getChildAt(i), mGames.get(i));
+            }
+        } else {
+            mAdapter.notifyDataSetChanged();
+        }
+        if (!mGames.isEmpty() && mSelected < mGames.size()) mHeroDetail.setText(detailOf(mGames.get(mSelected)));
     }
 
     private void reload()

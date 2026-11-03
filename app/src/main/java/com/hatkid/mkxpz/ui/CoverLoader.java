@@ -26,7 +26,8 @@ public final class CoverLoader
     public CoverLoader(int targetPx)
     {
         mTargetPx = targetPx;
-        int maxKb = (int) (Runtime.getRuntime().maxMemory() / 1024 / 8);
+        // a small cache: covers are small (RGB_565, sized for the cards)
+        int maxKb = (int) Math.min(Runtime.getRuntime().maxMemory() / 1024 / 16, 24 * 1024);
         mCache = new LruCache<String, Object>(maxKb) {
             @Override
             protected int sizeOf(String key, Object value) {
@@ -100,6 +101,12 @@ public final class CoverLoader
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    /** Frees the remembered covers (the library is hidden, e.g. while playing). */
+    public void trim()
+    {
+        mCache.evictAll();
     }
 
     public void shutdown()

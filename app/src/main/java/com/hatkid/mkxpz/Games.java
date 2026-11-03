@@ -78,6 +78,7 @@ public final class Games
     public static void startGame(Activity a, File gameDir, boolean newTask)
     {
         Log.i(TAG, "Starting game in " + gameDir);
+        MusicPlayer.stopNow();
         killGameProcess(a);
 
         String path = gameDir.getAbsolutePath();

@@ -48,6 +48,13 @@ public final class UpdateFlow
      */
     public static void beforeLaunch(Activity a, File dir, String title, Runnable launch)
     {
+        com.hatkid.mkxpz.UpdateService.State busy = com.hatkid.mkxpz.UpdateService.stateFor(dir.getAbsolutePath());
+        if (busy != null) {
+            int pct = busy.percent();
+            message(a, title, a.getString(R.string.upd_busy, pct < 0 ? "…" : pct + "%"),
+                () -> { if (a instanceof com.hatkid.mkxpz.LauncherActivity) a.finish(); });
+            return;
+        }
         if (!EssentiaSettings.flag(a, EssentiaSettings.AUTO_UPDATE, true) || !GameUpdater.supported(dir)) {
             launch.run();
             return;
@@ -105,7 +112,8 @@ public final class UpdateFlow
             .setTitle(a.getString(R.string.upd_found, info.latest))
             .setMessage(a.getString(R.string.upd_offer, title, info.current, info.latest))
             .setCancelable(false)
-            .setPositiveButton(R.string.upd_do, (x, w) -> run(a, dir, title, info.links.get(host), info.latest, launch))
+            .setPositiveButton(R.string.upd_do, (x, w) -> run(a, dir, title, info.links.get(host), info.latest,
+                () -> { if (a instanceof com.hatkid.mkxpz.LauncherActivity) a.finish(); }))
             .setNegativeButton(R.string.upd_play_now, (x, w) -> launch.run())
             .setNeutralButton(R.string.upd_not_this, (x, w) -> {
                 prefs(a).edit().putString(dir.getAbsolutePath() + ":skip", info.latest).apply();
@@ -161,76 +169,52 @@ public final class UpdateFlow
 
     // ------------------------------------------------------------ the update itself
 
+    /**
+     * Starts the update in the background (notification with progress) and
+     * continues with {@code after}: the player can keep using the console.
+     */
     public static void run(Activity a, File dir, String title, String link, String version, Runnable after)
     {
-        LinearLayout box = new LinearLayout(a);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int p = Ui.dp(a, 20);
-        box.setPadding(p, p, p, p);
-        TextView status = Ui.text(a, a.getString(R.string.upd_downloading), 16, Ui.TEXT, true);
-        box.addView(status);
-        ProgressBar bar = new ProgressBar(a, null, android.R.attr.progressBarStyleHorizontal);
-        bar.setMax(1000);
-        bar.setIndeterminate(true);
-        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(a, 16));
-        blp.topMargin = Ui.dp(a, 12);
-        box.addView(bar, blp);
-        TextView detail = Ui.text(a, "", 14, Ui.TEXT_DIM, false);
-        detail.setPadding(0, Ui.dp(a, 8), 0, 0);
-        box.addView(detail);
-        TextView note = Ui.text(a, a.getString(R.string.upd_note), 13, Ui.TEXT_DIM, false);
-        note.setPadding(0, Ui.dp(a, 10), 0, 0);
-        box.addView(note);
+        allowBackground(a, () -> {
+            com.hatkid.mkxpz.UpdateService.start(a.getApplicationContext(), dir.getAbsolutePath(), title, link, version);
+            message(a, title, a.getString(R.string.upd_background, version), after);
+        });
+    }
 
-        final boolean[] cancel = { false };
-        AlertDialog dlg = dialog(a)
-            .setTitle(title + "  →  " + version)
-            .setView(box)
-            .setCancelable(false)
-            .setNegativeButton(R.string.cancel, (d, w) -> cancel[0] = true)
-            .create();
-        controllerFriendly(dlg);
-        dlg.show();
-        a.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-        final int[] steps = { R.string.upd_downloading, R.string.upd_extracting, R.string.upd_copying };
-        GameUpdater.Progress progress = new GameUpdater.Progress() {
-            @Override public void update(int step, float fraction, String text) {
-                a.runOnUiThread(() -> {
-                    status.setText(steps[step]);
-                    bar.setIndeterminate(fraction < 0);
-                    if (fraction >= 0) bar.setProgress((int) (fraction * 1000));
-                    detail.setText(text);
-                    View cancelButton = dlg.getButton(AlertDialog.BUTTON_NEGATIVE);
-                    if (step == 2 && cancelButton != null) cancelButton.setEnabled(false);
-                });
-            }
-            @Override public boolean cancelled() { return cancel[0]; }
-        };
-
-        new Thread(() -> {
-            String msg;
-            try {
-                File backup = GameUpdater.install(dir, link,
-                    new File(Environment.getExternalStorageDirectory(), "Essentia/Respaldos"), progress);
-                if (cancel[0]) msg = null;
-                else msg = a.getString(R.string.upd_done, version)
-                    + (backup != null ? "\n\n" + a.getString(R.string.upd_backup, backup.getAbsolutePath()) : "");
-            } catch (GameUpdater.UnsupportedFormat ex) {
-                msg = a.getString(R.string.upd_format, ex.getMessage());
-            } catch (GameUpdater.NoSpace ex) {
-                msg = a.getString(R.string.upd_space, GameUpdater.mb(ex.needed));
-            } catch (Exception ex) {
-                msg = a.getString(R.string.upd_failed) + "\n(" + ex.getMessage() + ")";
-            }
-            final String text = msg;
-            a.runOnUiThread(() -> {
-                a.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                if (dlg.isShowing()) dlg.dismiss();
-                if (text == null) { if (after != null) after.run(); }
-                else message(a, title, text, after);
-            });
-        }, "EssentiaUpdate").start();
+    /**
+     * Android 13+: permission to show the progress notification. Also asks once to
+     * let Essentia keep working with the screen off (console closed).
+     */
+    private static void allowBackground(Activity a, Runnable then)
+    {
+        if (android.os.Build.VERSION.SDK_INT >= 33
+            && a.checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            try { a.requestPermissions(new String[] { "android.permission.POST_NOTIFICATIONS" }, 77); } catch (Exception ignored) { }
+        }
+        android.os.PowerManager pm = (android.os.PowerManager) a.getSystemService(Context.POWER_SERVICE);
+        boolean asked = prefs(a).getBoolean("asked_battery", false);
+        if (android.os.Build.VERSION.SDK_INT >= 23 && pm != null && !asked
+            && !pm.isIgnoringBatteryOptimizations(a.getPackageName())) {
+            prefs(a).edit().putBoolean("asked_battery", true).apply();
+            AlertDialog d = dialog(a)
+                .setTitle(R.string.upd_battery_title)
+                .setMessage(R.string.upd_battery_msg)
+                .setPositiveButton(R.string.upd_battery_allow, (x, w) -> {
+                    try {
+                        a.startActivity(new android.content.Intent(
+                            android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            android.net.Uri.parse("package:" + a.getPackageName())));
+                    } catch (Exception ignored) { }
+                    then.run();
+                })
+                .setNegativeButton(R.string.upd_battery_skip, (x, w) -> then.run())
+                .setCancelable(false)
+                .create();
+            controllerFriendly(d);
+            d.show();
+            return;
+        }
+        then.run();
     }
 
     // ------------------------------------------------------------ helpers

@@ -50,6 +50,7 @@ public class SettingsActivity extends ControllerActivity
         header.addView(title);
         mList.addView(header);
 
+        buildMusic();
         buildControls();
         buildScreen();
         buildPerformance();
@@ -66,6 +67,21 @@ public class SettingsActivity extends ControllerActivity
     }
 
     // ------------------------------------------------------------ sections
+
+    private void buildMusic()
+    {
+        section(R.string.set_music_title, R.string.set_music_desc);
+        CheckBox on = check(R.string.set_music, MusicPlayer.enabled(this));
+        on.setOnCheckedChangeListener((b, v) -> {
+            EssentiaSettings.setFlag(this, EssentiaSettings.MUSIC, v);
+            MusicPlayer.refresh(this);
+        });
+        card(on);
+        slider(R.string.set_music_volume, 5, 100, MusicPlayer.volume(this), v -> {
+            EssentiaSettings.setMusicVolume(this, v);
+            MusicPlayer.refresh(this);
+        });
+    }
 
     private void buildControls()
     {
@@ -283,6 +299,9 @@ public class SettingsActivity extends ControllerActivity
 
     private void buildAbout()
     {
+        Button news = Ui.button(this, getString(R.string.wn_show), false);
+        news.setOnClickListener(v -> com.hatkid.mkxpz.ui.WhatsNew.show(this));
+
         section(R.string.set_about_title, 0);
         TextView about = Ui.text(this, getString(R.string.set_about_text), 14, Ui.TEXT_DIM, false);
         about.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 10));
@@ -295,6 +314,9 @@ public class SettingsActivity extends ControllerActivity
             } catch (Exception ignored) { }
         });
         mList.addView(repo, wrap());
+        LinearLayout.LayoutParams nlp = wrap();
+        nlp.topMargin = Ui.dp(this, 8);
+        mList.addView(news, nlp);
     }
 
     // ------------------------------------------------------------ widgets
@@ -392,5 +414,19 @@ public class SettingsActivity extends ControllerActivity
         });
         col.addView(bar);
         card(col);
+    }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+        MusicPlayer.resume(this);
+    }
+
+    @Override
+    protected void onPause()
+    {
+        super.onPause();
+        MusicPlayer.pause();
     }
 }
