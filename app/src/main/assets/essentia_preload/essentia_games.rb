@@ -135,3 +135,28 @@ class << Object
     EssentiaGames.tame_resizer if name.to_s == 'pbConfigureWindowedScreen'
   end
 end
+
+# RPG Maker XP's Ruby (1.8.1) let a script define a class again with another
+# parent class: the new class simply replaced the old one. Newer Ruby stops
+# with "superclass mismatch" (Pokémon Cristal: BerryPlantSprite). Every
+# top-level "class X < Y" gets a tiny check in front, on the same line, that
+# does what the old Ruby did.
+module Essentia
+  RECLASS = /^class[ \t]+([A-Z]\w*)[ \t]*<[ \t]*([A-Z][\w:]*)(?=[ \t]*(?:#|;|\r?$))/
+
+  def self.prepare_script(src)
+    return src unless src.is_a?(String) && src.index('class ')
+    src.gsub(RECLASS) { "Essentia.reclass(:#{$1}, #{$2}); class #{$1} < #{$2}" }
+  rescue Exception
+    src
+  end
+
+  def self.reclass(name, parent)
+    return unless Object.const_defined?(name)
+    k = Object.const_get(name)
+    return unless k.is_a?(Class) && parent.is_a?(Class)
+    sup = k.superclass
+    Object.send(:remove_const, name) if sup != parent
+  rescue Exception
+  end
+end

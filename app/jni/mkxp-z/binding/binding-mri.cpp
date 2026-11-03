@@ -909,6 +909,30 @@ bool evalScript(VALUE string, const char *filename)
 
 #define SCRIPT_SECTION_FMT (rgssVer >= 3 ? "{%04ld}" : "Section%03ld")
 
+#if defined(MKXPZ_BUILD_ANDROID)
+static VALUE essentiaPrepareCb(VALUE string)
+{
+    VALUE mod = rb_const_get(rb_cObject, rb_intern("Essentia"));
+    return rb_funcall(mod, rb_intern("prepare_script"), 1, string);
+}
+
+static VALUE essentiaPrepareScript(VALUE string)
+{
+    if (!rb_const_defined(rb_cObject, rb_intern("Essentia")))
+        return string;
+    VALUE mod = rb_const_get(rb_cObject, rb_intern("Essentia"));
+    if (!rb_respond_to(mod, rb_intern("prepare_script")))
+        return string;
+    int st = 0;
+    VALUE out = rb_protect(essentiaPrepareCb, string, &st);
+    if (st || !RB_TYPE_P(out, RUBY_T_STRING)) {
+        rb_set_errinfo(Qnil);
+        return string;
+    }
+    return out;
+}
+#endif
+
 #if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
 /* Essentia: faster game start. Each script section is compiled once and the
  * compiled form is kept (ESSENTIA_ISEQ_DIR); the next time the game starts it
@@ -1180,6 +1204,11 @@ static void runRMXPScripts(BacktraceData &btData) {
             
             int state = 0;
             
+#if defined(MKXPZ_BUILD_ANDROID)
+            // Essentia: small rewrites for what RPG Maker's old Ruby allowed
+            // (see Essentia.prepare_script in essentia_games.rb)
+            string = essentiaPrepareScript(string);
+#endif
 #if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
             if (!essentiaCachedEval(string, fname, state))
 #endif
@@ -1213,7 +1242,8 @@ static void showExc(VALUE exc, const BacktraceData &btData) {
                           bt0, exc, name);
 #else
     // Ruby 1.9's version of this function needs char*
-    RSTRING_PTR(bt0), RSTRING_PTR(exc), RSTRING_PTR(name));
+    // (Essentia: the message, not the exception object)
+    RSTRING_PTR(bt0), RSTRING_PTR(msg), RSTRING_PTR(name));
 #endif
     /* omit "useless" last entry (from ruby:1:in `eval') */
     for (long i = 1, btlen = RARRAY_LEN(bt) - 1; i < btlen; ++i)
@@ -1225,39 +1255,24 @@ static void showExc(VALUE exc, const BacktraceData &btData) {
 #endif
     Debug() << StringValueCStr(ds);
     
-    char *s = RSTRING_PTR(bt0);
-    
-    char line[16];
-    std::string file(512, '\0');
-    
-    char *p = s + strlen(s);
-    char *e;
-    
-    while (p != s)
-        if (*--p == ':')
-            break;
-    
-    e = p;
-    
-    while (p != s)
-        if (*--p == ':')
-            break;
-    
-    /* s         p  e
-     * SectionXXX:YY: in 'blabla' */
-    
-    *e = '\0';
-    strncpy(line, *p ? p + 1 : p, sizeof(line));
-    line[sizeof(line) - 1] = '\0';
-    *e = ':';
-    e = p;
-    
-    /* s         e
-     * SectionXXX:YY: in 'blabla' */
-    
-    *e = '\0';
-    strncpy(&file[0], s, file.size());
-    *e = ':';
+    /* "file:line:in `method'" (the file may contain ':' itself, e.g.
+     * "002:Main"), or just "file:line" (Ruby 1.8) */
+    std::string btStr = RB_TYPE_P(bt0, RUBY_T_STRING) ? std::string(RSTRING_PTR(bt0), RSTRING_LEN(bt0)) : std::string();
+    char line[16] = "?";
+    std::string file(btStr);
+    {
+        size_t in = btStr.rfind(":in ");
+        std::string head = in != std::string::npos ? btStr.substr(0, in) : btStr;
+        size_t colon = head.rfind(':');
+        if (colon != std::string::npos && colon + 1 < head.size() &&
+            head.find_first_not_of("0123456789", colon + 1) == std::string::npos) {
+            strncpy(line, head.c_str() + colon + 1, sizeof(line) - 1);
+            line[sizeof(line) - 1] = '\0';
+            file = head.substr(0, colon);
+        } else {
+            file = head;
+        }
+    }
     
     /* Shrink to fit */
     file.resize(strlen(file.c_str()));

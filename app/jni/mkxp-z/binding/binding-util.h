@@ -22,6 +22,8 @@
 #ifndef BINDING_UTIL_H
 #define BINDING_UTIL_H
 
+#include <stdarg.h>
+#include <stdio.h>
 #include <ruby.h>
 #ifndef MKXPZ_LEGACY_RUBY
 #include <ruby/version.h>
@@ -423,16 +425,28 @@ inline void rb_check_argc(int actual, int expected) {
 #if RAPI_MAJOR < 2
 static inline void rb_error_arity(int argc, int min, int max) {
     if (argc > max || argc < min)
-        rb_raise(rb_eArgError, "Finish me! rb_error_arity()"); // TODO
+        rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)", argc, argc < min ? min : max);
 }
 
 #if RAPI_MINOR < 9
 static inline VALUE rb_sprintf(const char *fmt, ...) {
-    return rb_str_new2("Finish me! rb_sprintf()"); // TODO
+    /* Essentia: plain printf formatting (only C types are used with it here) */
+    char buf[4096];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    return rb_str_new2(buf);
 }
 
 static inline VALUE rb_str_catf(VALUE obj, const char *fmt, ...) {
-    return rb_str_new2("Finish me! rb_str_catf()"); // TODO
+    char buf[4096];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    rb_str_cat2(obj, buf);
+    return obj;
 }
 
 static inline VALUE rb_file_open_str(VALUE filename, const char *mode) {

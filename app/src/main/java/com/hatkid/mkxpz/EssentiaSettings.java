@@ -191,14 +191,19 @@ public final class EssentiaSettings
     }
 
     /** The automatic engine found that this game needs the classic engine. */
+    /** (Remembered per version of Essentia: after an update the modern engine is tried again.) */
     public static boolean learnedClassic(Context c, String path)
     {
-        return learned(c).getBoolean(path, false);
+        try {
+            return learned(c).getInt(path, 0) == BuildConfig.VERSION_CODE;
+        } catch (ClassCastException e) {
+            return false;
+        }
     }
 
     public static void setLearnedClassic(Context c, String path, boolean v)
     {
-        if (v) learned(c).edit().putBoolean(path, true).commit();
+        if (v) learned(c).edit().putInt(path, BuildConfig.VERSION_CODE).commit();
         else learned(c).edit().remove(path).commit();
     }
 
