@@ -940,7 +940,7 @@ struct GraphicsPrivate {
 
 #ifdef MKXPZ_BUILD_ANDROID
         const char *mode = getenv("ESSENTIA_SCREEN_MODE");
-        essentiaAmbientOn = mode && (!strcmp(mode, "ambient") || !strcmp(mode, "wide"));
+        essentiaAmbientOn = mode && !strcmp(mode, "ambient");
 #endif
     }
     

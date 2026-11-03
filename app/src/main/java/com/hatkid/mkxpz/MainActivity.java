@@ -147,7 +147,7 @@ public class MainActivity extends SDLActivity
                 EssentiaSettings.smoothScaling(this) ? "1" : "0", true);
             android.system.Os.setenv("ESSENTIA_DATA_DIR", dataDir != null ? dataDir : "", true);
             android.system.Os.setenv("ESSENTIA_SCREEN_MODE",
-                screenMode != null ? screenMode : EssentiaSettings.SCREEN_AMBIENT, true);
+                screenMode != null ? screenMode : EssentiaSettings.screenMode(this), true);
 
             // Live map for the second screen (written by essentia_live.rb)
             //noinspection ResultOfMethodCallIgnored

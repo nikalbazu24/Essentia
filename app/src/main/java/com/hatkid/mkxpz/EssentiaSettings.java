@@ -92,7 +92,7 @@ public final class EssentiaSettings
     public static final String SCREEN_WIDE = "wide";
     private static final String KEY_SCREEN = "screen_mode";
 
-    public static String screenMode(Context c) { return prefs(c).getString(KEY_SCREEN, SCREEN_AMBIENT); }
+    public static String screenMode(Context c) { return prefs(c).getString(KEY_SCREEN, SCREEN_WIDE); }
     public static void setScreenMode(Context c, String v) { prefs(c).edit().putString(KEY_SCREEN, v).commit(); }
 
     // Performance and diagnostics (booleans)

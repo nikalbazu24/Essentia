@@ -100,10 +100,10 @@ public class SettingsActivity extends ControllerActivity
         mList.addView(fmtLabel);
         RadioGroup fmt = new RadioGroup(this);
         String sm = EssentiaSettings.screenMode(this);
+        fmt.addView(radio(R.string.scr_wide_long, EssentiaSettings.SCREEN_WIDE, sm));
         fmt.addView(radio(R.string.scr_ambient_long, EssentiaSettings.SCREEN_AMBIENT, sm));
         fmt.addView(radio(R.string.scr_original_long, EssentiaSettings.SCREEN_ORIGINAL, sm));
         fmt.addView(radio(R.string.scr_stretch_long, EssentiaSettings.SCREEN_STRETCH, sm));
-        fmt.addView(radio(R.string.scr_wide_long, EssentiaSettings.SCREEN_WIDE, sm));
         fmt.setOnCheckedChangeListener((g, id) -> {
             RadioButton r = g.findViewById(id);
             if (r != null) EssentiaSettings.setScreenMode(this, (String) r.getTag());

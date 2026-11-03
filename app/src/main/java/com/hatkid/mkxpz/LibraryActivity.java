@@ -830,10 +830,10 @@ public class LibraryActivity extends ControllerActivity
 
     private void chooseScreen(Library.Entry e)
     {
-        final String[] values = { "", EssentiaSettings.SCREEN_AMBIENT, EssentiaSettings.SCREEN_ORIGINAL,
-            EssentiaSettings.SCREEN_STRETCH, EssentiaSettings.SCREEN_WIDE };
-        final String[] labels = { getString(R.string.scr_general), getString(R.string.scr_ambient),
-            getString(R.string.scr_original), getString(R.string.scr_stretch), getString(R.string.scr_wide) };
+        final String[] values = { "", EssentiaSettings.SCREEN_WIDE, EssentiaSettings.SCREEN_AMBIENT,
+            EssentiaSettings.SCREEN_ORIGINAL, EssentiaSettings.SCREEN_STRETCH };
+        final String[] labels = { getString(R.string.scr_general), getString(R.string.scr_wide),
+            getString(R.string.scr_ambient), getString(R.string.scr_original), getString(R.string.scr_stretch) };
         int checked = 0;
         for (int i = 0; i < values.length; i++) if (values[i].equals(e.screenMode)) checked = i;
         new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
@@ -843,13 +843,6 @@ public class LibraryActivity extends ControllerActivity
                 e.widescreen = EssentiaSettings.SCREEN_WIDE.equals(e.screenMode);
                 Library.update(this, e);
                 d.dismiss();
-                if (e.widescreen) {
-                    new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                        .setTitle(R.string.scr_wide)
-                        .setMessage(R.string.opt_wide_info)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show();
-                }
                 reload();
             })
             .setNegativeButton(R.string.cancel, null)
