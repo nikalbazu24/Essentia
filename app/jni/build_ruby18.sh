@@ -145,6 +145,8 @@ make -j"$NPROC" exts > make-ext.log 2>&1 || make -j"$NPROC" > make-ext.log 2>&1 
 
 # ------------------------------------------------------------ collect
 cp libruby-static.a "$OUT/lib/libruby18.a"
+# dmyext.o is an empty Init_ext() for builds without extensions; ours is in libruby18ext.a
+"$AR" d "$OUT/lib/libruby18.a" dmyext.o || true
 
 rm -rf extobjs && mkdir extobjs
 n=0
