@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!-- Essentia para ES-DE (Android): sistema "rpgmaker" con juegos de RPG Maker XP/VX/VX Ace.
+     Copia este archivo a ES-DE/custom_systems/es_systems.xml (si ya tienes uno, agrega solo el bloque <system>). -->
+<systemList>
+    <system>
+        <name>rpgmaker</name>
+        <fullname>RPG Maker XP / VX / VX Ace</fullname>
+        <path>%ROMPATH%/rpgmaker</path>
+        <extension>.essentia .ESSENTIA</extension>
+        <command label="Essentia">%EMULATOR_ESSENTIA% %ACTION%=android.intent.action.VIEW %DATA%=%ROMSAF%</command>
+        <platform>pc</platform>
+        <theme>rpgmaker</theme>
+    </system>
+</systemList>

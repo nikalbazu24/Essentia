@@ -306,6 +306,13 @@ try { exp } catch (...) {}
         preloadScripts.push_back("essentia_preload/mkxp_wrap.rb");
         preloadScripts.push_back("essentia_preload/win32_wrap.rb");
     }
+
+    // Essentia: optional 16:9 mode (chosen per game in the library)
+    {
+        const char *wide = getenv("ESSENTIA_WIDESCREEN");
+        if (wide && wide[0] == '1')
+            preloadScripts.push_back("essentia_preload/widescreen.rb");
+    }
 #endif
     fillStringVec(opts["RTP"], rtps);
     fillStringVec(opts["fontSub"], fontSubs);
@@ -408,6 +415,20 @@ void Config::readGameINI() {
         dataPathApp = game.title;
     
     customDataPath = prefPath(dataPathOrg.c_str(), dataPathApp.c_str());
+
+#ifdef MKXPZ_BUILD_ANDROID
+    // Essentia: each game keeps its saves in its own folder, chosen by the app
+    // (by default the game folder itself, like JoiPlay). Without this, every game
+    // would share the app's internal folder and could overwrite another's saves.
+    {
+        const char *dataDir = getenv("ESSENTIA_DATA_DIR");
+        if (dataDir && *dataDir) {
+            customDataPath = dataDir;
+            if (customDataPath.back() != '/')
+                customDataPath += '/';
+        }
+    }
+#endif
     
     if (rgssVersion == 0) {
         /* Try to guess RGSS version based on Data/Scripts extension */

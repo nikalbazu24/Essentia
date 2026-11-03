@@ -76,6 +76,14 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"
             android:exported="false" />
 
+        <!-- Essentia: controls manual and controller tester -->
+        <activity
+            android:name=".ControlsActivity"
+            android:label="@string/ctl_title"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+
         <!-- Essentia: entry point for frontends (Díptico, ES-DE, Daijishō...).
              Receives the game path and starts the engine:
              io.github.nikalbazu24.essentia/com.hatkid.mkxpz.LauncherActivity -->

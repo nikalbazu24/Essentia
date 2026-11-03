@@ -42,6 +42,12 @@ public class MainActivity extends SDLActivity
 
     /** Intent extra with the absolute path of the game folder (set by LauncherActivity). */
     public static final String EXTRA_GAME_PATH = "essentia.GAME_PATH";
+    /** Folder for this game's saves (System.data_directory). */
+    public static final String EXTRA_DATA_DIR = "essentia.DATA_DIR";
+    /** Game title, for the loading screen. */
+    public static final String EXTRA_TITLE = "essentia.TITLE";
+    /** "true" for the experimental 16:9 mode. */
+    public static final String EXTRA_WIDESCREEN = "essentia.WIDESCREEN";
     private static final String GAME_PATH_DEFAULT = Environment.getExternalStorageDirectory() + "/mkxp-z";
     private static String GAME_PATH = GAME_PATH_DEFAULT;
     private static String OBB_MAIN_FILENAME;
@@ -128,8 +134,16 @@ public class MainActivity extends SDLActivity
 
         // Essentia: settings read by the native engine through the environment
         try {
+            Intent in = getIntent();
+            String dataDir = in != null ? in.getStringExtra(EXTRA_DATA_DIR) : null;
+            boolean wide = in != null && in.getBooleanExtra(EXTRA_WIDESCREEN, false);
             android.system.Os.setenv("ESSENTIA_SMOOTH_SCALING",
                 EssentiaSettings.smoothScaling(this) ? "1" : "0", true);
+            android.system.Os.setenv("ESSENTIA_DATA_DIR", dataDir != null ? dataDir : "", true);
+            android.system.Os.setenv("ESSENTIA_WIDESCREEN", wide ? "1" : "0", true);
+            // The phone's motion sensor must not count as "controller 0", or the engine
+            // ignores the real controller (and its sticks).
+            android.system.Os.setenv("SDL_ACCELEROMETER_AS_JOYSTICK", "0", true);
         } catch (Exception e) {
             Log.w(TAG, "Could not pass settings to the engine: " + e);
         }
@@ -200,6 +214,12 @@ public class MainActivity extends SDLActivity
         tvFps.setLayoutParams(params);
 
         mLayout.addView(tvFps);
+
+        // Essentia: loading screen until the game draws its first frame
+        String title = getIntent() != null ? getIntent().getStringExtra(EXTRA_TITLE) : null;
+        mLoading = new com.hatkid.mkxpz.ui.LoadingScreen(this, title != null ? title : "", GAME_PATH);
+        mLayout.addView(mLoading, new android.widget.RelativeLayout.LayoutParams(
+            LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     }
 
     @Override
@@ -247,13 +267,46 @@ public class MainActivity extends SDLActivity
         if (mExitDialog != null && mExitDialog.isShowing())
             return;
 
+        String[] items = {
+            getString(R.string.menu_resume),
+            getString(R.string.menu_controls),
+            getString(R.string.menu_exit)
+        };
         mExitDialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(R.string.menu_title)
+            .setItems(items, (d, which) -> {
+                if (which == 1) {
+                    com.hatkid.mkxpz.ui.ControlsGuide.showDialog(this);
+                } else if (which == 2) {
+                    confirmExit();
+                }
+            })
+            .create();
+        mExitDialog.show();
+    }
+
+    private void confirmExit()
+    {
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(R.string.exit_title)
             .setMessage(R.string.exit_message)
             .setPositiveButton(R.string.exit_confirm, (d, w) -> finish())
             .setNegativeButton(R.string.exit_cancel, (d, w) -> d.dismiss())
-            .create();
-        mExitDialog.show();
+            .show();
+    }
+
+    // Essentia: loading screen
+    private static com.hatkid.mkxpz.ui.LoadingScreen mLoading;
+
+    /** Called by the engine (graphics.cpp) when the game loop starts. */
+    @SuppressWarnings("unused")
+    private static void onGameReady()
+    {
+        if (mMainHandler != null) {
+            mMainHandler.post(() -> {
+                if (mLoading != null) mLoading.finish();
+            });
+        }
     }
 
     @Override
@@ -324,13 +377,11 @@ public class MainActivity extends SDLActivity
     @Override
     public boolean dispatchGenericMotionEvent(MotionEvent evt)
     {
-        // Essentia: handle the d-pad hat and the left stick before SDL's view does,
-        // so they always arrive as arrow keys (and never twice).
-        boolean handled = mGamepad.processDPadEvent(evt);
-        handled |= mGamepad.processStickEvent(evt);
-        if (handled)
-            return true;
-
+        // Essentia: the d-pad hat and the left stick become arrow keys here, and the
+        // event also continues to SDL, so the engine's own controller support (left
+        // stick = arrows) works too. Both paths press the same arrow, so nothing doubles.
+        mGamepad.processDPadEvent(evt);
+        mGamepad.processStickEvent(evt);
         return super.dispatchGenericMotionEvent(evt);
     }
 

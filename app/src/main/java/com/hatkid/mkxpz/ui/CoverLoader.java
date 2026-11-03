@@ -38,8 +38,15 @@ public final class CoverLoader
     /** Shows the cover of {@code gamePath} in {@code view}, or leaves the placeholder. */
     public void load(String gamePath, ImageView view, int placeholderRes)
     {
-        view.setTag(gamePath);
-        Object cached = mCache.get(gamePath);
+        load(gamePath, "", view, placeholderRes);
+    }
+
+    /** Same, preferring the user's own cover image when there is one. */
+    public void load(String gamePath, String customCover, ImageView view, int placeholderRes)
+    {
+        final String key = key(gamePath, customCover);
+        view.setTag(key);
+        Object cached = mCache.get(key);
         if (cached instanceof Bitmap) {
             view.setScaleType(ImageView.ScaleType.CENTER_CROP);
             view.setImageBitmap((Bitmap) cached);
@@ -50,10 +57,10 @@ public final class CoverLoader
         if (cached == NONE) return;
 
         mPool.execute(() -> {
-            Bitmap bmp = decode(gamePath);
-            mCache.put(gamePath, bmp != null ? bmp : NONE);
+            Bitmap bmp = decode(gamePath, customCover);
+            mCache.put(key, bmp != null ? bmp : NONE);
             mUi.post(() -> {
-                if (bmp != null && gamePath.equals(view.getTag())) {
+                if (bmp != null && key.equals(view.getTag())) {
                     view.setScaleType(ImageView.ScaleType.CENTER_CROP);
                     view.setImageBitmap(bmp);
                 }
@@ -61,17 +68,23 @@ public final class CoverLoader
         });
     }
 
-    /** The cached cover if already decoded (for the second screen). */
-    public Bitmap cached(String gamePath)
+    private static String key(String gamePath, String customCover)
     {
-        Object o = mCache.get(gamePath);
+        return gamePath + "|" + (customCover == null ? "" : customCover);
+    }
+
+    /** The cached cover if already decoded (for the second screen). */
+    public Bitmap cached(String gamePath, String customCover)
+    {
+        Object o = mCache.get(key(gamePath, customCover));
         return o instanceof Bitmap ? (Bitmap) o : null;
     }
 
-    private Bitmap decode(String gamePath)
+    private Bitmap decode(String gamePath, String customCover)
     {
         try {
-            File cover = Games.findCover(new File(gamePath));
+            File cover = customCover != null && !customCover.isEmpty() && new File(customCover).isFile()
+                ? new File(customCover) : Games.findCover(new File(gamePath));
             if (cover == null) return null;
 
             BitmapFactory.Options o = new BitmapFactory.Options();

@@ -63,6 +63,33 @@
 #include <time.h>
 #include <cmath>
 
+#ifdef MKXPZ_BUILD_ANDROID
+#include <jni.h>
+#include <SDL_system.h>
+
+/* Essentia: tell the app the game loop is running (hides the loading screen). */
+static void essentiaNotifyGameReady()
+{
+    static bool notified = false;
+    if (notified)
+        return;
+    notified = true;
+
+    JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
+    jobject activity = (jobject)SDL_AndroidGetActivity();
+    if (!env || !activity)
+        return;
+    jclass cls = env->GetObjectClass(activity);
+    jmethodID mID = env->GetStaticMethodID(cls, "onGameReady", "()V");
+    if (mID)
+        env->CallStaticVoidMethod(cls, mID);
+    if (env->ExceptionCheck())
+        env->ExceptionClear();
+    env->DeleteLocalRef(cls);
+    env->DeleteLocalRef(activity);
+}
+#endif
+
 
 #define DEF_SCREEN_W (rgssVer == 1 ? 640 : 544)
 #define DEF_SCREEN_H (rgssVer == 1 ? 480 : 416)
@@ -1146,6 +1173,9 @@ unsigned long long Graphics::lastUpdate() {
 }
 
 void Graphics::update(bool checkForShutdown) {
+#ifdef MKXPZ_BUILD_ANDROID
+    essentiaNotifyGameReady();
+#endif
     p->threadData->rqWindowAdjust.wait();
     p->last_update = shState->runTime();
     

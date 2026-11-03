@@ -4,4 +4,16 @@
         <item quantity="one">Se agregó %d juego</item>
         <item quantity="other">Se agregaron %d juegos</item>
     </plurals>
+    <plurals name="lib_count">
+        <item quantity="one">%d juego</item>
+        <item quantity="other">%d juegos</item>
+    </plurals>
+    <plurals name="imp_done">
+        <item quantity="one">Se importó %d partida</item>
+        <item quantity="other">Se importaron %d partidas</item>
+    </plurals>
+    <plurals name="fe_done">
+        <item quantity="one">Se creó %1$d acceso en:\n%2$s</item>
+        <item quantity="other">Se crearon %1$d accesos en:\n%2$s</item>
+    </plurals>
 </resources>

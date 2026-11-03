@@ -52,6 +52,8 @@ public class SettingsActivity extends ControllerActivity
 
         buildControls();
         buildScreen();
+        buildSaves();
+        buildFrontends();
         buildUpdates();
         buildAbout();
 
@@ -105,6 +107,68 @@ public class SettingsActivity extends ControllerActivity
             13, Ui.TEXT_DIM, false);
         note.setPadding(Ui.dp(this, 4), Ui.dp(this, 6), 0, 0);
         mList.addView(note);
+    }
+
+    private void buildSaves()
+    {
+        section(R.string.set_saves_title, R.string.set_saves_desc);
+        RadioGroup group = new RadioGroup(this);
+        String loc = EssentiaSettings.saveLocation(this);
+        group.addView(radio(R.string.set_saves_game, EssentiaSettings.SAVES_GAME, loc));
+        group.addView(radio(R.string.set_saves_essentia, EssentiaSettings.SAVES_ESSENTIA, loc));
+        group.setOnCheckedChangeListener((g, id) -> {
+            RadioButton r = g.findViewById(id);
+            if (r != null) EssentiaSettings.setSaveLocation(this, (String) r.getTag());
+        });
+        card(group);
+    }
+
+    private static final int REQ_EXPORT = 10;
+
+    private void buildFrontends()
+    {
+        section(R.string.set_fe_title, R.string.set_fe_desc);
+
+        Button export = Ui.button(this, getString(R.string.set_fe_export), true);
+        export.setOnClickListener(v -> {
+            try {
+                startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_EXPORT);
+            } catch (Exception e) {
+                android.widget.Toast.makeText(this, R.string.err_no_picker, android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
+        mList.addView(export, wrap());
+
+        TextView how = Ui.text(this, getString(R.string.set_fe_how), 14, Ui.TEXT_DIM, false);
+        how.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), 0, Ui.dp(this, 10));
+        mList.addView(how);
+
+        Button guide = Ui.button(this, getString(R.string.set_fe_guide), false);
+        guide.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://github.com/nikalbazu24/Essentia/blob/main/docs/frontends.md")));
+            } catch (Exception ignored) { }
+        });
+        mList.addView(guide, wrap());
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQ_EXPORT || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        String path = Games.pathFromUri(this, data.getData());
+        if (path == null) {
+            android.widget.Toast.makeText(this, R.string.set_fe_failed, android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        int n = Shortcuts.export(this, new java.io.File(path));
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(R.string.set_fe_title)
+            .setMessage(getResources().getQuantityString(R.plurals.fe_done, n, n, path))
+            .setPositiveButton(android.R.string.ok, null)
+            .show();
     }
 
     private void buildUpdates()

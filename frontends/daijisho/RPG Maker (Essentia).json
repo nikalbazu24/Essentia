@@ -1,0 +1,29 @@
+{
+  "databaseVersion": 11,
+  "revisionNumber": 1,
+  "platform": {
+    "name": "RPG Maker XP / VX / VX Ace",
+    "uniqueId": "rpgmaker-essentia",
+    "shortname": "rpgmaker",
+    "acceptedFilenameRegex": "^(.*)\\.(?:essentia)$",
+    "scraperSourceList": [],
+    "boxArtAspectRatioId": 0,
+    "useCustomBoxArtAspectRatio": false,
+    "customBoxArtAspectRatio": null,
+    "screenAspectRatioId": 1,
+    "boxArtScaleType": 0,
+    "useForegroundOnBoxArt": false,
+    "extra": ""
+  },
+  "playerList": [
+    {
+      "name": "Essentia",
+      "description": "Fan games de RPG Maker (Pokémon Essentials) con Essentia",
+      "acceptedFilenameRegex": "^(.*)\\.(?:essentia)$",
+      "amStartArguments": "-n io.github.nikalbazu24.essentia/com.hatkid.mkxpz.LauncherActivity\n-a android.intent.action.VIEW\n-d {file.uri}",
+      "killPackageProcesses": false,
+      "killPackageProcessesWarning": true,
+      "extra": ""
+    }
+  ]
+}

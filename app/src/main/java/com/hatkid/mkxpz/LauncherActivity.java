@@ -7,7 +7,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 /**
  * Entry point for frontends (Díptico, ES-DE, Daijishō...):
@@ -15,7 +19,8 @@ import java.io.File;
  *
  * The game comes as a file path or URI in the intent data, or as a string extra such
  * as "path", "game" or "rom". It may point to the game folder or any file inside it
- * (Game.exe, Game.ini...). Without a game, it opens the library.
+ * (Game.exe, Game.ini...), or to a ".essentia" shortcut file whose first line is the
+ * game folder (Essentia creates these for frontends). Without a game, it opens the library.
  */
 public class LauncherActivity extends Activity
 {
@@ -84,6 +89,52 @@ public class LauncherActivity extends Activity
     }
 
     private String pathFromIntent(Intent intent)
+    {
+        String p = rawPathFromIntent(intent);
+        if (p != null && p.toLowerCase(java.util.Locale.ROOT).endsWith(".essentia")) {
+            String inside = readShortcut(new File(p));
+            if (inside != null) return inside;
+        }
+        if (p == null && intent != null && intent.getData() != null) {
+            // A content:// shortcut we can't turn into a path: read it through Android
+            String inside = readShortcut(intent.getData());
+            if (inside != null) return inside;
+        }
+        return p;
+    }
+
+    /** First non-empty line of a .essentia shortcut file. */
+    private static String readShortcut(File f)
+    {
+        try (BufferedReader r = new BufferedReader(new FileReader(f))) {
+            return firstLine(r);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String readShortcut(Uri uri)
+    {
+        try (InputStream in = getContentResolver().openInputStream(uri)) {
+            if (in == null) return null;
+            String line = firstLine(new BufferedReader(new InputStreamReader(in, "UTF-8")));
+            return line != null && line.startsWith("/") ? line : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String firstLine(BufferedReader r) throws java.io.IOException
+    {
+        String line;
+        while ((line = r.readLine()) != null) {
+            line = line.replace("\uFEFF", "").trim();
+            if (!line.isEmpty() && !line.startsWith("#")) return line;
+        }
+        return null;
+    }
+
+    private String rawPathFromIntent(Intent intent)
     {
         if (intent == null) return null;
 

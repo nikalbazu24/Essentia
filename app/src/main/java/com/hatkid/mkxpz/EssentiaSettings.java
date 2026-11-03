@@ -25,6 +25,21 @@ public final class EssentiaSettings
     private static final String KEY_OSC_SCALE = "osc_scale";
     private static final String KEY_DUAL = "dual_screen";
     private static final String KEY_SMOOTH = "smooth_scaling";
+    private static final String KEY_VIEW = "library_view";
+    private static final String KEY_SORT = "library_sort";
+    private static final String KEY_SAVES = "save_location";
+
+    public static final String VIEW_GRID = "grid";
+    public static final String VIEW_BIG = "big";
+    public static final String VIEW_LIST = "list";
+
+    public static final String SORT_RECENT = "recent";
+    public static final String SORT_AZ = "az";
+
+    /** Saves inside each game's folder (same place as JoiPlay). */
+    public static final String SAVES_GAME = "game";
+    /** Saves in /storage/emulated/0/Essentia/Partidas/<game>. */
+    public static final String SAVES_ESSENTIA = "essentia";
 
     private EssentiaSettings() { }
 
@@ -50,6 +65,15 @@ public final class EssentiaSettings
     /** Smooth (bilinear) scaling instead of sharp pixels. */
     public static boolean smoothScaling(Context c) { return prefs(c).getBoolean(KEY_SMOOTH, false); }
     public static void setSmoothScaling(Context c, boolean v) { prefs(c).edit().putBoolean(KEY_SMOOTH, v).commit(); }
+
+    public static String viewMode(Context c) { return prefs(c).getString(KEY_VIEW, VIEW_GRID); }
+    public static void setViewMode(Context c, String v) { prefs(c).edit().putString(KEY_VIEW, v).commit(); }
+
+    public static String sortMode(Context c) { return prefs(c).getString(KEY_SORT, SORT_RECENT); }
+    public static void setSortMode(Context c, String v) { prefs(c).edit().putString(KEY_SORT, v).commit(); }
+
+    public static String saveLocation(Context c) { return prefs(c).getString(KEY_SAVES, SAVES_GAME); }
+    public static void setSaveLocation(Context c, String v) { prefs(c).edit().putString(KEY_SAVES, v).commit(); }
 
     /** True when a physical controller (gamepad / joystick) is connected. */
     public static boolean hasPhysicalController(Context c)

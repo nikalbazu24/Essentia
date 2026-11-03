@@ -21,12 +21,21 @@ public final class Library
         public final String path;
         public String title;
         public long lastPlayed;
+        /** Custom cover image chosen by the user (absolute path), or "" for automatic. */
+        public String cover = "";
+        /** Experimental 16:9 mode for this game. */
+        public boolean widescreen = false;
 
         Entry(String path, String title, long lastPlayed)
         {
             this.path = path;
             this.title = title;
             this.lastPlayed = lastPlayed;
+        }
+
+        public String displayTitle()
+        {
+            return title == null || title.isEmpty() ? new File(path).getName() : title;
         }
     }
 
@@ -45,13 +54,16 @@ public final class Library
             JSONArray arr = new JSONArray(prefs(c).getString(KEY, "[]"));
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject o = arr.getJSONObject(i);
-                out.add(new Entry(o.getString("path"), o.optString("title", ""), o.optLong("lastPlayed", 0)));
+                Entry e = new Entry(o.getString("path"), o.optString("title", ""), o.optLong("lastPlayed", 0));
+                e.cover = o.optString("cover", "");
+                e.widescreen = o.optBoolean("widescreen", false);
+                out.add(e);
             }
         } catch (Exception ignored) { }
 
         Collections.sort(out, (a, b) -> {
             if (a.lastPlayed != b.lastPlayed) return Long.compare(b.lastPlayed, a.lastPlayed);
-            return a.title.compareToIgnoreCase(b.title);
+            return a.displayTitle().compareToIgnoreCase(b.displayTitle());
         });
         return out;
     }
@@ -65,10 +77,19 @@ public final class Library
                 o.put("path", e.path);
                 o.put("title", e.title);
                 o.put("lastPlayed", e.lastPlayed);
+                o.put("cover", e.cover);
+                o.put("widescreen", e.widescreen);
                 arr.put(o);
             }
         } catch (Exception ignored) { }
         prefs(c).edit().putString(KEY, arr.toString()).commit();
+    }
+
+    /** The entry for a game folder, or null if it isn't in the library. */
+    public static synchronized Entry find(Context c, String path)
+    {
+        for (Entry e : load(c)) if (e.path.equals(path)) return e;
+        return null;
     }
 
     /** Adds a game (if new). Returns true when it was added. */
@@ -80,6 +101,16 @@ public final class Library
         list.add(new Entry(path, Games.readTitle(dir), 0));
         save(c, list);
         return true;
+    }
+
+    /** Saves the changes made to an entry (title, cover, widescreen...). */
+    public static synchronized void update(Context c, Entry changed)
+    {
+        List<Entry> list = load(c);
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).path.equals(changed.path)) list.set(i, changed);
+        }
+        save(c, list);
     }
 
     public static synchronized void remove(Context c, String path)

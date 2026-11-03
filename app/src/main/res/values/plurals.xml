@@ -4,4 +4,16 @@
         <item quantity="one">%d game added</item>
         <item quantity="other">%d games added</item>
     </plurals>
+    <plurals name="lib_count">
+        <item quantity="one">%d game</item>
+        <item quantity="other">%d games</item>
+    </plurals>
+    <plurals name="imp_done">
+        <item quantity="one">%d save imported</item>
+        <item quantity="other">%d saves imported</item>
+    </plurals>
+    <plurals name="fe_done">
+        <item quantity="one">%1$d shortcut created in:\n%2$s</item>
+        <item quantity="other">%1$d shortcuts created in:\n%2$s</item>
+    </plurals>
 </resources>

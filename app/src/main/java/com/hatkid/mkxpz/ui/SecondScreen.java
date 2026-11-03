@@ -95,8 +95,17 @@ public final class SecondScreen extends Presentation
 
     public void showGame(String title, Bitmap cover)
     {
+        showGame(title, null, cover);
+    }
+
+    /** Title, a detail line (last played, 16:9...) and the cover. */
+    public void showGame(String title, String detail, Bitmap cover)
+    {
         if (mTitle == null) return;
         mTitle.setText(title);
+        mHint.setText(detail != null && !detail.isEmpty()
+            ? detail + "   ·   " + getContext().getString(R.string.lib_second_hint)
+            : getContext().getString(R.string.lib_second_hint));
         if (cover != null) {
             mCover.setImageBitmap(cover);
         } else {

@@ -79,10 +79,18 @@ public final class Games
     {
         Log.i(TAG, "Starting game in " + gameDir);
         killGameProcess(a);
-        Library.markPlayed(a, gameDir.getAbsolutePath());
+
+        String path = gameDir.getAbsolutePath();
+        Library.markPlayed(a, path);
+        Library.Entry entry = Library.find(a, path);
+        String title = entry != null ? entry.displayTitle() : readTitle(gameDir);
+        boolean wide = entry != null && entry.widescreen;
 
         Intent intent = new Intent(a, MainActivity.class);
-        intent.putExtra(MainActivity.EXTRA_GAME_PATH, gameDir.getAbsolutePath());
+        intent.putExtra(MainActivity.EXTRA_GAME_PATH, path);
+        intent.putExtra(MainActivity.EXTRA_TITLE, title);
+        intent.putExtra(MainActivity.EXTRA_WIDESCREEN, wide);
+        intent.putExtra(MainActivity.EXTRA_DATA_DIR, Saves.dirFor(a, gameDir, title).getAbsolutePath());
         if (newTask) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         }
@@ -206,6 +214,9 @@ public final class Games
     /** Best guess for a cover picture: the game's title screen, or an icon. */
     public static File findCover(File dir)
     {
+        File custom = new File(dir, "essentia-cover.png");
+        if (custom.isFile()) return custom;
+
         File titles = findChild(findChild(dir, "Graphics"), "Titles");
         File f = findImage(titles, "title");
         if (f == null) f = findAnyImage(titles);
