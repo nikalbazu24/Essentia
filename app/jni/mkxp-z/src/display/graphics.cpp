@@ -66,6 +66,8 @@
 #ifdef MKXPZ_BUILD_ANDROID
 #include <jni.h>
 #include <SDL_system.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Essentia: tell the app the game loop is running (hides the loading screen). */
 static void essentiaNotifyGameReady()
@@ -677,6 +679,7 @@ private:
     Quad screenQuad;
     
     Quad brightnessQuad;
+
     bool brightEffect;
 };
 
@@ -840,6 +843,57 @@ struct GraphicsPrivate {
     Vec2i integerScaleFactor;
     TEXFBO integerScaleBuffer;
     bool integerScaleActive;
+#ifdef MKXPZ_BUILD_ANDROID
+    /* Essentia "ambient" screen mode: the game keeps its shape in the middle and the
+     * rest of the screen is filled with a blurred, darkened copy of the same picture.
+     * Works with every game, because the game itself is not changed. */
+    bool essentiaAmbientOn = false;
+    bool essentiaAmbientReady = false;
+    TEXFBO essentiaBlur1, essentiaBlur2;
+    Quad essentiaDim;
+
+    void essentiaAmbient(TEXFBO &src, const Vec2i &srcSize) {
+        if (!essentiaAmbientReady) {
+            TEXFBO::init(essentiaBlur1);
+            TEXFBO::allocEmpty(essentiaBlur1, 128, 72);
+            TEXFBO::linkFBO(essentiaBlur1);
+            TEXFBO::init(essentiaBlur2);
+            TEXFBO::allocEmpty(essentiaBlur2, 24, 14);
+            TEXFBO::linkFBO(essentiaBlur2);
+            essentiaAmbientReady = true;
+        }
+
+        /* Shrink in two steps: a cheap, soft blur */
+        GLMeta::blitBegin(essentiaBlur1);
+        GLMeta::blitSource(src);
+        GLMeta::blitRectangle(IntRect(0, 0, srcSize.x, srcSize.y), IntRect(0, 0, 128, 72), true);
+        GLMeta::blitEnd();
+
+        GLMeta::blitBegin(essentiaBlur2);
+        GLMeta::blitSource(essentiaBlur1);
+        GLMeta::blitRectangle(IntRect(0, 0, 128, 72), IntRect(0, 0, 24, 14), true);
+        GLMeta::blitEnd();
+
+        /* Stretch it over the whole screen (flipped, like the game picture) */
+        GLMeta::blitBeginScreen(winSize);
+        GLMeta::blitSource(essentiaBlur2);
+        GLMeta::blitRectangle(IntRect(0, 0, 24, 14), IntRect(0, winSize.y, winSize.x, -winSize.y), true);
+        GLMeta::blitEnd();
+
+        /* Darken it so the game stands out */
+        glState.viewport.pushSet(IntRect(0, 0, winSize.x, winSize.y));
+        SimpleColorShader &shader = shState->shaders().simpleColor;
+        shader.bind();
+        shader.applyViewportProj();
+        shader.setTranslation(Vec2i());
+        essentiaDim.setTexPosRect(FloatRect(0, 0, winSize.x, winSize.y), FloatRect(0, 0, winSize.x, winSize.y));
+        essentiaDim.setColor(Vec4(0, 0, 0, 0.55f));
+        glState.blend.pushSet(true);
+        essentiaDim.draw();
+        glState.blend.pop();
+        glState.viewport.pop();
+    }
+#endif
     bool integerLastMileScaling;
     
     std::vector<unsigned long long> avgFPSData;
@@ -883,9 +937,20 @@ struct GraphicsPrivate {
         screenQuad.setTexPosRect(screenRect, screenRect);
         
         fpsLimiter.resetFrameAdjust();
+
+#ifdef MKXPZ_BUILD_ANDROID
+        const char *mode = getenv("ESSENTIA_SCREEN_MODE");
+        essentiaAmbientOn = mode && !strcmp(mode, "ambient");
+#endif
     }
     
     ~GraphicsPrivate() {
+#ifdef MKXPZ_BUILD_ANDROID
+        if (essentiaAmbientReady) {
+            TEXFBO::fini(essentiaBlur1);
+            TEXFBO::fini(essentiaBlur2);
+        }
+#endif
         TEXFBO::fini(frozenScene);
         TEXFBO::fini(integerScaleBuffer);
         SDL_DestroyMutex(avgFPSLock);
@@ -1095,6 +1160,14 @@ struct GraphicsPrivate {
         }
         
         FBO::clear();
+#ifdef MKXPZ_BUILD_ANDROID
+        if (essentiaAmbientOn && !integerScaleActive) {
+            GLMeta::blitEnd();
+            essentiaAmbient(screen.getPP().frontBuffer(), scRes);
+            GLMeta::blitBeginScreen(winSize);
+            GLMeta::blitSource(screen.getPP().frontBuffer());
+        }
+#endif
         metaBlitBufferFlippedScaled(sourceSize);
         
         GLMeta::blitEnd();
@@ -1309,6 +1382,10 @@ void Graphics::transition(int duration, const char *filename, int vague) {
         FBO::unbind();
         FBO::clear();
         
+#ifdef MKXPZ_BUILD_ANDROID
+        if (p->essentiaAmbientOn && !p->integerScaleActive)
+            p->essentiaAmbient(transBuffer, p->scRes);
+#endif
         GLMeta::blitBeginScreen(Vec2i(p->winSize));
         GLMeta::blitSource(transBuffer);
         p->metaBlitBufferFlippedScaled();

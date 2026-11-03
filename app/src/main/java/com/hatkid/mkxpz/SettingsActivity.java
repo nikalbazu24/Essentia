@@ -93,6 +93,24 @@ public class SettingsActivity extends ControllerActivity
     {
         section(R.string.set_screen_title, 0);
 
+        TextView fmtLabel = Ui.text(this, getString(R.string.set_screen_format), 15, Ui.TEXT, true);
+        fmtLabel.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 4));
+        mList.addView(fmtLabel);
+        RadioGroup fmt = new RadioGroup(this);
+        String sm = EssentiaSettings.screenMode(this);
+        fmt.addView(radio(R.string.scr_ambient_long, EssentiaSettings.SCREEN_AMBIENT, sm));
+        fmt.addView(radio(R.string.scr_original_long, EssentiaSettings.SCREEN_ORIGINAL, sm));
+        fmt.addView(radio(R.string.scr_stretch_long, EssentiaSettings.SCREEN_STRETCH, sm));
+        fmt.addView(radio(R.string.scr_wide_long, EssentiaSettings.SCREEN_WIDE, sm));
+        fmt.setOnCheckedChangeListener((g, id) -> {
+            RadioButton r = g.findViewById(id);
+            if (r != null) EssentiaSettings.setScreenMode(this, (String) r.getTag());
+        });
+        card(fmt);
+        TextView fmtNote = Ui.text(this, getString(R.string.set_screen_format_note), 13, Ui.TEXT_DIM, false);
+        fmtNote.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 10));
+        mList.addView(fmtNote);
+
         CheckBox smooth = check(R.string.set_smooth, EssentiaSettings.smoothScaling(this));
         smooth.setOnCheckedChangeListener((b, on) -> EssentiaSettings.setSmoothScaling(this, on));
         card(smooth);
@@ -127,6 +145,8 @@ public class SettingsActivity extends ControllerActivity
     private void buildPerformance()
     {
         section(R.string.set_perf_title, R.string.set_perf_desc);
+        flagRow(R.string.set_perf_fast_load, EssentiaSettings.PERF_FAST_LOAD, true);
+        flagRow(R.string.set_perf_load_times, EssentiaSettings.PERF_LOAD_TIMES, true);
         flagRow(R.string.set_perf_fps, EssentiaSettings.PERF_SHOW_FPS, false);
         flagRow(R.string.set_perf_frameskip, EssentiaSettings.PERF_FRAMESKIP, false);
         flagRow(R.string.set_perf_vsync, EssentiaSettings.PERF_VSYNC, false);

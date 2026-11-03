@@ -20,6 +20,7 @@
 */
 
 #include "sharedstate.h"
+#include "essentia-android.h"
 
 #include "util.h"
 #include "filesystem.h"
@@ -142,8 +143,10 @@ struct SharedStatePrivate
 		for (size_t i = 0; i < config.rtps.size(); ++i)
 			fileSystem.addPath(config.rtps[i].c_str());
 
+		essentiaLoadPhase("files");
 		if (config.pathCache)
 			fileSystem.createPathCache();
+		essentiaLoadPhase("engine");
 
 		fileSystem.initFontSets(fontState);
 

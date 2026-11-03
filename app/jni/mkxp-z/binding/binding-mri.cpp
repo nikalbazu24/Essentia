@@ -28,6 +28,7 @@
 #include "util/util.h"
 #include "util/sdl-util.h"
 #include "util/debugwriter.h"
+#include "essentia-android.h"
 #include "util/boost-hash.h"
 #include "util/exception.h"
 #include "util/encoding.h"
@@ -940,6 +941,7 @@ static void essentiaRetryLegacy(VALUE string, VALUE fname, int &state)
 #endif
 
 static void runRMXPScripts(BacktraceData &btData) {
+    essentiaLoadPhase("scripts");
     const Config &conf = shState->rtData().config;
     const std::string &scriptPack = conf.game.scripts;
     
@@ -1020,6 +1022,8 @@ static void runRMXPScripts(BacktraceData &btData) {
         rb_ary_store(script, 3, rb_utf8_str_new_cstr(decodeBuffer.c_str()));
     }
     
+    essentiaLoadPhase("start");
+
     /* Execute preloaded scripts */
     for (std::vector<std::string>::const_iterator i = conf.preloadScripts.begin();
          i != conf.preloadScripts.end(); ++i)

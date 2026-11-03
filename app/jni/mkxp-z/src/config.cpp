@@ -6,6 +6,7 @@
 //
 
 #include <stdlib.h>
+#include <string.h>
 #include "config.h"
 #include <SDL_filesystem.h>
 #include <assert.h>
@@ -319,10 +320,21 @@ try { exp } catch (...) {}
     // Essentia: compatibility helpers for every game (Windows programs, Ruby 1.8 syntax)
     preloadScripts.insert(preloadScripts.begin(), "essentia_preload/essentia_compat.rb");
 
-    // Essentia: optional 16:9 mode (chosen per game in the library)
+    // Essentia: live map for the second screen (only when the app asks for it)
     {
-        const char *wide = getenv("ESSENTIA_WIDESCREEN");
-        if (wide && wide[0] == '1')
+        const char *live = getenv("ESSENTIA_LIVE_FILE");
+        if (live && *live)
+            preloadScripts.push_back("essentia_preload/essentia_live.rb");
+    }
+
+    // Essentia: screen format (chosen in the settings or per game)
+    //   original: game shape, black bars   ambient: game shape, blurred picture on the sides
+    //   stretch: fill the screen           wide: wider game resolution (experimental)
+    {
+        const char *mode = getenv("ESSENTIA_SCREEN_MODE");
+        if (mode && !strcmp(mode, "stretch"))
+            fixedAspectRatio = false;
+        if (mode && !strcmp(mode, "wide"))
             preloadScripts.push_back("essentia_preload/widescreen.rb");
     }
 #endif

@@ -84,12 +84,13 @@ public final class Games
         Library.markPlayed(a, path);
         Library.Entry entry = Library.find(a, path);
         String title = entry != null ? entry.displayTitle() : readTitle(gameDir);
-        boolean wide = entry != null && entry.widescreen;
+        String screen = entry != null && !entry.screenMode.isEmpty()
+            ? entry.screenMode : EssentiaSettings.screenMode(a);
 
         Intent intent = new Intent(a, MainActivity.class);
         intent.putExtra(MainActivity.EXTRA_GAME_PATH, path);
         intent.putExtra(MainActivity.EXTRA_TITLE, title);
-        intent.putExtra(MainActivity.EXTRA_WIDESCREEN, wide);
+        intent.putExtra(MainActivity.EXTRA_SCREEN_MODE, screen);
         intent.putExtra(MainActivity.EXTRA_DATA_DIR, Saves.dirFor(a, gameDir, title).getAbsolutePath());
         if (newTask) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

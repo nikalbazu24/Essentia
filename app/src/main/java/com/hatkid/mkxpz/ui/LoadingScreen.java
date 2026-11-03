@@ -33,21 +33,27 @@ public final class LoadingScreen extends FrameLayout
     private final TextView mStatus;
     private final TextView mHint;
     private boolean mDone = false;
+    private final boolean mShowTimes;
+    private String mPhase = null;
+    private long mPhaseStart;
+    private final java.util.LinkedHashMap<String, Long> mPhaseTimes = new java.util.LinkedHashMap<>();
 
     private final Runnable mTick = new Runnable() {
         @Override
         public void run() {
             if (mDone) return;
             long secs = (SystemClock.elapsedRealtime() - mStart) / 1000;
-            mStatus.setText(getContext().getString(R.string.loading_status, secs));
+            mStatus.setText(getContext().getString(R.string.loading_status, secs)
+                + (mPhase != null ? "  ·  " + phaseLabel(mPhase) : ""));
             if (secs >= 10) mHint.setAlpha(1f);
             mHandler.postDelayed(this, 500);
         }
     };
 
-    public LoadingScreen(Context c, String title, String gamePath)
+    public LoadingScreen(Context c, String title, String gamePath, boolean showTimes)
     {
         super(c);
+        mShowTimes = showTimes;
         setBackgroundColor(Ui.BG);
         setClickable(true); // touches don't reach the game while it loads
 
@@ -110,13 +116,47 @@ public final class LoadingScreen extends FrameLayout
         }, "EssentiaLoadingCover").start();
     }
 
+    private String phaseLabel(String phase)
+    {
+        Context c = getContext();
+        switch (phase) {
+            case "files": return c.getString(R.string.loading_files);
+            case "engine": return c.getString(R.string.loading_engine);
+            case "scripts": return c.getString(R.string.loading_scripts);
+            case "start": return c.getString(R.string.loading_start);
+            default: return phase;
+        }
+    }
+
+    /** The engine moved to another loading stage. */
+    public void setPhase(String phase)
+    {
+        long now = SystemClock.elapsedRealtime();
+        if (mPhase != null) mPhaseTimes.put(mPhase, now - mPhaseStart);
+        else mPhaseTimes.put("prep", now - mStart);
+        mPhase = phase;
+        mPhaseStart = now;
+    }
+
     /** The game is running: fade away. */
     public void finish()
     {
         if (mDone) return;
         mDone = true;
-        Log.i(TAG, String.format(Locale.ROOT, "Game ready after %.1f s",
-            (SystemClock.elapsedRealtime() - mStart) / 1000f));
+        long now = SystemClock.elapsedRealtime();
+        if (mPhase != null) mPhaseTimes.put(mPhase, now - mPhaseStart);
+        float total = (now - mStart) / 1000f;
+        Log.i(TAG, String.format(Locale.ROOT, "Game ready after %.1f s %s", total, mPhaseTimes));
+
+        if (mShowTimes) {
+            StringBuilder sb = new StringBuilder(getContext().getString(R.string.loading_done, total));
+            for (java.util.Map.Entry<String, Long> e : mPhaseTimes.entrySet()) {
+                String name = "prep".equals(e.getKey()) ? getContext().getString(R.string.loading_prep) : phaseLabel(e.getKey());
+                sb.append("\n").append(name).append(": ")
+                  .append(String.format(Locale.ROOT, "%.1f s", e.getValue() / 1000f));
+            }
+            android.widget.Toast.makeText(getContext(), sb.toString(), android.widget.Toast.LENGTH_LONG).show();
+        }
 
         AlphaAnimation out = new AlphaAnimation(1f, 0f);
         out.setDuration(350);

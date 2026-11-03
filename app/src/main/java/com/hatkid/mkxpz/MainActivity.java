@@ -46,8 +46,8 @@ public class MainActivity extends SDLActivity
     public static final String EXTRA_DATA_DIR = "essentia.DATA_DIR";
     /** Game title, for the loading screen. */
     public static final String EXTRA_TITLE = "essentia.TITLE";
-    /** "true" for the experimental 16:9 mode. */
-    public static final String EXTRA_WIDESCREEN = "essentia.WIDESCREEN";
+    /** Screen format: original, ambient, stretch or wide. */
+    public static final String EXTRA_SCREEN_MODE = "essentia.SCREEN_MODE";
     private static final String GAME_PATH_DEFAULT = Environment.getExternalStorageDirectory() + "/mkxp-z";
     private static String GAME_PATH = GAME_PATH_DEFAULT;
     private static String OBB_MAIN_FILENAME;
@@ -136,11 +136,31 @@ public class MainActivity extends SDLActivity
         try {
             Intent in = getIntent();
             String dataDir = in != null ? in.getStringExtra(EXTRA_DATA_DIR) : null;
-            boolean wide = in != null && in.getBooleanExtra(EXTRA_WIDESCREEN, false);
+            String screenMode = in != null ? in.getStringExtra(EXTRA_SCREEN_MODE) : null;
             android.system.Os.setenv("ESSENTIA_SMOOTH_SCALING",
                 EssentiaSettings.smoothScaling(this) ? "1" : "0", true);
             android.system.Os.setenv("ESSENTIA_DATA_DIR", dataDir != null ? dataDir : "", true);
-            android.system.Os.setenv("ESSENTIA_WIDESCREEN", wide ? "1" : "0", true);
+            android.system.Os.setenv("ESSENTIA_SCREEN_MODE",
+                screenMode != null ? screenMode : EssentiaSettings.SCREEN_AMBIENT, true);
+
+            // Live map for the second screen (written by essentia_live.rb)
+            //noinspection ResultOfMethodCallIgnored
+            new java.io.File(getCacheDir(), "essentia_live.txt").delete();
+            boolean livePanel = EssentiaSettings.GAME2_PANEL.equals(EssentiaSettings.gameSecondScreen(this));
+            android.system.Os.setenv("ESSENTIA_LIVE_FILE",
+                livePanel ? new java.io.File(getCacheDir(), "essentia_live.txt").getAbsolutePath() : "", true);
+
+            // Faster loading: give Ruby a bigger memory heap from the start, so it doesn't
+            // stop to clean up memory thousands of times while the game loads its data.
+            if (EssentiaSettings.flag(this, EssentiaSettings.PERF_FAST_LOAD, true)) {
+                android.system.Os.setenv("RUBY_GC_HEAP_INIT_SLOTS", "800000", true);
+                android.system.Os.setenv("RUBY_GC_HEAP_FREE_SLOTS", "200000", true);
+                android.system.Os.setenv("RUBY_GC_HEAP_GROWTH_FACTOR", "1.6", true);
+                android.system.Os.setenv("RUBY_GC_MALLOC_LIMIT", "67108864", true);
+                android.system.Os.setenv("RUBY_GC_MALLOC_LIMIT_MAX", "268435456", true);
+                android.system.Os.setenv("RUBY_GC_OLDMALLOC_LIMIT", "67108864", true);
+                android.system.Os.setenv("RUBY_GC_OLDMALLOC_LIMIT_MAX", "268435456", true);
+            }
             // The phone's motion sensor must not count as "controller 0", or the engine
             // ignores the real controller (and its sticks).
             android.system.Os.setenv("SDL_ACCELEROMETER_AS_JOYSTICK", "0", true);
@@ -162,6 +182,9 @@ public class MainActivity extends SDLActivity
 
         // Essentia: performance options for the game window
         applyWindowPerformance();
+
+        // Essentia: take the sound over from the frontend (its music pauses)
+        requestAudio();
 
         mStorageManager = (StorageManager) getSystemService(STORAGE_SERVICE);
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -229,7 +252,8 @@ public class MainActivity extends SDLActivity
 
         // Essentia: loading screen until the game draws its first frame
         String title = getIntent() != null ? getIntent().getStringExtra(EXTRA_TITLE) : null;
-        mLoading = new com.hatkid.mkxpz.ui.LoadingScreen(this, title != null ? title : "", GAME_PATH);
+        mLoading = new com.hatkid.mkxpz.ui.LoadingScreen(this, title != null ? title : "", GAME_PATH,
+            EssentiaSettings.flag(this, EssentiaSettings.PERF_LOAD_TIMES, true));
         mLayout.addView(mLoading, new android.widget.RelativeLayout.LayoutParams(
             LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     }
@@ -371,6 +395,7 @@ public class MainActivity extends SDLActivity
         String title = getIntent() != null ? getIntent().getStringExtra(EXTRA_TITLE) : null;
         mPanel = com.hatkid.mkxpz.ui.GamePanel.show(this, getWindowManager().getDefaultDisplay(),
             EssentiaSettings.GAME2_BLACK.equals(mode), title != null ? title : "",
+            GAME_PATH, new java.io.File(getCacheDir(), "essentia_live.txt"),
             new com.hatkid.mkxpz.ui.GamePanel.Keys() {
                 @Override public void down(int k) { SDLActivity.onNativeKeyDown(k); debugKey(k, true); }
                 @Override public void up(int k) { SDLActivity.onNativeKeyUp(k); debugKey(k, false); }
@@ -395,6 +420,44 @@ public class MainActivity extends SDLActivity
         if (mPanel != null) {
             mPanel.dismiss();
             mPanel = null;
+        }
+    }
+
+    // Essentia: audio focus, so the frontend's music stops while playing
+    private android.media.AudioFocusRequest mFocusRequest;
+
+    private void requestAudio()
+    {
+        try {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+            if (am == null) return;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                mFocusRequest = new android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(new android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_GAME)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build())
+                    .setOnAudioFocusChangeListener(change -> { })
+                    .build();
+                am.requestAudioFocus(mFocusRequest);
+            } else {
+                am.requestAudioFocus(change -> { }, android.media.AudioManager.STREAM_MUSIC,
+                    android.media.AudioManager.AUDIOFOCUS_GAIN);
+            }
+            setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
+        } catch (Exception e) {
+            Log.w(TAG, "Audio focus not taken: " + e);
+        }
+    }
+
+    /** Called by the engine with the loading stage ("files", "engine", "scripts", "start"). */
+    @SuppressWarnings("unused")
+    private static void onLoadPhase(String phase)
+    {
+        if (mMainHandler != null) {
+            mMainHandler.post(() -> {
+                if (mLoading != null) mLoading.setPhase(phase);
+            });
         }
     }
 

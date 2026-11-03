@@ -504,7 +504,8 @@ public class LibraryActivity extends ControllerActivity
         String when = e.lastPlayed == 0 ? getString(R.string.lib_never_played)
             : getString(R.string.lib_played, DateUtils.getRelativeTimeSpanString(e.lastPlayed,
                 System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString());
-        return e.widescreen ? when + "  ·  16:9" : when;
+        String mode = screenLabel(e.screenMode);
+        return mode == null ? when : when + "  ·  " + mode;
     }
 
     private static final class Holder
@@ -557,7 +558,9 @@ public class LibraryActivity extends ControllerActivity
     {
         Holder h = (Holder) card.getTag();
         h.title.setText(e.displayTitle());
-        h.badge.setVisibility(e.widescreen ? View.VISIBLE : View.GONE);
+        String mode = screenLabel(e.screenMode);
+        h.badge.setText(mode == null ? "" : mode);
+        h.badge.setVisibility(mode == null ? View.GONE : View.VISIBLE);
         mCovers.load(e.path, e.cover, h.cover, R.drawable.ic_launcher_foreground);
     }
 
@@ -759,8 +762,7 @@ public class LibraryActivity extends ControllerActivity
         labels.add(getString(R.string.opt_cover)); actions.add(() -> pickCover(e));
         if (!e.cover.isEmpty()) { labels.add(getString(R.string.opt_cover_reset)); actions.add(() -> resetCover(e)); }
         labels.add(getString(R.string.opt_rename)); actions.add(() -> rename(e));
-        labels.add(getString(e.widescreen ? R.string.opt_wide_off : R.string.opt_wide_on));
-        actions.add(() -> toggleWide(e));
+        labels.add(getString(R.string.opt_screen)); actions.add(() -> chooseScreen(e));
         labels.add(getString(R.string.opt_import)); actions.add(() -> importSaves(e));
         labels.add(getString(R.string.lib_remove)); actions.add(() -> { Library.remove(this, e.path); reload(); });
 
@@ -789,18 +791,45 @@ public class LibraryActivity extends ControllerActivity
             .show();
     }
 
-    private void toggleWide(Library.Entry e)
+    /** Short badge for a game with its own screen format, or null when it follows the general one. */
+    private String screenLabel(String mode)
     {
-        e.widescreen = !e.widescreen;
-        Library.update(this, e);
-        if (e.widescreen) {
-            new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(R.string.opt_wide_on)
-                .setMessage(R.string.opt_wide_info)
-                .setPositiveButton(android.R.string.ok, null)
-                .show();
+        if (mode == null || mode.isEmpty()) return null;
+        switch (mode) {
+            case EssentiaSettings.SCREEN_ORIGINAL: return "4:3";
+            case EssentiaSettings.SCREEN_STRETCH: return getString(R.string.scr_badge_stretch);
+            case EssentiaSettings.SCREEN_WIDE: return "16:9";
+            case EssentiaSettings.SCREEN_AMBIENT: return getString(R.string.scr_badge_ambient);
+            default: return null;
         }
-        reload();
+    }
+
+    private void chooseScreen(Library.Entry e)
+    {
+        final String[] values = { "", EssentiaSettings.SCREEN_AMBIENT, EssentiaSettings.SCREEN_ORIGINAL,
+            EssentiaSettings.SCREEN_STRETCH, EssentiaSettings.SCREEN_WIDE };
+        final String[] labels = { getString(R.string.scr_general), getString(R.string.scr_ambient),
+            getString(R.string.scr_original), getString(R.string.scr_stretch), getString(R.string.scr_wide) };
+        int checked = 0;
+        for (int i = 0; i < values.length; i++) if (values[i].equals(e.screenMode)) checked = i;
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(R.string.opt_screen)
+            .setSingleChoiceItems(labels, checked, (d, which) -> {
+                e.screenMode = values[which];
+                e.widescreen = EssentiaSettings.SCREEN_WIDE.equals(e.screenMode);
+                Library.update(this, e);
+                d.dismiss();
+                if (e.widescreen) {
+                    new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                        .setTitle(R.string.scr_wide)
+                        .setMessage(R.string.opt_wide_info)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+                }
+                reload();
+            })
+            .setNegativeButton(R.string.cancel, null)
+            .show();
     }
 
     private void pickCover(Library.Entry e)

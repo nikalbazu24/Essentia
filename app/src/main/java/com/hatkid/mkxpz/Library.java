@@ -23,8 +23,10 @@ public final class Library
         public long lastPlayed;
         /** Custom cover image chosen by the user (absolute path), or "" for automatic. */
         public String cover = "";
-        /** Experimental 16:9 mode for this game. */
+        /** Experimental 16:9 mode for this game (older setting, now part of screenMode). */
         public boolean widescreen = false;
+        /** Screen format for this game, or "" to use the general setting. */
+        public String screenMode = "";
 
         Entry(String path, String title, long lastPlayed)
         {
@@ -57,6 +59,7 @@ public final class Library
                 Entry e = new Entry(o.getString("path"), o.optString("title", ""), o.optLong("lastPlayed", 0));
                 e.cover = o.optString("cover", "");
                 e.widescreen = o.optBoolean("widescreen", false);
+                e.screenMode = o.optString("screenMode", e.widescreen ? EssentiaSettings.SCREEN_WIDE : "");
                 out.add(e);
             }
         } catch (Exception ignored) { }
@@ -78,7 +81,8 @@ public final class Library
                 o.put("title", e.title);
                 o.put("lastPlayed", e.lastPlayed);
                 o.put("cover", e.cover);
-                o.put("widescreen", e.widescreen);
+                o.put("widescreen", EssentiaSettings.SCREEN_WIDE.equals(e.screenMode));
+                o.put("screenMode", e.screenMode);
                 arr.put(o);
             }
         } catch (Exception ignored) { }

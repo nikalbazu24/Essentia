@@ -89,3 +89,42 @@ module Kernel
     essentia_original_backtick(cmd)
   end
 end
+
+# ---------------------------------------------------------------------------
+# Ruby 1.8 methods that modern Ruby removed (old community games still call them).
+
+class Thread
+  class << self
+    # Ruby 1.8 used Thread.critical to pause other threads; not needed anymore.
+    def critical; false; end unless method_defined?(:critical)
+    def critical=(value); value; end unless method_defined?(:critical=)
+  end
+end
+
+class String
+  def each(*args, &block); each_line(*args, &block); end unless method_defined?(:each)
+  def to_a; lines; end unless method_defined?(:to_a)
+end
+
+class Array
+  def nitems; count { |x| !x.nil? }; end unless method_defined?(:nitems)
+  def choice; sample; end unless method_defined?(:choice)
+  def indexes(*i); values_at(*i); end unless method_defined?(:indexes)
+  alias_method :indices, :indexes unless method_defined?(:indices)
+end
+
+class Hash
+  def indexes(*k); values_at(*k); end unless method_defined?(:indexes)
+  alias_method :indices, :indexes unless method_defined?(:indices)
+end
+
+module Kernel
+  # Libraries from Ruby 1.8 that no longer exist; old scripts only "require" them.
+  ESSENTIA_GONE_LIBS = %w[jcode dl dl/import Win32API win32api].freeze
+
+  alias_method :essentia_original_require, :require
+  def require(name)
+    return true if ESSENTIA_GONE_LIBS.include?(name.to_s.sub(/\.(rb|so)\z/, ''))
+    essentia_original_require(name)
+  end
+end

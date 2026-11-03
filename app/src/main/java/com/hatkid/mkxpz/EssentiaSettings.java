@@ -85,7 +85,19 @@ public final class EssentiaSettings
     public static String saveLocation(Context c) { return prefs(c).getString(KEY_SAVES, SAVES_GAME); }
     public static void setSaveLocation(Context c, String v) { prefs(c).edit().putString(KEY_SAVES, v).commit(); }
 
+    /** Screen format: game shape + black bars / + blurred sides / stretched / wider game. */
+    public static final String SCREEN_ORIGINAL = "original";
+    public static final String SCREEN_AMBIENT = "ambient";
+    public static final String SCREEN_STRETCH = "stretch";
+    public static final String SCREEN_WIDE = "wide";
+    private static final String KEY_SCREEN = "screen_mode";
+
+    public static String screenMode(Context c) { return prefs(c).getString(KEY_SCREEN, SCREEN_AMBIENT); }
+    public static void setScreenMode(Context c, String v) { prefs(c).edit().putString(KEY_SCREEN, v).commit(); }
+
     // Performance and diagnostics (booleans)
+    public static final String PERF_FAST_LOAD = "perf_fast_load";
+    public static final String PERF_LOAD_TIMES = "perf_load_times";
     public static final String PERF_SHOW_FPS = "perf_show_fps";
     public static final String PERF_FRAMESKIP = "perf_frameskip";
     public static final String PERF_VSYNC = "perf_vsync";
