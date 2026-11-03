@@ -102,8 +102,17 @@ class Thread
 end
 
 class String
-  def each(*args, &block); each_line(*args, &block); end unless method_defined?(:each)
-  def to_a; lines; end unless method_defined?(:to_a)
+  # Only answers when a game really calls it, so modern games that use
+  # respond_to?(:each) keep behaving like Ruby 3. (String#to_a is left out:
+  # Array(text) and *text would change for every game.)
+  alias_method :essentia_method_missing, :method_missing
+  def method_missing(name, *args, &block)
+    case name
+    when :each then each_line(*args, &block)
+    else essentia_method_missing(name, *args, &block)
+    end
+  end
+  private :method_missing
 end
 
 class Array
