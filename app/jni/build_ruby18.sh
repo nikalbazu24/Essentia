@@ -162,6 +162,11 @@ fi
 rm -f "$OUT/lib/libruby18ext.a"
 "$AR" rcs "$OUT/lib/libruby18ext.a" extobjs/*.o
 echo "Extensions:"; "$NM" "$OUT/lib/libruby18ext.a" | grep " T Init_" || true
+if ! "$NM" "$OUT/lib/libruby18ext.a" | grep -q " T Init_zlib"; then
+    echo "Zlib was not built (needed by many games):"
+    tail -60 ext/zlib/mkmf.log 2>/dev/null || true
+    exit 1
+fi
 
 cp ../src/*.h "$OUT/include/"
 cp config.h "$OUT/include/config.h"

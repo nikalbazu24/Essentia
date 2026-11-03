@@ -175,6 +175,14 @@ return Data_Wrap_Struct(klass, 0, free, 0);                                \
 #if RAPI_FULL < 220
 #define rb_utf8_str_new_cstr rb_str_new2
 #define rb_utf8_str_new rb_str_new
+#ifdef MKXPZ_LEGACY_RUBY
+/* Essentia classic engine: Ruby 1.8 names for newer API functions */
+#ifndef rb_str_new_cstr
+#define rb_str_new_cstr rb_str_new2
+#endif
+#define rb_set_errinfo(err) (ruby_errinfo = (err))
+#define rb_get_argv() (rb_argv)
+#endif
 #endif
 
 // end
