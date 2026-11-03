@@ -75,9 +75,16 @@ module EssentiaWide
       false
     end
 
-    # Walking on the map: the game sees the wide screen
+    # Walking on the map: the game sees the wide screen.
+    # (Asked very often, e.g. through Graphics.width, so it's remembered for the
+    # frame and recalculated when a menu or battle opens or closes.)
     def map_mode?
-      @depth.zero? && on_map? && !in_battle?
+      @mm = (@depth.zero? && on_map? && !in_battle? ? true : false) if @mm.nil?
+      @mm
+    end
+
+    def forget_mode
+      @mm = nil
     end
 
     # A 4:3 screen (menu, battle, title...) being built right now
@@ -88,19 +95,33 @@ module EssentiaWide
     def inside(battle = false)
       @depth += 1
       @battle += 1 if battle
+      @mm = nil
       yield
     ensure
       @depth -= 1
       @battle -= 1 if battle
+      @mm = nil
+    end
+
+    # Battles get more room: the field (Pokémon, bases, data boxes) spreads
+    # towards the sides; the bottom menus stay as designed. Things near the
+    # middle move gradually, so nothing jumps when crossing it.
+    def spread(cx, cy)
+      return 0 if cy > base[1] * 0.74
+      t = (cx - base[0] / 2.0) / 64.0
+      t = -1.0 if t < -1.0
+      t = 1.0 if t > 1.0
+      (off * 0.55 * t).round
     end
 
     # ------------------------------------------------------------ pictures
 
     # A copy of a 4:3 full-width picture, extended to the wide screen.
-    # Landscapes (battle backgrounds) continue as a mirror image; menu
-    # backgrounds and bars repeat their edge colors.
+    # Backgrounds (landscapes, title screens) continue as a mirror image, which
+    # has no seams; bars and strips repeat their edge colors.
+    # Made once per picture and remembered.
     def extended(src, battle)
-      mirror = battle && src.height >= 160
+      mirror = src.height >= base[1] / 2
       cache = (src.instance_variable_get(:@essentia_ext) || {})
       key = [wide_w, mirror]
       ext = cache[key]
@@ -268,6 +289,12 @@ module EssentiaWide
 
     def tick
       @frame += 1
+      @mm = nil
+      if @frame == 1
+        # widened here (not while loading) so the window is ready
+        w, h = wide_size
+        Graphics.essentia_raw_resize_screen(w, h) if Graphics.essentia_raw_width != w
+      end
       install_hooks if @frame == 1 || (@frame % 120).zero?
       if map_mode? && !@was_map
         entering_map
@@ -431,9 +458,22 @@ class Sprite
       self.essentia_raw_x = shift - m
     else
       self.essentia_raw_bitmap = gb unless essentia_raw_bitmap.equal?(gb)
-      self.essentia_raw_x = gx + shift
+      extra = 0
+      if @essentia_battle && gb
+        r = src_rect
+        cx = gx - ox + r.width * zoom_x / 2.0
+        cy = y - oy + r.height * zoom_y / 2.0
+        extra = EssentiaWide.spread(cx, cy)
+      end
+      self.essentia_raw_x = gx + shift + extra
     end
   rescue StandardError
+  end
+
+  alias_method :essentia_raw_y=, :y=
+  def y=(value)
+    self.essentia_raw_y = value
+    essentia_place if @essentia_battle
   end
 end
 
@@ -500,95 +540,105 @@ end
 
 # Windows of 4:3 screens: the ones that span the whole width get wider, the
 # others stay where the game puts them (in the middle part).
+# The engine's Window and Pokémon Essentials' SpriteWindow (a subclass made of
+# sprites) are wrapped separately, each with its own method names, so one
+# never calls into the other by mistake.
 module EssentiaWideWindow
-  def self.install(klass, sprite_window)
-    return if klass.instance_variable_get(:@essentia_wide_window)
-    klass.instance_variable_set(:@essentia_wide_window, true)
-    klass.class_eval do
-      alias_method :essentia_wwin_init, :initialize
-      alias_method :essentia_raw_x, :x
-      alias_method :essentia_raw_x=, :x=
-      alias_method :essentia_raw_width, :width
-      alias_method :essentia_raw_width=, :width=
-      alias_method :essentia_raw_viewport=, :viewport= if method_defined?(:viewport=)
+  TEMPLATE = <<-'RUBY'
+    alias_method :essentia_P_init, :initialize
+    alias_method :essentia_P_raw_x, :x
+    alias_method :essentia_P_raw_x=, :x=
+    alias_method :essentia_P_raw_width, :width
+    alias_method :essentia_P_raw_width=, :width=
+    alias_method :essentia_P_raw_viewport=, :viewport=
 
-      define_method(:initialize) do |*args, &block|
-        @essentia_sprite_window = true if sprite_window
-        @essentia_init_depth = (@essentia_init_depth || 0) + 1
-        begin
-          essentia_wwin_init(*args, &block)
-        ensure
-          @essentia_init_depth -= 1
-        end
-        # only once the whole window is built (subclasses call super)
-        if @essentia_init_depth.zero? && EssentiaWide.centered?
-          @essentia_screen = true
-          essentia_place
-        end
+    def initialize(*args, &block)
+      @essentia_init_depth = (@essentia_init_depth || 0) + 1
+      begin
+        essentia_P_init(*args, &block)
+      ensure
+        @essentia_init_depth -= 1
       end
-
-      def x
-        @essentia_gx.nil? ? essentia_raw_x : @essentia_gx
-      end
-
-      def x=(value)
-        return self.essentia_raw_x = value unless @essentia_screen
-        @essentia_gx = value
-        essentia_place
-      end
-
-      def width
-        @essentia_gw.nil? ? essentia_raw_width : @essentia_gw
-      end
-
-      def width=(value)
-        return self.essentia_raw_width = value unless @essentia_screen
-        @essentia_gw = value
-        essentia_place
-      end
-
-      if method_defined?(:essentia_raw_viewport=)
-        def viewport=(value)
-          self.essentia_raw_viewport = value
-          essentia_place if @essentia_screen
-        end
-      end
-
-      def essentia_place
-        @essentia_gx = essentia_raw_x if @essentia_gx.nil?
-        @essentia_gw = essentia_raw_width if @essentia_gw.nil?
-        vp = viewport
-        if vp.nil?
-          # Essentia's sprite-based windows move their own pieces (which are
-          # already shifted); engine windows are shifted here.
-          shift = @essentia_sprite_window ? 0 : EssentiaWide.off
-          full_shift = @essentia_sprite_window ? -EssentiaWide.off : 0
-        elsif vp.instance_variable_get(:@essentia_full)
-          shift = 0
-          full_shift = -EssentiaWide.off
-        else
-          self.essentia_raw_width = @essentia_gw
-          self.essentia_raw_x = @essentia_gx
-          return
-        end
-        if @essentia_gx == 0 && @essentia_gw == EssentiaWide.base[0]
-          self.essentia_raw_width = EssentiaWide.wide_w
-          self.essentia_raw_x = full_shift
-        else
-          self.essentia_raw_width = @essentia_gw
-          self.essentia_raw_x = @essentia_gx + shift
-        end
-      rescue StandardError
+      # only once the whole window is built (subclasses call super)
+      if @essentia_init_depth.zero? && EssentiaWide.centered?
+        @essentia_P_on = true
+        essentia_P_place
       end
     end
+
+    def x
+      @essentia_P_on ? @essentia_gx : essentia_P_raw_x
+    end
+
+    def x=(value)
+      return self.essentia_P_raw_x = value unless @essentia_P_on
+      @essentia_gx = value
+      essentia_P_place
+    end
+
+    def width
+      @essentia_P_on ? @essentia_gw : essentia_P_raw_width
+    end
+
+    def width=(value)
+      return self.essentia_P_raw_width = value unless @essentia_P_on
+      @essentia_gw = value
+      essentia_P_place
+    end
+
+    def viewport=(value)
+      self.essentia_P_raw_viewport = value
+      essentia_P_place if @essentia_P_on
+    end
+
+    def essentia_P_place
+      @essentia_gx = essentia_P_raw_x if @essentia_gx.nil?
+      @essentia_gw = essentia_P_raw_width if @essentia_gw.nil?
+      vp = viewport
+      if vp.nil?
+        # sprite-based windows move their own pieces (already shifted);
+        # engine windows are shifted here
+        shift = SPRITES ? 0 : EssentiaWide.off
+        full_x = SPRITES ? -EssentiaWide.off : 0
+      elsif vp.instance_variable_get(:@essentia_full)
+        shift = 0
+        full_x = -EssentiaWide.off
+      else
+        self.essentia_P_raw_width = @essentia_gw
+        self.essentia_P_raw_x = @essentia_gx
+        return
+      end
+      if @essentia_gx == 0 && @essentia_gw == EssentiaWide.base[0]
+        self.essentia_P_raw_width = EssentiaWide.wide_w
+        self.essentia_P_raw_x = full_x
+      else
+        self.essentia_P_raw_width = @essentia_gw
+        self.essentia_P_raw_x = @essentia_gx + shift
+      end
+    rescue Exception
+      @essentia_P_on = false
+    end
+  RUBY
+
+  def self.install(klass, sprite_window)
+    return if klass.instance_variable_get(:@essentia_wide_window)
+    prefix = sprite_window ? 'sw' : 'cw'
+    needed = [:initialize, :x, :x=, :width, :width=, :viewport=]
+    if sprite_window
+      # only if the class really implements these itself
+      own = klass.instance_methods(false).map { |m| m.to_sym } + klass.private_instance_methods(false).map { |m| m.to_sym }
+      return unless needed.all? { |m| own.include?(m) }
+    else
+      return unless needed.all? { |m| klass.method_defined?(m) || klass.private_method_defined?(m) }
+    end
+    klass.instance_variable_set(:@essentia_wide_window, true)
+    code = TEMPLATE.gsub('essentia_P_', "essentia_#{prefix}_").gsub('SPRITES', sprite_window ? 'true' : 'false')
+    klass.class_eval(code)
+  rescue Exception
   end
 end
 
 EssentiaWideWindow.install(Window, false)
 
-# The game's own size is what it had before Essentia widened the screen
+# The game's own size is what it has before Essentia widens the screen
 EssentiaWide.base
-begin
-  Graphics.essentia_raw_resize_screen(*EssentiaWide.wide_size)
-rescue StandardError
-end

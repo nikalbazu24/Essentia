@@ -137,7 +137,7 @@ jobs:
           if ./gradlew --no-daemon assembleRelease > "$RUNNER_TEMP/gradle.log" 2>&1; then
             tail -5 "$RUNNER_TEMP/gradle.log"
             if [ -d app/jni/ruby18-out ]; then echo "Motor clásico (Ruby 1.8): incluido."; fi
-          elif [ -d app/jni/ruby18-out ]; then
+          elif [ -d app/jni/ruby18-out ] && grep -q "mkxp-z-legacy" "$RUNNER_TEMP/gradle.log"; then
             echo "::warning::El motor clásico no compiló; el APK sale sin él."
             grep -n -E "error:|undefined reference|undefined symbol|FAILED" "$RUNNER_TEMP/gradle.log" | head -120 || true
             mv app/jni/ruby18-out app/jni/ruby18-out.failed

@@ -28,3 +28,37 @@ class Symbol
     Proc.new { |obj, *args| obj.__send__(sym, *args) }
   end unless method_defined?(:to_proc)
 end
+
+# Windows programs (.exe...) can't run on Android: answer like a program that
+# printed nothing, and tell Essentia if it was the game's updater.
+module EssentiaClassic
+  WINDOWS_PROGRAM = /\.(exe|bat|cmd|com|vbs|ps1|msi)\b/i
+
+  def self.windows_program?(args)
+    text = args.flatten.map { |a| a.is_a?(Hash) ? '' : a.to_s }.join(' ')
+    return false unless text =~ WINDOWS_PROGRAM
+    if text =~ /updater/i && !ENV['ESSENTIA_ACK_FILE'].to_s.empty?
+      File.open(ENV['ESSENTIA_ACK_FILE'], 'ab') { |f| f.write("updater 1\n") } rescue nil
+    end
+    true
+  end
+end
+
+class << IO
+  alias_method :essentia_original_popen, :popen
+  def popen(*args, &block)
+    if EssentiaClassic.windows_program?(args)
+      io = File.open('/dev/null', 'r')
+      return block ? block.call(io) : io
+    end
+    essentia_original_popen(*args, &block)
+  end
+end
+
+module Kernel
+  alias_method :essentia_original_system, :system
+  def system(*args)
+    return false if EssentiaClassic.windows_program?(args)
+    essentia_original_system(*args)
+  end
+end

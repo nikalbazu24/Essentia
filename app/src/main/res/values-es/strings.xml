@@ -246,4 +246,22 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="act_autofire_off">Auto Fire desactivado</string>
     <string name="panel_key_a">A</string>
     <string name="panel_key_d">D</string>
+    <string name="upd_game">Actualizar el juego…</string>
+    <string name="upd_checking">Buscando una versión nueva…</string>
+    <string name="upd_latest">Ya tienes la última versión (%1$s).</string>
+    <string name="upd_no_host">El juego anuncia una versión nueva, pero su enlace no es de MEGA, Dropbox ni GitHub.</string>
+    <string name="upd_found">Nueva versión %1$s disponible</string>
+    <string name="upd_found_msg">Tienes la %1$s. Essentia descargará la %2$s desde %3$s, hará un respaldo de tus partidas y actualizará el juego. Tus partidas se mantienen.</string>
+    <string name="upd_do">Actualizar</string>
+    <string name="upd_check_failed">No se pudo revisar si hay actualización (sin internet, o el enlace del juego ya no funciona).</string>
+    <string name="upd_downloading">Descargando…</string>
+    <string name="upd_extracting">Descomprimiendo…</string>
+    <string name="upd_copying">Actualizando los archivos del juego…</string>
+    <string name="upd_note">Deja Essentia abierta. Los juegos grandes pueden tardar.</string>
+    <string name="upd_done">¡Actualizado a la versión %1$s! ✓</string>
+    <string name="upd_backup">Una copia de tus partidas quedó en:\n%1$s</string>
+    <string name="upd_format">La actualización viene como %1$s, un formato que Essentia todavía no abre (solo .zip). Descárgala en un PC o con un administrador de archivos.</string>
+    <string name="upd_space">No hay espacio suficiente: se necesitan unos %1$s.</string>
+    <string name="upd_failed">La actualización falló. El juego no cambió (o cambió solo en parte: se puede volver a intentar).</string>
+    <string name="act_updater">Este juego quiere actualizarse: hazlo desde la biblioteca → Opciones → Actualizar el juego</string>
 </resources>

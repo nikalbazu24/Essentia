@@ -518,11 +518,10 @@ public class MainActivity extends SDLActivity
     public void toggleKeyboard()
     {
         try {
-            if (SDLActivity.isScreenKeyboardShown() && mTextEdit != null) {
+            if (SDLActivity.isScreenKeyboardShown()) {
                 android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager)
                     getSystemService(INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(mTextEdit.getWindowToken(), 0);
-                mTextEdit.setLayoutParams(new android.widget.RelativeLayout.LayoutParams(0, 0));
+                imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
                 mScreenKeyboardShown = false;
                 if (mSurface != null) mSurface.requestFocus();
             } else {
@@ -590,6 +589,7 @@ public class MainActivity extends SDLActivity
             case "heal": msg = getString(result.equals("ok") ? R.string.act_heal_ok : R.string.act_unsupported); break;
             case "money": msg = getString(result.equals("ok") ? R.string.act_money_ok : R.string.act_unsupported); break;
             case "speed": break;
+            case "updater": msg = getString(R.string.act_updater); break;
             default:
                 if (result.equals("locked")) msg = getString(R.string.act_dex_locked);
                 else if (result.equals("unsupported")) msg = getString(R.string.act_unsupported);
@@ -683,10 +683,47 @@ public class MainActivity extends SDLActivity
         }
     }
 
+    // Essentia: always full screen (no status or navigation bar over the game)
+    private void applyImmersive()
+    {
+        try {
+            android.view.Window w = getWindow();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                android.view.WindowManager.LayoutParams lp = w.getAttributes();
+                lp.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                w.setAttributes(lp);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                w.setDecorFitsSystemWindows(false);
+                android.view.WindowInsetsController c = w.getInsetsController();
+                if (c != null) {
+                    c.hide(android.view.WindowInsets.Type.systemBars());
+                    c.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                }
+            } else {
+                w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+            }
+            w.addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        } catch (Exception e) {
+            Log.w(TAG, "Full screen: " + e);
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus)
+    {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) applyImmersive();
+    }
+
     @Override
     protected void onResume()
     {
         super.onResume();
+        applyImmersive();
         showGamePanel();
     }
 

@@ -16,7 +16,18 @@ module Essentia
 
   def self.windows_program?(args)
     text = args.flatten.map { |a| a.is_a?(Hash) ? '' : a.to_s }.join(' ')
-    !!(text =~ WINDOWS_PROGRAM)
+    return false unless text =~ WINDOWS_PROGRAM
+    note_program(text)
+    true
+  end
+
+  # The game wanted to run its updater (PokéUpdater): tell Essentia, which can
+  # do the update from the library.
+  def self.note_program(text)
+    return unless text =~ /updater/i
+    ack = ENV['ESSENTIA_ACK_FILE'].to_s
+    File.open(ack, 'ab') { |f| f.write("updater 1\n") } unless ack.empty?
+  rescue Exception
   end
 
   def self.empty_io

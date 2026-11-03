@@ -249,4 +249,22 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="act_autofire_off">Auto Fire off</string>
     <string name="panel_key_a">A</string>
     <string name="panel_key_d">D</string>
+    <string name="upd_game">Update the game…</string>
+    <string name="upd_checking">Looking for a new version…</string>
+    <string name="upd_latest">You already have the latest version (%1$s).</string>
+    <string name="upd_no_host">The game announces a new version, but its download link isn\'t from MEGA, Dropbox or GitHub.</string>
+    <string name="upd_found">New version %1$s available</string>
+    <string name="upd_found_msg">You have %1$s. Essentia will download %2$s from %3$s, back up your saves and update the game. Your saves are kept.</string>
+    <string name="upd_do">Update</string>
+    <string name="upd_check_failed">Couldn\'t check for updates (no internet, or the game\'s link no longer works).</string>
+    <string name="upd_downloading">Downloading…</string>
+    <string name="upd_extracting">Unpacking…</string>
+    <string name="upd_copying">Updating the game files…</string>
+    <string name="upd_note">Keep Essentia open. Big games can take a while.</string>
+    <string name="upd_done">Updated to version %1$s! ✓</string>
+    <string name="upd_backup">A copy of your saves is in:\n%1$s</string>
+    <string name="upd_format">The update comes as %1$s, a format Essentia can\'t open yet (only .zip). Download it on a PC or with a file manager.</string>
+    <string name="upd_space">Not enough free space: about %1$s are needed.</string>
+    <string name="upd_failed">The update failed. The game was not changed (or only partly: it can be launched again).</string>
+    <string name="act_updater">This game wants to update itself: do it from the library → Options → Update the game</string>
 </resources>

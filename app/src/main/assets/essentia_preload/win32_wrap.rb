@@ -342,6 +342,72 @@ module Win32API_Impl
 	end
 end
 
+# Essentia: more window functions old games use to find their own window
+# (there is only one window: the game's, number 42).
+module Win32API_Impl
+	module User32
+		RGSS_HWND = 42
+
+		def self.rgss_window?(name)
+			name.nil? || name == 0 || name == "" || name == "RGSS Player"
+		end
+
+		class FindWindowA
+			def call(args)
+				User32.rgss_window?(args[0]) ? RGSS_HWND : 0
+			end
+		end
+		class FindWindow < FindWindowA; end
+		class FindWindowW < FindWindowA; end
+
+		class FindWindowExA
+			def call(args)
+				User32.rgss_window?(args[2]) ? RGSS_HWND : 0
+			end
+		end
+		class FindWindowEx < FindWindowExA; end
+		class FindWindowExW < FindWindowExA; end
+
+		class GetActiveWindow
+			def call(args); RGSS_HWND; end
+		end
+		class GetForegroundWindow < GetActiveWindow; end
+		class GetFocus < GetActiveWindow; end
+
+		class GetSystemMetrics
+			def call(args)
+				case args[0]
+				when 0 then Graphics.width
+				when 1 then Graphics.height
+				else 0
+				end
+			end
+		end
+
+		class GetWindowRect
+			def call(args)
+				memcpy_string(args[1], [0, 0, Graphics.width, Graphics.height].pack('l4'))
+				1
+			end
+		end
+
+		class WindowDone
+			def call(args); 1; end
+		end
+		%w[SetWindowPos MoveWindow ShowWindow UpdateWindow SetForegroundWindow
+		   SetWindowTextA SetWindowTextW SetWindowText SetWindowLongA SetWindowLong
+		   SetWindowLongW SetActiveWindow SetFocus].each do |name|
+			const_set(name, Class.new(WindowDone)) unless const_defined?(name)
+		end
+
+		class GetWindowLongA
+			def call(args); 0; end
+		end
+		class GetWindowLong < GetWindowLongA; end
+		class GetWindowLongW < GetWindowLongA; end
+	end
+end
+
 def kappatalize(s)
 	# (Essentia: s[0, 1] works the same in Ruby 1.8, where s[0] is a number)
 	s[0, 1] = s[0, 1].upcase
