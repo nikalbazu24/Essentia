@@ -38,7 +38,7 @@ public final class Translator
 {
     private static final String TAG = "Essentia[Translate]";
     private static final Pattern CODES = Pattern.compile(
-        "\\\\[A-Za-z]+\\[[^\\]]*\\]|\\\\[A-Za-z]+|\\\\[.|!^<>{}\\\\]|<[^>]{1,40}>|\\[[^\\]]{1,20}\\]");
+        "\\\\[A-Za-z]+\\[[^\\]]*\\]|\\\\[A-Za-z]+|\\\\[.|!^<>{}\\\\]|<[^>]{1,40}>|\\[[^\\]]{1,20}\\]|\\{\\d+[^}]{0,6}\\}");
     private static final Pattern TOKEN = Pattern.compile("\u27E6\\s*(\\d+)\\s*\u27E7");
 
     private final Context mContext;

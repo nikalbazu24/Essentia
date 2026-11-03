@@ -99,7 +99,7 @@ public final class GameStats
         } catch (Exception ignored) { }
         try {
             s.kind = GameProfile.of(c, dir).label();
-        } catch (Exception e) {
+        } catch (Exception ex) {
             s.kind = kindOf(dir);
         }
         s.size = cachedSize(c, dir);
