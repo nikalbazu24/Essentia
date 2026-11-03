@@ -121,6 +121,19 @@ public final class GameUpdater
         return out;
     }
 
+    /** The version the game says it is (PokéUpdater games), or null. No internet. */
+    public static String localVersion(File gameDir)
+    {
+        try {
+            File cfg = configFile(gameDir);
+            if (cfg == null) return null;
+            String v = readConfig(cfg).get("CURRENT_GAME_VERSION");
+            return v == null || v.isEmpty() ? null : v;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // ------------------------------------------------------------ check
 
     public static Info check(File gameDir) throws Exception

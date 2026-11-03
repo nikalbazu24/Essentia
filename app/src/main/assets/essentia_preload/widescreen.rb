@@ -25,6 +25,7 @@ module EssentiaWide
   @wrapped = {}
   @frame = 0
   @viewports = []    # viewports adjusted for 4:3 screens (weak list)
+  @building = 0      # making the map's pieces
 
   class << self
     def aspect
@@ -71,8 +72,12 @@ module EssentiaWide
       defined?(Scene_Map) && current_scene.is_a?(Scene_Map)
     end
 
+    # Pokémon Essentials: only the battle itself (inside pbBattleAnimation), not
+    # its intro animation, which still runs over the map (its transitions must
+    # cover the whole wide screen and the map must keep drawing all of it).
     def in_battle?
       return true if @battle > 0
+      return false if @wrapped[:pbBattleAnimation]
       $game_temp && $game_temp.respond_to?(:in_battle) && $game_temp.in_battle
     rescue StandardError
       false
@@ -82,8 +87,21 @@ module EssentiaWide
     # (Asked very often, e.g. through Graphics.width, so it's remembered for the
     # frame and recalculated when a menu or battle opens or closes.)
     def map_mode?
+      return true if @building > 0
       @mm = (@depth.zero? && on_map? && !in_battle? ? true : false) if @mm.nil?
       @mm
+    end
+
+    # The map's pieces (tilemap, map viewports) are being made: they must be made
+    # for the wide screen even if this happens behind a fade or a menu, or the
+    # map would be drawn only up to the 4:3 width (black side, missing tiles).
+    def building_map
+      @building += 1
+      @mm = nil
+      yield
+    ensure
+      @building -= 1
+      @mm = nil
     end
 
     def forget_mode
@@ -153,16 +171,35 @@ module EssentiaWide
       nil
     end
 
-    # A picture meant to cover the whole 4:3 width
+    # A picture meant to cover the whole 4:3 width: loaded from a file, or
+    # solid at its left and right edges (drawn layers for text are transparent
+    # there). Decided once per picture.
     def full_picture?(bmp)
-      bmp && !(bmp.disposed? rescue true) && bmp.width == base[0] &&
-        bmp.instance_variable_get(:@essentia_file)
+      return false unless bmp && !(bmp.disposed? rescue true) && bmp.width == base[0]
+      return true if bmp.instance_variable_get(:@essentia_file)
+      known = bmp.instance_variable_get(:@essentia_solid)
+      return known unless known.nil?
+      solid = bmp.height >= 16 && solid_edges?(bmp)
+      bmp.instance_variable_set(:@essentia_solid, solid)
+      solid
+    end
+
+    def solid_edges?(bmp)
+      w = bmp.width
+      h = bmp.height
+      [0.1, 0.5, 0.9].each do |f|
+        y = (h * f).to_i
+        return false if bmp.get_pixel(0, y).alpha < 250 || bmp.get_pixel(w - 1, y).alpha < 250
+      end
+      true
+    rescue StandardError
+      false
     end
 
     # ------------------------------------------------------------ viewports
 
     def adopt_viewport(v)
-      r = v.rect
+      r = v.essentia_rect
       bw = base[0]
       return if @making_backdrop
       if r.x == 0 && (r.width == bw || r.width == wide_w) && !in_battle?
@@ -203,7 +240,7 @@ module EssentiaWide
         elsif v.instance_variable_get(:@essentia_shifted) || v.instance_variable_get(:@essentia_cfull)
           v.instance_variable_set(:@essentia_shifted, nil)
           v.instance_variable_set(:@essentia_cfull, nil)
-          r = v.rect
+          r = v.essentia_rect
           v.essentia_raw_rect = Rect.new(r.x - off, r.y, r.width, r.height)
         end
       end
@@ -216,7 +253,7 @@ module EssentiaWide
     def backdrop_for(v)
       b = v.instance_variable_get(:@essentia_back)
       return b if b && !(b.disposed? rescue true)
-      r = v.rect
+      r = v.essentia_rect
       @making_backdrop = true
       b = Viewport.new(0, r.y, wide_w, r.height)
       @making_backdrop = false
@@ -243,9 +280,9 @@ module EssentiaWide
             b.color = v.color
             b.tone = v.tone
             b.z = v.z - 1
-            r = v.rect
-            br = b.rect
-            b.rect = Rect.new(0, r.y, wide_w, r.height) if br.y != r.y || br.height != r.height
+            r = v.essentia_rect
+            br = b.essentia_rect
+            b.essentia_raw_rect = Rect.new(0, r.y, wide_w, r.height) if br.y != r.y || br.height != r.height
           rescue StandardError
           end
           false
@@ -258,7 +295,7 @@ module EssentiaWide
       bw, bh = base
       ObjectSpace.each_object(Viewport) do |v|
         next if (v.disposed? rescue true)
-        r = v.rect
+        r = v.essentia_rect
         next unless r.x == 0 && r.y == 0 && r.width == bw && r.height == bh
         v.essentia_raw_rect = Rect.new(0, 0, wide_w, bh)
       end
@@ -330,13 +367,24 @@ module EssentiaWide
       raw = :essentia_wide_raw_initialize
       klass.send(:alias_method, raw, :initialize)
       klass.send(:define_method, :initialize) do |*args, &block|
-        # the map is being built: from here the game must see the wide screen
-        EssentiaWide.forget_mode
-        EssentiaWide.entering_map if EssentiaWide.depth_zero?
-        __send__(raw, *args, &block)
+        # the map is being built: it must see the wide screen
+        EssentiaWide.building_map do
+          EssentiaWide.entering_map if EssentiaWide.depth_zero?
+          EssentiaWide.expand_map_viewports
+          __send__(raw, *args, &block)
+        end
       end
       klass.send(:private, :initialize)
       @wrapped[class_name] = klass.instance_method(:initialize)
+    rescue StandardError
+    end
+
+    # Old Pokémon Essentials replaces Graphics.width with its own (always 4:3)
+    def keep_width
+      meta = class << Graphics; self; end
+      return if @my_width && meta.instance_method(:width) == @my_width
+      meta.send(:define_method, :width) { essentia_wide_width }
+      @my_width = meta.instance_method(:width)
     rescue StandardError
     end
 
@@ -353,6 +401,7 @@ module EssentiaWide
         Graphics.essentia_raw_resize_screen(w, h) if Graphics.essentia_raw_width != w
       end
       install_hooks if @frame == 1 || (@frame % 120).zero?
+      keep_width if @frame <= 2 || (@frame % 30).zero?
       sync_backdrops
       if map_mode? && !@was_map
         entering_map
@@ -371,8 +420,12 @@ module Graphics
     alias_method :essentia_raw_resize_screen, :resize_screen
 
     # On the map the game sees the wide screen; 4:3 screens see their own size.
-    def width
+    def essentia_wide_width
       EssentiaWide.map_mode? ? essentia_raw_width : EssentiaWide.base[0]
+    end
+
+    def width
+      essentia_wide_width
     end
 
     def resize_screen(width, height)
@@ -405,6 +458,7 @@ class Viewport
   alias_method :essentia_raw_ox, :ox
   alias_method :essentia_raw_ox=, :ox=
   alias_method :essentia_raw_rect=, :rect=
+  alias_method :essentia_rect, :rect
 
   def initialize(*args)
     essentia_wide_init(*args)

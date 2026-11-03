@@ -325,6 +325,9 @@ try { exp } catch (...) {}
     // ...but the bundled helper scripts need a few modern methods on Ruby 1.8
     preloadScripts.insert(preloadScripts.begin(), "essentia_preload/essentia_ruby18.rb");
 #endif
+    // Essentia: fixes for things games do that only work on Windows (old Pokémon
+    // Essentials window resizing, DLL screenshots...), for both engines
+    preloadScripts.insert(preloadScripts.begin() + 1, "essentia_preload/essentia_games.rb");
 
     // Essentia: live map for the second screen (only when the app asks for it)
     {

@@ -180,3 +180,24 @@ module Kernel
     essentia_original_require(name)
   end
 end
+
+# Ruby 1.8: proc { ... } worked like a lambda, so "return" (or "break") inside
+# it just left the proc. Old Pokémon Essentials event handlers rely on that
+#   Events.onWildBattleOverride += proc { |sender, e| return if ... }
+# (Pokémon Z: "unexpected return"). Modern Ruby raises an error instead; here
+# the proc simply ends, as it did back then.
+class Proc
+  alias_method :essentia_raw_call, :call
+
+  def call(*args, &block)
+    essentia_raw_call(*args, &block)
+  rescue LocalJumpError => e
+    raise if lambda? || (e.reason != :return && e.reason != :break)
+    e.exit_value
+  end
+  ruby2_keywords(:call) if respond_to?(:ruby2_keywords, true)
+
+  alias_method :[], :call
+  alias_method :===, :call
+  alias_method :yield, :call
+end

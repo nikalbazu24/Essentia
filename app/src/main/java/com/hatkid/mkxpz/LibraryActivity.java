@@ -85,6 +85,8 @@ public class LibraryActivity extends ControllerActivity
     private ImageView mHeroCover;
     private TextView mHeroTitle;
     private TextView mHeroDetail;
+    private TextView mHeroLabel;
+    private LinearLayout mHeroChips;
     private View mHeroPlay;
     private HorizontalScrollView mShelfScroll;
     private LinearLayout mShelf;
@@ -92,6 +94,11 @@ public class LibraryActivity extends ControllerActivity
     private GamesAdapter mAdapter;
     private View mEmpty;
     private View mZoomed;
+    /** Details of games (saves, version, size...), measured in the background. */
+    private final java.util.Map<String, GameStats> mStats = new java.util.HashMap<>();
+    private final java.util.concurrent.ExecutorService mStatsExec =
+        java.util.concurrent.Executors.newSingleThreadExecutor();
+    private long mTotalPlay = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -143,6 +150,7 @@ public class LibraryActivity extends ControllerActivity
     {
         super.onDestroy();
         mCovers.shutdown();
+        mStatsExec.shutdownNow();
     }
 
     // ================================================================== UI
@@ -190,7 +198,7 @@ public class LibraryActivity extends ControllerActivity
         mShelfScroll.setHorizontalScrollBarEnabled(false);
         mShelfScroll.setClipToPadding(false);
         // room around the cards for the zoomed one and its highlight
-        mShelfScroll.setPadding(Ui.dp(this, 16), Ui.dp(this, 12), Ui.dp(this, 16), Ui.dp(this, 12));
+        mShelfScroll.setPadding(Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4));
         // the cards always fit the height there is (zoom and highlight included)
         mShelfScroll.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             if (b - t != ob - ot) v.post(this::fitShelfCards);
@@ -256,10 +264,10 @@ public class LibraryActivity extends ControllerActivity
         info.setGravity(Gravity.CENTER_VERTICAL);
         info.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 20), 0);
 
-        TextView label = Ui.text(this, getString(R.string.lib_featured), 12, Ui.ACCENT_LIGHT, true);
-        label.setLetterSpacing(0.12f);
-        label.setAllCaps(true);
-        info.addView(label);
+        mHeroLabel = Ui.text(this, getString(R.string.lib_featured), 12, Ui.ACCENT_LIGHT, true);
+        mHeroLabel.setLetterSpacing(0.14f);
+        mHeroLabel.setAllCaps(true);
+        info.addView(mHeroLabel);
 
         mHeroTitle = Ui.text(this, "", 30, Ui.TEXT, true);
         mHeroTitle.setMaxLines(2);
@@ -268,7 +276,19 @@ public class LibraryActivity extends ControllerActivity
         mHeroTitle.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
         info.addView(mHeroTitle);
 
-        mHeroDetail = Ui.text(this, "", 14, Ui.TEXT_DIM, false);
+        // little chips: play time, last played, kind of game, version, format...
+        mHeroChips = new LinearLayout(this);
+        mHeroChips.setOrientation(LinearLayout.HORIZONTAL);
+        android.widget.HorizontalScrollView chipsScroll = new android.widget.HorizontalScrollView(this);
+        chipsScroll.setHorizontalScrollBarEnabled(false);
+        chipsScroll.setFocusable(false);
+        chipsScroll.addView(mHeroChips);
+        info.addView(chipsScroll, wrapWidth());
+
+        mHeroDetail = Ui.text(this, "", 13, Ui.TEXT_DIM, false);
+        mHeroDetail.setPadding(0, Ui.dp(this, 6), 0, 0);
+        mHeroDetail.setMaxLines(1);
+        mHeroDetail.setEllipsize(TextUtils.TruncateAt.END);
         info.addView(mHeroDetail);
 
         LinearLayout actions = new LinearLayout(this);
@@ -433,22 +453,37 @@ public class LibraryActivity extends ControllerActivity
     }
 
     /**
-     * Highlight of the selected card. The outline sits fully inside the card (a
-     * stroke is drawn half outside its edge, where the rounded card would cut it).
+     * The highlight of the selected game: a ring drawn around the card, on a
+     * frame that leaves room for it, so it's never cut (no zooming either).
      */
-    private Drawable selectorDrawable()
+    private Drawable ringDrawable()
     {
         int stroke = Ui.dp(this, 3);
-        GradientDrawable ring = Ui.rounded(this, 0x00000000, 14);
+        GradientDrawable ring = Ui.rounded(this, 0x00000000, 21);
         ring.setStroke(stroke, Ui.ACCENT_LIGHT);
-        Drawable focus = new android.graphics.drawable.InsetDrawable(ring, stroke / 2);
-        GradientDrawable press = Ui.rounded(this, 0x408A5CF6, 16);
+        GradientDrawable press = Ui.rounded(this, 0x408A5CF6, 21);
         StateListDrawable s = new StateListDrawable();
         s.addState(new int[]{android.R.attr.state_pressed}, press);
-        s.addState(new int[]{android.R.attr.state_focused}, focus);
-        s.addState(new int[]{android.R.attr.state_activated}, focus);
+        s.addState(new int[]{android.R.attr.state_focused}, ring);
+        s.addState(new int[]{android.R.attr.state_activated}, ring);
         s.addState(new int[]{}, new ColorDrawable(0x00000000));
         return s;
+    }
+
+    private int slotPad() { return Ui.dp(this, 6); }
+
+    /** A card inside its frame (the frame draws the highlight). */
+    private FrameLayout newSlot()
+    {
+        FrameLayout slot = new FrameLayout(this);
+        int p = slotPad();
+        slot.setPadding(p, p, p, p);
+        slot.setBackground(ringDrawable());
+        View card = newCard();
+        slot.addView(card, match());
+        slot.setTag(card.getTag());
+        card.setAlpha(0.78f);
+        return slot;
     }
 
     // ------------------------------------------------------------ view modes
@@ -501,16 +536,20 @@ public class LibraryActivity extends ControllerActivity
         reload();
     }
 
+    /** Marks the selected card: ring around it, full brightness. */
     private void zoom(View v)
     {
         if (mZoomed != null && mZoomed != v) {
-            mZoomed.animate().scaleX(1f).scaleY(1f).translationZ(0).setDuration(120).start();
             mZoomed.setActivated(false);
+            View card = mZoomed instanceof ViewGroup && ((ViewGroup) mZoomed).getChildCount() > 0
+                ? ((ViewGroup) mZoomed).getChildAt(0) : null;
+            if (card != null) card.animate().alpha(0.78f).setDuration(120).start();
         }
         mZoomed = null;
         if (v != null && !isList()) {
-            v.animate().scaleX(1.06f).scaleY(1.06f).translationZ(Ui.dp(this, 6)).setDuration(150).start();
-            v.setActivated(true); // the highlight grows with the card
+            v.setActivated(true);
+            View card = v instanceof ViewGroup && ((ViewGroup) v).getChildCount() > 0 ? ((ViewGroup) v).getChildAt(0) : null;
+            if (card != null) card.animate().alpha(1f).setDuration(150).start();
             mZoomed = v;
         }
     }
@@ -643,15 +682,14 @@ public class LibraryActivity extends ControllerActivity
                 mCovers.load(e.path, e.cover, h.cover, R.drawable.ic_launcher_foreground);
                 return convert;
             }
-            if (convert == null) {
-                convert = newCard();
-                convert.setForeground(selectorDrawable());
-            }
-            convert.setActivated(false);
+            if (convert == null) convert = newSlot();
+            boolean on = pos == mSelected && mGrid.hasFocus();
+            convert.setActivated(on);
+            ((ViewGroup) convert).getChildAt(0).setAlpha(on ? 1f : 0.78f);
+            if (on) mZoomed = convert;
             int w = mGrid.getColumnWidth() > 0 ? mGrid.getColumnWidth() : mBaseColumn;
-            convert.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, w * 3 / 4));
-            convert.setScaleX(1f);
-            convert.setScaleY(1f);
+            convert.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                (w - 2 * slotPad()) * 3 / 4 + 2 * slotPad()));
             bindCard(convert, e);
             return convert;
         }
@@ -664,14 +702,13 @@ public class LibraryActivity extends ControllerActivity
         if (!isShelf()) return;
 
         int h = shelfCardHeight();
-        int w = h * 4 / 3;
+        int w = shelfCardWidth(h);
         for (int i = 0; i < mGames.size(); i++) {
             final int pos = i;
-            View card = newCard();
+            View card = newSlot();
             bindCard(card, mGames.get(i));
             card.setFocusable(true);
             card.setClickable(true);
-            card.setForeground(selectorDrawable());
             card.setOnClickListener(v -> play(pos));
             card.setOnLongClickListener(v -> { showOptions(pos); return true; });
             card.setOnFocusChangeListener((v, has) -> {
@@ -685,24 +722,31 @@ public class LibraryActivity extends ControllerActivity
                 }
             });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(w, h);
-            lp.rightMargin = Ui.dp(this, 14);
+            lp.rightMargin = Ui.dp(this, 6);
             mShelf.addView(card, lp);
         }
     }
 
-    /** Card height on the shelf: as designed, or smaller if the screen is short. */
+    /** Slot height on the shelf (card + frame): as designed, or what fits. */
     private int shelfCardHeight()
     {
-        int h = Ui.dp(this, isPortrait() ? 120 : 132);
+        int h = Ui.dp(this, isPortrait() ? 132 : 144);
         int avail = mShelfScroll.getHeight() - mShelfScroll.getPaddingTop() - mShelfScroll.getPaddingBottom();
-        if (avail > 0) h = Math.min(h, (int) (avail / 1.08f)); // room for the 6% zoom
-        return Math.max(h, Ui.dp(this, 48));
+        if (avail > 0) h = Math.min(h, avail);
+        return Math.max(h, Ui.dp(this, 60));
+    }
+
+    /** 4:3 card inside the frame. */
+    private int shelfCardWidth(int slotH)
+    {
+        int p = 2 * slotPad();
+        return (slotH - p) * 4 / 3 + p;
     }
 
     private void fitShelfCards()
     {
         int h = shelfCardHeight();
-        int w = h * 4 / 3;
+        int w = shelfCardWidth(h);
         for (int i = 0; i < mShelf.getChildCount(); i++) {
             View c = mShelf.getChildAt(i);
             ViewGroup.LayoutParams lp = c.getLayoutParams();
@@ -746,13 +790,15 @@ public class LibraryActivity extends ControllerActivity
         } else {
             mAdapter.notifyDataSetChanged();
         }
-        if (!mGames.isEmpty() && mSelected < mGames.size()) mHeroDetail.setText(detailOf(mGames.get(mSelected)));
+        if (!mGames.isEmpty() && mSelected < mGames.size()) fillHero(mGames.get(mSelected));
     }
 
     private void reload()
     {
         mGames.clear();
         mGames.addAll(Library.load(this));
+        mStats.clear(); // play time and saves may have changed
+        mTotalPlay = GameStats.totalPlay(this, mGames);
         if (EssentiaSettings.SORT_AZ.equals(mSort)) {
             Collections.sort(mGames, (a, b) -> a.displayTitle().compareToIgnoreCase(b.displayTitle()));
         }
@@ -774,7 +820,10 @@ public class LibraryActivity extends ControllerActivity
         mSelected = Math.max(0, Math.min(pos, mGames.size() - 1));
         Library.Entry e = mGames.get(mSelected);
         mHeroTitle.setText(e.displayTitle());
-        mHeroDetail.setText(detailOf(e));
+        boolean resume = mSelected == 0 && e.lastPlayed > 0 && !EssentiaSettings.SORT_AZ.equals(mSort);
+        mHeroLabel.setText(resume ? R.string.lib_continue : R.string.lib_featured);
+        fillHero(e);
+        loadStats(e);
         mCovers.load(e.path, e.cover, mHeroCover, R.drawable.ic_launcher_foreground);
         mCovers.load(e.path, e.cover, mBackdrop, 0);
         mBackdrop.setAlpha(0f);
@@ -796,16 +845,105 @@ public class LibraryActivity extends ControllerActivity
     private void updateSecondScreen()
     {
         if (mSecond == null) return;
+        String footer = getResources().getQuantityString(R.plurals.lib_count, mGames.size(), mGames.size())
+            + (mTotalPlay > 0 ? "  ·  " + getString(R.string.stat_total, GameStats.duration(this, mTotalPlay)) : "")
+            + "  ·  " + getString(R.string.lib_second_hint);
         if (mGames.isEmpty()) {
-            mSecond.showGame(getString(R.string.app_name), null, null);
+            mSecond.showGame(getString(R.string.app_name), getString(R.string.lib_empty_title), null, footer);
             return;
         }
         Library.Entry e = mGames.get(Math.min(mSelected, mGames.size() - 1));
-        File saves = Saves.dirFor(this, new File(e.path), e.displayTitle());
-        String detail = detailOf(e) + "\n" + getString(R.string.second_saves, saves.getAbsolutePath());
-        mSecond.showGame(e.displayTitle(), detail, null);
+        GameStats st = statsOf(e);
+        List<SecondScreen.Stat> list = new ArrayList<>();
+        list.add(new SecondScreen.Stat(getString(R.string.stat_play), st.playMs > 0 ? GameStats.duration(this, st.playMs) : "—"));
+        list.add(new SecondScreen.Stat(getString(R.string.stat_sessions), String.valueOf(st.sessions)));
+        list.add(new SecondScreen.Stat(getString(R.string.stat_last), e.lastPlayed == 0 ? "—"
+            : DateUtils.getRelativeTimeSpanString(e.lastPlayed, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()));
+        String saves = st.saves < 0 ? "…" : String.valueOf(st.saves);
+        String savesLabel = st.lastSave > 0 ? getString(R.string.stat_saves_last,
+            DateUtils.getRelativeTimeSpanString(st.lastSave, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString())
+            : getString(R.string.stat_saves);
+        list.add(new SecondScreen.Stat(savesLabel, saves));
+        list.add(new SecondScreen.Stat(getString(R.string.stat_version), st.version.isEmpty() ? "—" : st.version));
+        list.add(new SecondScreen.Stat(getString(R.string.stat_size), st.size < 0 ? "…" : GameStats.bytes(st.size)));
+
+        StringBuilder sub = new StringBuilder();
+        if (!st.kind.isEmpty()) sub.append(st.kind);
+        sub.append(sub.length() > 0 ? "  ·  " : "").append(EssentiaSettings.ENGINE_CLASSIC.equals(e.engine)
+            ? getString(R.string.eng_classic_short) : getString(R.string.eng_modern_short));
+        String mode = screenLabel(e.screenMode);
+        if (mode != null) sub.append("  ·  ").append(mode);
+        UpdateService.State up = UpdateService.stateFor(e.path);
+        if (up != null) sub.append("  ·  ").append(detailOf(e));
+
+        mSecond.showGame(e.displayTitle(), sub.toString(), list, footer);
         mCovers.load(e.path, e.cover, mSecond.coverView(), R.drawable.ic_launcher_foreground);
         mCovers.load(e.path, e.cover, mSecond.backdropView(), 0);
+    }
+
+    // ------------------------------------------------------------ game details
+
+    private GameStats statsOf(Library.Entry e)
+    {
+        GameStats st = mStats.get(e.path);
+        return st != null ? st : GameStats.quick(this, e.path);
+    }
+
+    /** Measures saves, version and size in the background, then shows them. */
+    private void loadStats(Library.Entry e)
+    {
+        if (mStats.containsKey(e.path)) return;
+        final String path = e.path;
+        try {
+            mStatsExec.execute(() -> {
+                GameStats st = GameStats.details(this, e);
+                runOnUiThread(() -> {
+                    if (isFinishing()) return;
+                    mStats.put(path, st);
+                    if (!mGames.isEmpty() && mSelected < mGames.size() && mGames.get(mSelected).path.equals(path)) {
+                        fillHero(mGames.get(mSelected));
+                        updateSecondScreen();
+                    }
+                });
+            });
+        } catch (Exception ignored) { }
+    }
+
+    /** Chips under the title: play time, last played, kind, version, format, engine. */
+    private void fillHero(Library.Entry e)
+    {
+        GameStats st = statsOf(e);
+        mHeroChips.removeAllViews();
+        UpdateService.State up = UpdateService.stateFor(e.path);
+        if (up != null) chip(detailOf(e), true);
+        if (st.playMs > 0) chip("\u23F1 " + GameStats.duration(this, st.playMs), false);
+        chip(e.lastPlayed == 0 ? getString(R.string.lib_never_played)
+            : DateUtils.getRelativeTimeSpanString(e.lastPlayed, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(), false);
+        if (!st.kind.isEmpty()) chip(st.kind, false);
+        if (!st.version.isEmpty()) chip("v" + st.version.replaceFirst("^[vV]", ""), false);
+        String mode = screenLabel(e.screenMode);
+        if (mode != null) chip(mode, false);
+        if (EssentiaSettings.ENGINE_CLASSIC.equals(e.engine)) chip("Ruby 1.8", false);
+
+        if (st.saves > 0) {
+            String when = st.lastSave > 0 ? DateUtils.getRelativeTimeSpanString(st.lastSave,
+                System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString() : "";
+            mHeroDetail.setText(getResources().getQuantityString(R.plurals.stat_saves_line, st.saves, st.saves, when));
+        } else {
+            mHeroDetail.setText(st.saves == 0 ? getString(R.string.stat_no_saves) : "");
+        }
+    }
+
+    private void chip(String text, boolean highlight)
+    {
+        TextView t = Ui.text(this, text, 13, highlight ? Ui.BG : Ui.TEXT, true);
+        t.setBackground(Ui.rounded(this, highlight ? Ui.GOLD : 0x33FFFFFF, 12));
+        t.setPadding(Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4));
+        t.setSingleLine(true);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.rightMargin = Ui.dp(this, 6);
+        mHeroChips.addView(t, lp);
     }
 
     // ------------------------------------------------------------ actions

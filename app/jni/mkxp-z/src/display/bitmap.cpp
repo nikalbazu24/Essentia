@@ -1519,6 +1519,55 @@ static void applyShadow(SDL_Surface *&in, const SDL_PixelFormat &fm, const SDL_C
     in = out;
 }
 
+/* Essentia: rendered text is remembered. Menus (a bag list, a party screen)
+ * redraw the same words every time the cursor moves, and turning text into
+ * pixels with FreeType (plus shadow and outline) is the slow part. */
+#include <list>
+#include <unordered_map>
+#include <string>
+
+namespace {
+struct TextCache
+{
+    typedef std::list<std::pair<std::string, SDL_Surface*> > List;
+    List lru;
+    std::unordered_map<std::string, List::iterator> map;
+    size_t bytes = 0;
+    static const size_t MAX_ITEMS = 512;
+    static const size_t MAX_BYTES = 12 * 1024 * 1024;
+
+    SDL_Surface *get(const std::string &k)
+    {
+        auto it = map.find(k);
+        if (it == map.end())
+            return 0;
+        lru.splice(lru.begin(), lru, it->second);
+        return it->second->second;
+    }
+
+    /* false: too big to keep (the caller still owns it) */
+    bool put(const std::string &k, SDL_Surface *s)
+    {
+        size_t sz = (size_t) s->pitch * s->h;
+        if (sz > MAX_BYTES / 8)
+            return false;
+        lru.emplace_front(k, s);
+        map[k] = lru.begin();
+        bytes += sz;
+        while ((lru.size() > MAX_ITEMS || bytes > MAX_BYTES) && lru.size() > 1)
+        {
+            auto &last = lru.back();
+            bytes -= (size_t) last.second->pitch * last.second->h;
+            SDL_FreeSurface(last.second);
+            map.erase(last.first);
+            lru.pop_back();
+        }
+        return true;
+    }
+};
+TextCache textCache;
+}
+
 void Bitmap::drawText(const IntRect &rect, const char *str, int align)
 {
     guardDisposed();
@@ -1546,14 +1595,42 @@ void Bitmap::drawText(const IntRect &rect, const char *str, int align)
     
     SDL_Surface *txtSurf;
     
+    std::string cacheKey;
+    {
+        const Color &oc = outColor;
+        char head[160];
+        snprintf(head, sizeof(head), "%p|%d|%d%d|%d|%d|%d,%d,%d|%d,%d,%d|",
+                 (void*) font, p->font->getSize(),
+                 (int) p->font->getBold(), (int) p->font->getItalic(),
+                 (int) p->font->getShadow(),
+                 (int) p->font->getOutline(), (int) shState->rtData().config.solidFonts,
+                 (int) c.r, (int) c.g, (int) c.b,
+                 (int) oc.red, (int) oc.green, (int) oc.blue);
+        cacheKey = head;
+        cacheKey += str;
+    }
+    SDL_Surface *cachedSurf = textCache.get(cacheKey);
+    int rawTxtSurfH;
+    bool ownSurf = false;
+    
+    if (cachedSurf)
+    {
+        txtSurf = cachedSurf;
+        rawTxtSurfH = cachedSurf->userdata ? (int) (intptr_t) cachedSurf->userdata : cachedSurf->h;
+    }
+    else
+    {
     if (shState->rtData().config.solidFonts)
         txtSurf = TTF_RenderUTF8_Solid(font, str, c);
     else
         txtSurf = TTF_RenderUTF8_Blended(font, str, c);
     
+    if (!txtSurf)
+        return;
+    
     p->ensureFormat(txtSurf, SDL_PIXELFORMAT_ABGR8888);
     
-    int rawTxtSurfH = txtSurf->h;
+    rawTxtSurfH = txtSurf->h;
     
     if (p->font->getShadow())
         applyShadow(txtSurf, *p->format, c);
@@ -1581,6 +1658,9 @@ void Bitmap::drawText(const IntRect &rect, const char *str, int align)
         txtSurf = outline;
         /* reset outline to 0 */
         TTF_SetFontOutline(font, 0);
+    }
+    txtSurf->userdata = (void*) (intptr_t) rawTxtSurfH;
+    ownSurf = !textCache.put(cacheKey, txtSurf);
     }
     
     int alignX = rect.x;
@@ -1731,7 +1811,9 @@ void Bitmap::drawText(const IntRect &rect, const char *str, int align)
         p->popViewport();
     }
     
-    SDL_FreeSurface(txtSurf);
+    /* otherwise txtSurf belongs to the text cache */
+    if (ownSurf)
+        SDL_FreeSurface(txtSurf);
     p->addTaintedArea(posRect);
     
     p->onModified();

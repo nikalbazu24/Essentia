@@ -149,6 +149,15 @@ public class MainActivity extends SDLActivity
             android.system.Os.setenv("ESSENTIA_SCREEN_MODE",
                 screenMode != null ? screenMode : EssentiaSettings.screenMode(this), true);
 
+            // Windows folders some games use (e.g. Dir.chdir(ENV["TEMP"]) for animated
+            // pictures in older Pokémon Essentials, like Pokémon Z)
+            java.io.File tmp = new java.io.File(getCacheDir(), "tmp");
+            //noinspection ResultOfMethodCallIgnored
+            tmp.mkdirs();
+            for (String k : new String[] { "TEMP", "TMP", "TMPDIR" }) {
+                android.system.Os.setenv(k, tmp.getAbsolutePath(), true);
+            }
+
             // Live map for the second screen (written by essentia_live.rb)
             //noinspection ResultOfMethodCallIgnored
             new java.io.File(getCacheDir(), "essentia_live.txt").delete();
@@ -322,6 +331,7 @@ public class MainActivity extends SDLActivity
     @Override
     protected void onDestroy()
     {
+        stopPlayClock();
         super.onDestroy();
 
         // HACK: Exiting the JVM (process) since Ruby does not likes when we
@@ -731,11 +741,38 @@ public class MainActivity extends SDLActivity
         super.onResume();
         applyImmersive();
         showGamePanel();
+        startPlayClock();
+    }
+
+    // Essentia: play time for the library (counted while the game is on screen)
+    private long mPlayStart = 0;
+    private boolean mSessionCounted = false;
+
+    private String gamePath()
+    {
+        return getIntent() != null ? getIntent().getStringExtra(EXTRA_GAME_PATH) : null;
+    }
+
+    private void startPlayClock()
+    {
+        if (mPlayStart == 0) mPlayStart = android.os.SystemClock.elapsedRealtime();
+    }
+
+    private void stopPlayClock()
+    {
+        if (mPlayStart == 0) return;
+        long ms = android.os.SystemClock.elapsedRealtime() - mPlayStart;
+        mPlayStart = 0;
+        final boolean first = !mSessionCounted;
+        mSessionCounted = true;
+        final String path = gamePath();
+        try { GameStats.addPlay(this, path, ms, first); } catch (Exception ignored) { }
     }
 
     @Override
     protected void onStop()
     {
+        stopPlayClock();
         super.onStop();
         if (mPanel != null) {
             mPanel.dismiss();

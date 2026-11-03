@@ -24,15 +24,15 @@ public final class WhatsNew
     private static final String KEY = "whats_new_seen";
     private static final String KEY_TOUR = "whats_new_tour";
     /** Raise this when PAGES change: small fix releases don't show the tour again. */
-    private static final int TOUR = 1;
+    private static final int TOUR = 2;
 
     /** Icon, title, text for this release. */
     private static final int[][] PAGES = {
-        { R.drawable.ic_w_download, R.string.wn_bg_title, R.string.wn_bg_text },
-        { R.drawable.ic_w_music, R.string.wn_music_title, R.string.wn_music_text },
-        { R.drawable.ic_e_gamepad, R.string.wn_controls_title, R.string.wn_controls_text },
+        { R.drawable.ic_e_shelf, R.string.wn_lib_title, R.string.wn_lib_text },
+        { R.drawable.ic_e_grid, R.string.wn_stats_title, R.string.wn_stats_text },
+        { R.drawable.ic_e_gamepad, R.string.wn_compat_title, R.string.wn_compat_text },
+        { R.drawable.ic_w_speed, R.string.wn_fast_title, R.string.wn_fast_text },
         { R.drawable.ic_w_wide, R.string.wn_wide_title, R.string.wn_wide_text },
-        { R.drawable.ic_w_speed, R.string.wn_light_title, R.string.wn_light_text },
     };
 
     private WhatsNew() { }

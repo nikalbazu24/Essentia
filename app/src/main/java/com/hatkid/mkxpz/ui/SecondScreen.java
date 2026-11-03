@@ -2,36 +2,52 @@ package com.hatkid.mkxpz.ui;
 
 import android.app.Presentation;
 import android.content.Context;
-import android.graphics.Bitmap;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.RenderEffect;
 import android.graphics.Shader;
 import android.graphics.drawable.GradientDrawable;
 import android.hardware.display.DisplayManager;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Display;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextClock;
 import android.widget.TextView;
 
 import com.hatkid.mkxpz.R;
 
 /**
- * Dual-screen mode in the library: on devices with a second screen (e.g. AYN Thor),
- * shows the selected game's details there: cover, name, last played and where its
- * saves are. It never takes the controller away from the main screen.
+ * Dual-screen mode in the library: on devices with a second screen (e.g. AYN Thor)
+ * the selected game's card is shown there: cover, play time, sessions, saves,
+ * version, size... and a status bar with the time, battery and library totals.
+ * It never takes the controller away from the main screen.
  */
 public final class SecondScreen extends Presentation
 {
+    /** One stat: label + value. */
+    public static final class Stat
+    {
+        final String label;
+        final String value;
+        public Stat(String label, String value) { this.label = label; this.value = value; }
+    }
+
     private ImageView mBackdrop;
     private ImageView mCover;
     private TextView mTitle;
-    private TextView mDetail;
+    private TextView mSubtitle;
+    private LinearLayout mTiles;
+    private TextView mFooter;
+    private TextView mBattery;
 
     private SecondScreen(Context outer, Display display)
     {
@@ -82,21 +98,26 @@ public final class SecondScreen extends Presentation
 
         mBackdrop = new ImageView(c);
         mBackdrop.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        mBackdrop.setAlpha(0.4f);
+        mBackdrop.setAlpha(0.35f);
         if (Build.VERSION.SDK_INT >= 31) {
             mBackdrop.setRenderEffect(RenderEffect.createBlurEffect(50f, 50f, Shader.TileMode.CLAMP));
         }
         root.addView(mBackdrop, match());
-        android.view.View shade = new android.view.View(c);
+        View shade = new View(c);
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ 0x4014162B, 0xE614162B }));
+            new int[]{ 0x5014162B, 0xF014162B }));
         root.addView(shade, match());
 
+        LinearLayout col = new LinearLayout(c);
+        col.setOrientation(LinearLayout.VERTICAL);
+        int pad = Ui.dp(c, 18);
+        col.setPadding(pad, pad, pad, Ui.dp(c, 10));
+        root.addView(col, match());
+
+        // ---- game card
         LinearLayout row = new LinearLayout(c);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = Ui.dp(c, 22);
-        row.setPadding(pad, pad, pad, pad);
+        col.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         FrameLayout coverFrame = new FrameLayout(c);
         coverFrame.setBackground(Ui.rounded(c, Ui.SURFACE, 16));
@@ -105,33 +126,56 @@ public final class SecondScreen extends Presentation
         mCover = new ImageView(c);
         mCover.setScaleType(ImageView.ScaleType.CENTER_CROP);
         coverFrame.addView(mCover, match());
-        row.addView(coverFrame, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        row.addView(coverFrame, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.9f));
 
         LinearLayout info = new LinearLayout(c);
         info.setOrientation(LinearLayout.VERTICAL);
-        info.setGravity(Gravity.CENTER_VERTICAL);
-        info.setPadding(Ui.dp(c, 20), 0, 0, 0);
+        info.setPadding(Ui.dp(c, 18), 0, 0, 0);
+        row.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.6f));
 
-        TextView label = Ui.text(c, c.getString(R.string.second_label), 12, Ui.ACCENT_LIGHT, true);
+        TextView label = Ui.text(c, c.getString(R.string.second_label), 11, Ui.ACCENT_LIGHT, true);
         label.setAllCaps(true);
-        label.setLetterSpacing(0.12f);
+        label.setLetterSpacing(0.14f);
         info.addView(label);
 
-        mTitle = Ui.text(c, c.getString(R.string.app_name), 24, Ui.TEXT, true);
-        mTitle.setMaxLines(3);
+        mTitle = Ui.text(c, c.getString(R.string.app_name), 22, Ui.TEXT, true);
+        mTitle.setMaxLines(2);
         mTitle.setEllipsize(TextUtils.TruncateAt.END);
-        mTitle.setPadding(0, Ui.dp(c, 4), 0, Ui.dp(c, 8));
+        mTitle.setPadding(0, Ui.dp(c, 2), 0, 0);
         info.addView(mTitle);
 
-        mDetail = Ui.text(c, "", 13, Ui.TEXT_DIM, false);
-        info.addView(mDetail);
+        mSubtitle = Ui.text(c, "", 12, Ui.TEXT_DIM, false);
+        mSubtitle.setMaxLines(1);
+        mSubtitle.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+        mSubtitle.setPadding(0, 0, 0, Ui.dp(c, 8));
+        info.addView(mSubtitle);
 
-        TextView hint = Ui.text(c, c.getString(R.string.lib_second_hint), 14, Ui.GOLD, true);
-        hint.setPadding(0, Ui.dp(c, 14), 0, 0);
-        info.addView(hint);
+        mTiles = new LinearLayout(c);
+        mTiles.setOrientation(LinearLayout.VERTICAL);
+        info.addView(mTiles, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        row.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f));
-        root.addView(row, match());
+        // ---- status bar
+        LinearLayout bar = new LinearLayout(c);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPadding(Ui.dp(c, 4), Ui.dp(c, 8), Ui.dp(c, 4), 0);
+        TextClock clock = new TextClock(c);
+        clock.setFormat12Hour("h:mm a");
+        clock.setFormat24Hour("HH:mm");
+        clock.setTextColor(Ui.TEXT);
+        clock.setTextSize(14);
+        clock.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        bar.addView(clock);
+        mBattery = Ui.text(c, "", 13, Ui.TEXT_DIM, false);
+        mBattery.setPadding(Ui.dp(c, 12), 0, 0, 0);
+        bar.addView(mBattery);
+        mFooter = Ui.text(c, "", 13, Ui.TEXT_DIM, false);
+        mFooter.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        mFooter.setMaxLines(1);
+        mFooter.setEllipsize(TextUtils.TruncateAt.END);
+        bar.addView(mFooter, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        col.addView(bar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
+
         setContentView(root);
     }
 
@@ -143,18 +187,68 @@ public final class SecondScreen extends Presentation
     public ImageView coverView() { return mCover; }
     public ImageView backdropView() { return mBackdrop; }
 
-    public void showGame(String title, Bitmap cover)
-    {
-        showGame(title, null, cover);
-    }
-
-    /** Title, detail lines and (optionally) the cover. */
-    public void showGame(String title, String detail, Bitmap cover)
+    /** The selected game: title, a small line under it and its stats (3 per row). */
+    public void showGame(String title, String subtitle, java.util.List<Stat> stats, String footer)
     {
         if (mTitle == null) return;
+        Context c = getContext();
         mTitle.setText(title);
-        mDetail.setText(detail == null ? "" : detail);
-        if (cover != null) mCover.setImageBitmap(cover);
-        else mCover.setImageResource(R.drawable.ic_launcher_foreground);
+        mSubtitle.setText(subtitle == null ? "" : subtitle);
+        mSubtitle.setVisibility(subtitle == null || subtitle.isEmpty() ? View.GONE : View.VISIBLE);
+        mFooter.setText(footer == null ? "" : footer);
+        mBattery.setText(battery(c));
+
+        mTiles.removeAllViews();
+        if (stats == null) return;
+        LinearLayout line = null;
+        for (int i = 0; i < stats.size(); i++) {
+            if (i % 3 == 0) {
+                line = new LinearLayout(c);
+                LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+                llp.bottomMargin = Ui.dp(c, 8);
+                mTiles.addView(line, llp);
+            }
+            Stat s = stats.get(i);
+            LinearLayout tile = new LinearLayout(c);
+            tile.setOrientation(LinearLayout.VERTICAL);
+            tile.setGravity(Gravity.CENTER_VERTICAL);
+            tile.setBackground(Ui.rounded(c, 0x66262B52, 12));
+            int p = Ui.dp(c, 10);
+            tile.setPadding(p, Ui.dp(c, 4), p, Ui.dp(c, 4));
+            TextView v = Ui.text(c, s.value, 16, Ui.TEXT, true);
+            v.setMaxLines(1);
+            v.setEllipsize(TextUtils.TruncateAt.END);
+            TextView l = Ui.text(c, s.label, 11, Ui.TEXT_DIM, false);
+            l.setMaxLines(1);
+            l.setEllipsize(TextUtils.TruncateAt.END);
+            tile.addView(v);
+            tile.addView(l);
+            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+            tlp.rightMargin = (i % 3 == 2) ? 0 : Ui.dp(c, 8);
+            line.addView(tile, tlp);
+        }
+        // keep the grid even
+        while (line != null && line.getChildCount() < 3) {
+            View filler = new View(c);
+            LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+            flp.rightMargin = line.getChildCount() == 2 ? 0 : Ui.dp(c, 8);
+            line.addView(filler, flp);
+        }
+    }
+
+    private static String battery(Context c)
+    {
+        try {
+            Intent b = c.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (b == null) return "";
+            int level = b.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = b.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+            int status = b.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+            if (level < 0 || scale <= 0) return "";
+            boolean charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL;
+            return (charging ? "⚡ " : "🔋 ") + (level * 100 / scale) + "%";
+        } catch (Exception e) {
+            return "";
+        }
     }
 }
