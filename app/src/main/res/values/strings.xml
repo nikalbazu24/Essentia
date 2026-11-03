@@ -241,4 +241,8 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="ctl_key_essentia">(Essentia)</string>
     <string name="ctl_use_turbo">Turbo on / off</string>
     <string name="ctl_use_shot">Screenshot</string>
+    <string name="opt_engine">Ruby engine…</string>
+    <string name="eng_modern">Modern (Ruby 3) — recommended, fast</string>
+    <string name="eng_classic">Classic (Ruby 1.8) — for very old games that show Ruby errors</string>
+    <string name="eng_missing">This version of Essentia doesn\'t include the classic engine yet.</string>
 </resources>

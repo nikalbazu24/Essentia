@@ -498,7 +498,13 @@ int main(int argc, char *argv[])
 #endif
 
 	// Start RGSS thread
+	#ifdef MKXPZ_LEGACY_RUBY
+	/* Essentia classic engine: Ruby 1.8 measures its stack limit from the process
+	 * settings (8 MB), so give the game thread a stack at least that big. */
+	SDL_Thread *rgssThread = SDL_CreateThreadWithStackSize(rgssThreadFun, "rgss", 16 * 1024 * 1024, &rtData);
+#else
 	SDL_Thread *rgssThread = SDL_CreateThread(rgssThreadFun, "rgss", &rtData);
+#endif
 
 	// Start events processing
 	eventThread.process(rtData);

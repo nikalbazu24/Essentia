@@ -48,6 +48,9 @@ public class MainActivity extends SDLActivity
     public static final String EXTRA_TITLE = "essentia.TITLE";
     /** Screen format: original, ambient, stretch or wide. */
     public static final String EXTRA_SCREEN_MODE = "essentia.SCREEN_MODE";
+    /** Ruby engine: modern (Ruby 3.1) or classic (Ruby 1.8). */
+    public static final String EXTRA_ENGINE = "essentia.ENGINE";
+    private boolean mClassicEngine = false;
     private static final String GAME_PATH_DEFAULT = Environment.getExternalStorageDirectory() + "/mkxp-z";
     private static String GAME_PATH = GAME_PATH_DEFAULT;
     private static String OBB_MAIN_FILENAME;
@@ -128,6 +131,9 @@ public class MainActivity extends SDLActivity
         // Essentia: the game folder comes from LauncherActivity. It must be set before
         // SDL starts the native thread, which reads GAME_PATH through JNI.
         String requestedPath = getIntent() != null ? getIntent().getStringExtra(EXTRA_GAME_PATH) : null;
+        mClassicEngine = getIntent() != null
+            && EssentiaSettings.ENGINE_CLASSIC.equals(getIntent().getStringExtra(EXTRA_ENGINE))
+            && Games.classicEngineAvailable(this);
         if (requestedPath != null && !requestedPath.isEmpty()) {
             GAME_PATH = requestedPath;
         }
@@ -718,6 +724,16 @@ public class MainActivity extends SDLActivity
         mGamepad.processDPadEvent(evt);
         mGamepad.processStickEvent(evt);
         return super.dispatchGenericMotionEvent(evt);
+    }
+
+    /** Essentia: the classic engine is a second build of mkxp-z with Ruby 1.8 inside. */
+    @Override
+    protected String[] getLibraries()
+    {
+        if (mClassicEngine) {
+            return new String[] { "SDL2", "SDL2_image", "SDL2_ttf", "SDL2_sound", "openal", "mkxp-z-legacy" };
+        }
+        return super.getLibraries();
     }
 
     /**

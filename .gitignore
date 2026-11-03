@@ -18,3 +18,5 @@ captures/
 .AppleDouble
 .LSOverride
 Thumbs.db
+app/jni/ruby18-work/
+app/jni/ruby18-out/

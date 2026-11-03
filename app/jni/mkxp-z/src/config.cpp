@@ -317,8 +317,11 @@ try { exp } catch (...) {}
         preloadScripts.push_back("essentia_preload/win32_wrap.rb");
     }
 
-    // Essentia: compatibility helpers for every game (Windows programs, Ruby 1.8 syntax)
+    // Essentia: compatibility helpers for every game (Windows programs, Ruby 1.8 syntax).
+    // The classic engine *is* Ruby 1.8, so it doesn't need them.
+#ifndef MKXPZ_LEGACY_RUBY
     preloadScripts.insert(preloadScripts.begin(), "essentia_preload/essentia_compat.rb");
+#endif
 
     // Essentia: live map for the second screen (only when the app asks for it)
     {

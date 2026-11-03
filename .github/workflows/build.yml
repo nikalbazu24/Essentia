@@ -101,6 +101,41 @@ jobs:
           command -v xxd || sudo apt-get install -y xxd
           sh ./make_xxd.sh
 
+      # Motor clásico (Ruby 1.8.7, el Ruby de RPG Maker XP) para juegos muy antiguos.
+      # Si algo falla aquí, el APK se publica igual, solo que sin el motor clásico.
+      - name: Recuperar Ruby 1.8 compilado antes
+        id: ruby18-cache
+        uses: actions/cache@v4
+        with:
+          path: app/jni/ruby18-out
+          key: ruby18-${{ env.ABI }}-ndk${{ env.NDK_VERSION }}-${{ hashFiles('app/jni/build_ruby18.sh') }}
+
+      - name: Compilar Ruby 1.8 (motor clásico)
+        if: steps.ruby18-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        working-directory: app/jni
+        run: ./build_ruby18.sh
+
+      - name: Probar el motor clásico
+        working-directory: app/jni
+        run: |
+          if [ ! -f ruby18-out/lib/libruby18.a ]; then
+            echo "::warning::Sin Ruby 1.8: el APK sale sin motor clásico."
+            exit 0
+          fi
+          if "$ANDROID_NDK_HOME/ndk-build" NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk \
+               NDK_APPLICATION_MK=Application.mk APP_MODULES=mkxp-z-legacy \
+               NDK_OUT="$RUNNER_TEMP/legacy-obj" NDK_LIBS_OUT="$RUNNER_TEMP/legacy-libs" \
+               -j"$(nproc)" > "$RUNNER_TEMP/legacy.log" 2>&1; then
+            echo "Motor clásico: compila bien."
+            ls -la "$RUNNER_TEMP/legacy-libs/arm64-v8a/"
+          else
+            echo "::warning::El motor clásico no compiló; el APK sale sin él."
+            grep -n -E "error:|undefined reference|undefined symbol" "$RUNNER_TEMP/legacy.log" | head -80 || true
+            tail -30 "$RUNNER_TEMP/legacy.log"
+            mv ruby18-out ruby18-out.failed
+          fi
+
       - name: Preparar la firma de Essentia
         env:
           KS_B64: ${{ secrets.ESSENTIA_KEYSTORE_B64 }}
@@ -119,6 +154,12 @@ jobs:
 
       - name: Compilar el APK (versión optimizada)
         run: ./gradlew --no-daemon assembleRelease
+
+      - name: Dejar Ruby 1.8 listo para la próxima vez
+        if: always()
+        working-directory: app/jni
+        run: |
+          if [ -d ruby18-out.failed ] && [ ! -d ruby18-out ]; then mv ruby18-out.failed ruby18-out; fi
 
       - name: Preparar archivos para publicar
         run: |

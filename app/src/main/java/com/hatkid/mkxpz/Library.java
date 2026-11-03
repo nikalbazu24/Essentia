@@ -27,6 +27,8 @@ public final class Library
         public boolean widescreen = false;
         /** Screen format for this game, or "" to use the general setting. */
         public String screenMode = "";
+        /** Ruby engine for this game: "" / modern (Ruby 3.1) or classic (Ruby 1.8). */
+        public String engine = "";
 
         Entry(String path, String title, long lastPlayed)
         {
@@ -60,6 +62,7 @@ public final class Library
                 e.cover = o.optString("cover", "");
                 e.widescreen = o.optBoolean("widescreen", false);
                 e.screenMode = o.optString("screenMode", e.widescreen ? EssentiaSettings.SCREEN_WIDE : "");
+                e.engine = o.optString("engine", "");
                 out.add(e);
             }
         } catch (Exception ignored) { }
@@ -83,6 +86,7 @@ public final class Library
                 o.put("cover", e.cover);
                 o.put("widescreen", EssentiaSettings.SCREEN_WIDE.equals(e.screenMode));
                 o.put("screenMode", e.screenMode);
+                o.put("engine", e.engine);
                 arr.put(o);
             }
         } catch (Exception ignored) { }

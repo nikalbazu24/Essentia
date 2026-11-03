@@ -238,4 +238,8 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="ctl_key_essentia">(Essentia)</string>
     <string name="ctl_use_turbo">Turbo sí / no</string>
     <string name="ctl_use_shot">Captura de pantalla</string>
+    <string name="opt_engine">Motor de Ruby…</string>
+    <string name="eng_modern">Moderno (Ruby 3): recomendado, rápido</string>
+    <string name="eng_classic">Clásico (Ruby 1.8): para juegos muy antiguos que dan errores de Ruby</string>
+    <string name="eng_missing">Esta versión de Essentia todavía no trae el motor clásico.</string>
 </resources>

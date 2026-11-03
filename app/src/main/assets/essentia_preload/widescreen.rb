@@ -112,7 +112,12 @@ module EssentiaWide
       return unless defined?(Game_Player)
       extra = wide ? (wide_size[0] - base[0]) : 0
       [:SCREEN_CENTER_X, :CENTER_X].each do |name|
-        next unless Game_Player.const_defined?(name, false)
+        defined_here = begin
+          Game_Player.const_defined?(name, false)
+        rescue ArgumentError # Ruby 1.8
+          Game_Player.const_defined?(name)
+        end
+        next unless defined_here
         @center[name] = Game_Player.const_get(name) unless @center.key?(name)
         value = @center[name] + extra * 2
         Game_Player.send(:remove_const, name)

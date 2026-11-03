@@ -29,6 +29,11 @@
 #include "util/sdl-util.h"
 #include "util/debugwriter.h"
 #include "essentia-android.h"
+
+#ifdef MKXPZ_LEGACY_RUBY
+/* Ruby 1.8: registers the statically linked extensions (ext/extinit.c) */
+extern "C" void Init_ext(void);
+#endif
 #include "util/boost-hash.h"
 #include "util/exception.h"
 #include "util/encoding.h"
@@ -901,7 +906,7 @@ bool evalScript(VALUE string, const char *filename)
 
 #define SCRIPT_SECTION_FMT (rgssVer >= 3 ? "{%04ld}" : "Section%03ld")
 
-#ifdef MKXPZ_BUILD_ANDROID
+#if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
 static VALUE essentiaFixSyntaxCb(VALUE args)
 {
     VALUE mod = rb_const_get(rb_cObject, rb_intern("Essentia"));
@@ -1081,7 +1086,7 @@ static void runRMXPScripts(BacktraceData &btData) {
             int state;
             
             evalString(string, fname, &state);
-#ifdef MKXPZ_BUILD_ANDROID
+#if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
             // Essentia: a script written for Ruby 1.8 (old Essentials games) may not
             // parse in modern Ruby. Rewrite the old syntax and try once more.
             if (state)
@@ -1221,6 +1226,13 @@ static void mriBindingExecute() {
     rb_enc_set_default_external(rb_enc_from_encoding(rb_utf8_encoding()));
 #else
     ruby_init();
+#ifdef MKXPZ_LEGACY_RUBY
+    {
+        /* Essentia classic engine: register the extensions built into Ruby 1.8
+         * (zlib, stringio, thread, digest/md5) */
+        Init_ext();
+    }
+#endif
     rb_eval_string("$KCODE='U'");
 #ifdef __WIN32__
     if (!conf.winConsole) {

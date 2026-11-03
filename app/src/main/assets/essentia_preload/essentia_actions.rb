@@ -251,13 +251,13 @@ module EssentiaActions
       if $game_system && $game_system.respond_to?(:save_disabled) && $game_system.save_disabled
         return :disabled
       end
-      ok = if defined?(Game) && Game.respond_to?(:save)
-             Game.save
-           elsif respond_to?(:pbSave, true)
-             pbSave
-           else
-             return :unsupported
-           end
+      if defined?(Game) && Game.respond_to?(:save)
+        ok = Game.save
+      elsif respond_to?(:pbSave, true)
+        ok = pbSave
+      else
+        return :unsupported
+      end
       ok == false ? :fail : true
     end
 

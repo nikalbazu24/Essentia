@@ -18,3 +18,8 @@ include $(L_PATH)/ruby.mk
 
 # Include main library
 include $(L_PATH)/mkxp-z.mk
+
+# Essentia: classic engine (Ruby 1.8), only when Ruby 1.8 was built
+ifneq ($(wildcard $(L_PATH)/ruby18-out/lib/libruby18.a),)
+include $(L_PATH)/mkxp-z-legacy.mk
+endif

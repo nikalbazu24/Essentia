@@ -5,7 +5,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := mkxp-z
 
-LOCAL_CPPFLAGS := \
+ESSENTIA_MKXPZ_FLAGS := \
 	-DGLES2_HEADER \
 	-DMKXPZ_BUILD_ANDROID \
 	-DMKXPZ_VERSION="\"2.4\"" \
@@ -16,8 +16,9 @@ LOCAL_CPPFLAGS := \
 	-Wno-undefined-var-template \
 	-Wno-uninitialized
 
-LOCAL_C_INCLUDES := \
-	$(LOCAL_BUILD_PATH)/include \
+LOCAL_CPPFLAGS := $(ESSENTIA_MKXPZ_FLAGS)
+
+ESSENTIA_MKXPZ_INC := \
 	$(LOCAL_PATH)/xxd/assets \
 	$(LOCAL_PATH)/xxd/shader \
 	$(LOCAL_PATH)/src \
@@ -34,7 +35,9 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/src/system \
 	$(LOCAL_PATH)/src/util
 
-LOCAL_SRC_FILES := \
+LOCAL_C_INCLUDES := $(LOCAL_BUILD_PATH)/include $(ESSENTIA_MKXPZ_INC)
+
+ESSENTIA_MKXPZ_SRC := \
 	$(LOCAL_PATH)/src/main.cpp \
 	$(LOCAL_PATH)/src/config.cpp \
 	$(LOCAL_PATH)/src/eventthread.cpp \
@@ -108,6 +111,8 @@ LOCAL_SRC_FILES := \
 	$(LOCAL_PATH)/binding/miniffi.cpp \
 	$(LOCAL_PATH)/binding/miniffi-binding.cpp \
 	$(LOCAL_PATH)/binding/module_rpg.cpp
+
+LOCAL_SRC_FILES := $(ESSENTIA_MKXPZ_SRC)
 
 LOCAL_SHARED_LIBRARIES := SDL2 SDL2_ttf SDL2_image SDL2_sound openal ruby
 

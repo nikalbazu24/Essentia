@@ -505,7 +505,8 @@ public class LibraryActivity extends ControllerActivity
             : getString(R.string.lib_played, DateUtils.getRelativeTimeSpanString(e.lastPlayed,
                 System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString());
         String mode = screenLabel(e.screenMode);
-        return mode == null ? when : when + "  ·  " + mode;
+        String out = mode == null ? when : when + "  ·  " + mode;
+        return EssentiaSettings.ENGINE_CLASSIC.equals(e.engine) ? out + "  ·  Ruby 1.8" : out;
     }
 
     private static final class Holder
@@ -763,6 +764,7 @@ public class LibraryActivity extends ControllerActivity
         if (!e.cover.isEmpty()) { labels.add(getString(R.string.opt_cover_reset)); actions.add(() -> resetCover(e)); }
         labels.add(getString(R.string.opt_rename)); actions.add(() -> rename(e));
         labels.add(getString(R.string.opt_screen)); actions.add(() -> chooseScreen(e));
+        labels.add(getString(R.string.opt_engine)); actions.add(() -> chooseEngine(e));
         labels.add(getString(R.string.opt_import)); actions.add(() -> importSaves(e));
         labels.add(getString(R.string.lib_remove)); actions.add(() -> { Library.remove(this, e.path); reload(); });
 
@@ -802,6 +804,28 @@ public class LibraryActivity extends ControllerActivity
             case EssentiaSettings.SCREEN_AMBIENT: return getString(R.string.scr_badge_ambient);
             default: return null;
         }
+    }
+
+    private void chooseEngine(Library.Entry e)
+    {
+        boolean available = Games.classicEngineAvailable(this);
+        final String[] values = { EssentiaSettings.ENGINE_MODERN, EssentiaSettings.ENGINE_CLASSIC };
+        final String[] labels = { getString(R.string.eng_modern), getString(R.string.eng_classic) };
+        int checked = EssentiaSettings.ENGINE_CLASSIC.equals(e.engine) ? 1 : 0;
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(R.string.opt_engine)
+            .setSingleChoiceItems(labels, checked, (d, which) -> {
+                if (which == 1 && !available) {
+                    Toast.makeText(this, R.string.eng_missing, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                e.engine = values[which];
+                Library.update(this, e);
+                d.dismiss();
+                reload();
+            })
+            .setNegativeButton(R.string.cancel, null)
+            .show();
     }
 
     private void chooseScreen(Library.Entry e)

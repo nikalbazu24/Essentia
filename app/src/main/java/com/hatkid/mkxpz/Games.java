@@ -91,12 +91,21 @@ public final class Games
         intent.putExtra(MainActivity.EXTRA_GAME_PATH, path);
         intent.putExtra(MainActivity.EXTRA_TITLE, title);
         intent.putExtra(MainActivity.EXTRA_SCREEN_MODE, screen);
+        boolean classic = entry != null && EssentiaSettings.ENGINE_CLASSIC.equals(entry.engine)
+            && classicEngineAvailable(a);
+        intent.putExtra(MainActivity.EXTRA_ENGINE, classic ? EssentiaSettings.ENGINE_CLASSIC : EssentiaSettings.ENGINE_MODERN);
         intent.putExtra(MainActivity.EXTRA_DATA_DIR, Saves.dirFor(a, gameDir, title).getAbsolutePath());
         if (newTask) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         }
         a.startActivity(intent);
         a.overridePendingTransition(0, 0);
+    }
+
+    /** True when this APK includes the classic engine (Ruby 1.8). */
+    public static boolean classicEngineAvailable(Context c)
+    {
+        return new File(c.getApplicationInfo().nativeLibraryDir, "libmkxp-z-legacy.so").isFile();
     }
 
     public static void killGameProcess(Context c)
