@@ -109,22 +109,37 @@ class String
   #   the one-letter string answers as that number.
   # (String#to_a is left out: Array(text) and *text would change for every game.)
   alias_method :essentia_method_missing, :method_missing
+  # Old games sometimes bring their own String#getbyte/bytesize (written for
+  # Ruby 1.8); unpack is used instead so they can't make this loop forever.
   def method_missing(name, *args, &block)
     if name == :each
       each_line(*args, &block)
-    elsif bytesize == 1 && Integer.method_defined?(name)
-      getbyte(0).__send__(name, *args, &block)
+    elsif !Thread.current[:essentia_byte_call] && Integer.method_defined?(name) &&
+          (byte = essentia_single_byte)
+      begin
+        Thread.current[:essentia_byte_call] = true
+        byte.__send__(name, *args, &block)
+      ensure
+        Thread.current[:essentia_byte_call] = false
+      end
     else
       essentia_method_missing(name, *args, &block)
     end
   end
   private :method_missing
 
+  def essentia_single_byte
+    b = unpack('C*')
+    b.length == 1 ? b[0] : nil
+  end
+  private :essentia_single_byte
+
   # 5 + text[i] (Ruby 1.8 style): the one-letter string acts as its byte.
   unless method_defined?(:coerce)
     def coerce(other)
-      if bytesize == 1 && other.is_a?(Numeric)
-        [other, getbyte(0)]
+      byte = essentia_single_byte
+      if byte && other.is_a?(Numeric)
+        [other, byte]
       else
         raise TypeError, "String can't be coerced into #{other.class}"
       end

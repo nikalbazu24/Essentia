@@ -343,7 +343,8 @@ module Win32API_Impl
 end
 
 def kappatalize(s)
-	s[0] = s[0].upcase
+	# (Essentia: s[0, 1] works the same in Ruby 1.8, where s[0] is a number)
+	s[0, 1] = s[0, 1].upcase
 	return s
 end
 

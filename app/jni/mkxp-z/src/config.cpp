@@ -321,6 +321,9 @@ try { exp } catch (...) {}
     // The classic engine *is* Ruby 1.8, so it doesn't need them.
 #ifndef MKXPZ_LEGACY_RUBY
     preloadScripts.insert(preloadScripts.begin(), "essentia_preload/essentia_compat.rb");
+#else
+    // ...but the bundled helper scripts need a few modern methods on Ruby 1.8
+    preloadScripts.insert(preloadScripts.begin(), "essentia_preload/essentia_ruby18.rb");
 #endif
 
     // Essentia: live map for the second screen (only when the app asks for it)
