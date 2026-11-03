@@ -122,8 +122,16 @@ protected:
 	void setSpriteY(int value);
 	void unlink();
 
+public:
+	/* Essentia: draw this element immediately below another one
+	 * (same Z, same place in the creation order) */
+	void drawRightBelow(const SceneElement &other);
+protected:
+
 	IntruListLink<SceneElement> link;
-	const unsigned int creationStamp;
+	unsigned int creationStamp;
+	/* Essentia: drawn right below the element with the same stamp */
+	bool drawBelowTwin;
 	int z;
 	bool visible;
 	Scene *scene;

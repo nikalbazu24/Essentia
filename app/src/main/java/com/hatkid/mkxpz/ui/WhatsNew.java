@@ -24,15 +24,24 @@ public final class WhatsNew
     private static final String KEY = "whats_new_seen";
     private static final String KEY_TOUR = "whats_new_tour";
     /** Raise this when PAGES change: small fix releases don't show the tour again. */
-    private static final int TOUR = 2;
+    private static final int TOUR = 3;
 
     /** Icon, title, text for this release. */
     private static final int[][] PAGES = {
-        { R.drawable.ic_e_shelf, R.string.wn_lib_title, R.string.wn_lib_text },
-        { R.drawable.ic_e_grid, R.string.wn_stats_title, R.string.wn_stats_text },
-        { R.drawable.ic_e_gamepad, R.string.wn_compat_title, R.string.wn_compat_text },
-        { R.drawable.ic_w_speed, R.string.wn_fast_title, R.string.wn_fast_text },
-        { R.drawable.ic_e_settings, R.string.wn_comfort_title, R.string.wn_comfort_text },
+        { R.drawable.ic_launcher_foreground, R.string.wn_beta_title, R.string.wn_beta_text },
+        { R.drawable.ic_e_grid, R.string.wn_colors_title, R.string.wn_colors_text },
+        { R.drawable.ic_e_shelf, R.string.wn_safe_title, R.string.wn_safe_text },
+        { R.drawable.ic_e_more, R.string.wn_tr_title, R.string.wn_tr_text },
+        { R.drawable.ic_e_sort, R.string.wn_cloud_title, R.string.wn_cloud_text },
+        { R.drawable.ic_w_speed, R.string.wn_start_title, R.string.wn_start_text },
+    };
+
+    /** First time Essentia opens: a short welcome instead. */
+    private static final int[][] WELCOME = {
+        { R.drawable.ic_launcher_foreground, R.string.wl_hello_title, R.string.wl_hello_text },
+        { R.drawable.ic_e_add, R.string.wl_add_title, R.string.wl_add_text },
+        { R.drawable.ic_e_gamepad, R.string.wl_play_title, R.string.wl_play_text },
+        { R.drawable.ic_e_settings, R.string.wl_set_title, R.string.wl_set_text },
     };
 
     private WhatsNew() { }
@@ -41,13 +50,20 @@ public final class WhatsNew
     public static void showIfNew(Activity a)
     {
         SharedPreferences p = a.getSharedPreferences(EssentiaSettings.PREFS, Context.MODE_PRIVATE);
+        boolean fresh = !p.contains(KEY_TOUR) && !p.contains(KEY);
         int seen = p.getInt(KEY_TOUR, p.getInt(KEY, 0) > 0 ? 1 : 0);
         if (seen >= TOUR) return;
         p.edit().putInt(KEY_TOUR, TOUR).apply();
-        show(a);
+        if (fresh) show(a, WELCOME, R.string.wl_header);
+        else show(a);
     }
 
     public static void show(Activity a)
+    {
+        show(a, PAGES, R.string.wn_header);
+    }
+
+    public static void show(Activity a, int[][] PAGES, int headerRes)
     {
         LinearLayout box = new LinearLayout(a);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -56,7 +72,7 @@ public final class WhatsNew
         box.setPadding(pad, pad, pad, Ui.dp(a, 14));
         box.setBackground(Ui.rounded(a, Ui.BG, 22));
 
-        TextView header = Ui.text(a, a.getString(R.string.wn_header), 14, Ui.ACCENT_LIGHT, true);
+        TextView header = Ui.text(a, a.getString(headerRes), 14, Ui.ACCENT_LIGHT, true);
         header.setGravity(Gravity.CENTER);
         box.addView(header);
 
@@ -101,6 +117,8 @@ public final class WhatsNew
         Runnable showPage = () -> {
             int[] pg = PAGES[page[0]];
             icon.setImageResource(pg[0]);
+            if (pg[0] == R.drawable.ic_launcher_foreground) icon.clearColorFilter();
+            else icon.setColorFilter(Ui.GOLD);
             title.setText(pg[1]);
             text.setText(pg[2]);
             StringBuilder sb = new StringBuilder();

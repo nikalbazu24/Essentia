@@ -15,14 +15,66 @@ import android.widget.TextView;
 /** Essentia's look: the colors of the essence flask, and focus-friendly widgets. */
 public final class Ui
 {
-    public static final int BG = Color.parseColor("#14162B");
-    public static final int SURFACE = Color.parseColor("#1E2240");
-    public static final int SURFACE_HI = Color.parseColor("#2A2F55");
-    public static final int ACCENT = Color.parseColor("#8A5CF6");
-    public static final int ACCENT_LIGHT = Color.parseColor("#B48CFF");
+    // The palette in use (set by applyTheme; the defaults are the "Esencia" theme)
+    public static int BG = Color.parseColor("#14162B");
+    public static int SURFACE = Color.parseColor("#1E2240");
+    public static int SURFACE_HI = Color.parseColor("#2A2F55");
+    public static int ACCENT = Color.parseColor("#8A5CF6");
+    public static int ACCENT_LIGHT = Color.parseColor("#B48CFF");
     public static final int GOLD = Color.parseColor("#FFE066");
     public static final int TEXT = Color.parseColor("#F3EEFE");
     public static final int TEXT_DIM = Color.parseColor("#A9A6C9");
+
+    /** Themes: id, background, surface, raised surface, accent, light accent. */
+    public static final String[][] THEMES = {
+        { "esencia",   "#14162B", "#1E2240", "#2A2F55", "#8A5CF6", "#B48CFF" },
+        { "oceano",    "#0D1A2B", "#14273E", "#1E3757", "#2F8CFF", "#86BFFF" },
+        { "bosque",    "#0E1C16", "#162A20", "#213D2E", "#2EBD6B", "#86E3AE" },
+        { "fuego",     "#1D1111", "#2A1919", "#3E2323", "#F0533A", "#FF9C88" },
+        { "electrico", "#1A1808", "#26230F", "#383316", "#E8B500", "#FFE066" },
+        { "rosa",      "#1E1220", "#2C1A2F", "#402544", "#E5489A", "#FF94C8" },
+        { "noche",     "#000000", "#101014", "#1C1C24", "#8A5CF6", "#B48CFF" },
+    };
+
+    private static int sStamp = 0;
+    private static String sTheme = null;
+
+    /** Loads the chosen theme (cheap: only when it changed). */
+    public static void applyTheme(Context c)
+    {
+        String id = c.getSharedPreferences("essentia", Context.MODE_PRIVATE).getString("theme", "esencia");
+        if (id.equals(sTheme)) return;
+        for (String[] t : THEMES) {
+            if (!t[0].equals(id)) continue;
+            BG = Color.parseColor(t[1]);
+            SURFACE = Color.parseColor(t[2]);
+            SURFACE_HI = Color.parseColor(t[3]);
+            ACCENT = Color.parseColor(t[4]);
+            ACCENT_LIGHT = Color.parseColor(t[5]);
+        }
+        sTheme = id;
+        sStamp++;
+    }
+
+    public static void setTheme(Context c, String id)
+    {
+        c.getSharedPreferences("essentia", Context.MODE_PRIVATE).edit().putString("theme", id).commit();
+        applyTheme(c);
+    }
+
+    public static String theme(Context c)
+    {
+        return c.getSharedPreferences("essentia", Context.MODE_PRIVATE).getString("theme", "esencia");
+    }
+
+    /** Changes every time a new theme is loaded (screens compare it to rebuild). */
+    public static int themeStamp() { return sStamp; }
+
+    /** A color with another opacity (0..255). */
+    public static int alpha(int color, int a)
+    {
+        return (color & 0x00FFFFFF) | (a << 24);
+    }
 
     private Ui() { }
 

@@ -23,50 +23,205 @@ import com.hatkid.mkxpz.ui.Ui;
 public class SettingsActivity extends ControllerActivity
 {
     private LinearLayout mList;
+    private ScrollView mScroll;
+    private LinearLayout mTabs;
+    private int mCategory = 0;
+
+    /** Settings are grouped: one category on screen at a time. */
+    private static final int[] CATEGORIES = {
+        R.string.cat_look, R.string.cat_screen, R.string.cat_controls, R.string.cat_games,
+        R.string.cat_cloud, R.string.cat_advanced, R.string.cat_about
+    };
+    private static final int[] CATEGORY_ICONS = {
+        R.drawable.ic_e_grid, R.drawable.ic_e_shelf, R.drawable.ic_e_gamepad, R.drawable.ic_e_play,
+        R.drawable.ic_e_sort, R.drawable.ic_e_settings, R.drawable.ic_e_more
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) mCategory = savedInstanceState.getInt("category", 0);
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
+        boolean portrait = getResources().getConfiguration().orientation
+            == android.content.res.Configuration.ORIENTATION_PORTRAIT;
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(portrait ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
+        root.setBackgroundColor(Ui.BG);
 
-        mList = new LinearLayout(this);
-        mList.setOrientation(LinearLayout.VERTICAL);
-        int pad = Ui.dp(this, 20);
-        mList.setPadding(pad, pad, pad, pad);
-        scroll.addView(mList, new ScrollView.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        // Left (or top): back button and the categories
+        LinearLayout side = new LinearLayout(this);
+        side.setOrientation(LinearLayout.VERTICAL);
+        int pad = Ui.dp(this, 16);
+        side.setPadding(pad, pad, portrait ? pad : Ui.dp(this, 8), portrait ? 0 : pad);
+        side.setBackgroundColor(Ui.alpha(Ui.SURFACE, 0x88));
 
-        // Header
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        Button back = Ui.button(this, "‹  " + getString(R.string.set_back), false);
+        Button back = Ui.button(this, "\u2039  " + getString(R.string.set_back), false);
         back.setOnClickListener(v -> finish());
         header.addView(back);
-        TextView title = Ui.text(this, getString(R.string.lib_settings), 24, Ui.TEXT, true);
-        title.setPadding(Ui.dp(this, 14), 0, 0, 0);
+        TextView title = Ui.text(this, getString(R.string.lib_settings), 22, Ui.TEXT, true);
+        title.setPadding(Ui.dp(this, 12), 0, 0, 0);
         header.addView(title);
-        mList.addView(header);
+        side.addView(header);
 
-        buildMusic();
-        buildControls();
-        buildScreen();
-        buildPerformance();
-        buildTurbo();
-        buildSaves();
-        buildRtp();
-        buildGameUpdates();
-        buildFrontends();
-        buildUpdates();
-        buildAbout();
+        mTabs = new LinearLayout(this);
+        mTabs.setOrientation(portrait ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+        mTabs.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 8));
+        for (int i = 0; i < CATEGORIES.length; i++) {
+            final int cat = i;
+            View tab = tab(CATEGORY_ICONS[i], getString(CATEGORIES[i]));
+            tab.setOnClickListener(v -> showCategory(cat));
+            tab.setOnFocusChangeListener((v, has) -> { if (has) showCategory(cat); });
+            LinearLayout.LayoutParams lp = portrait
+                ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 46))
+                : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 46));
+            lp.setMargins(0, 0, portrait ? Ui.dp(this, 6) : 0, portrait ? 0 : Ui.dp(this, 4));
+            mTabs.addView(tab, lp);
+        }
+        if (portrait) {
+            android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(this);
+            hs.setHorizontalScrollBarEnabled(false);
+            hs.addView(mTabs);
+            side.addView(hs);
+        } else {
+            ScrollView vs = new ScrollView(this);
+            vs.addView(mTabs);
+            side.addView(vs, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        }
+        root.addView(side, portrait
+            ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            : new LinearLayout.LayoutParams(Ui.dp(this, 250), ViewGroup.LayoutParams.MATCH_PARENT));
 
-        setContentView(scroll);
-        back.requestFocus();
+        // Right (or below): the chosen category
+        mScroll = new ScrollView(this);
+        mScroll.setFillViewport(true);
+        mList = new LinearLayout(this);
+        mList.setOrientation(LinearLayout.VERTICAL);
+        mList.setPadding(Ui.dp(this, 20), Ui.dp(this, 6), Ui.dp(this, 20), Ui.dp(this, 20));
+        mScroll.addView(mList, new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(mScroll, portrait
+            ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+            : new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+
+        setContentView(root);
+        showCategory(mCategory);
+        View first = mTabs.getChildAt(mCategory);
+        if (first != null) first.requestFocus();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle out)
+    {
+        super.onSaveInstanceState(out);
+        out.putInt("category", mCategory);
+    }
+
+    private View tab(int icon, String text)
+    {
+        LinearLayout b = new LinearLayout(this);
+        b.setGravity(Gravity.CENTER_VERTICAL);
+        b.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 14), 0);
+        b.setFocusable(true);
+        b.setClickable(true);
+        android.graphics.drawable.StateListDrawable bg = new android.graphics.drawable.StateListDrawable();
+        android.graphics.drawable.GradientDrawable focused = Ui.rounded(this, Ui.SURFACE_HI, 12);
+        focused.setStroke(Ui.dp(this, 2), Ui.ACCENT_LIGHT);
+        bg.addState(new int[]{android.R.attr.state_focused}, focused);
+        bg.addState(new int[]{android.R.attr.state_selected}, Ui.rounded(this, Ui.alpha(Ui.ACCENT, 0x55), 12));
+        bg.addState(new int[]{android.R.attr.state_pressed}, Ui.rounded(this, Ui.ACCENT, 12));
+        bg.addState(new int[]{}, new android.graphics.drawable.ColorDrawable(0));
+        b.setBackground(bg);
+        android.widget.ImageView i = new android.widget.ImageView(this);
+        i.setImageResource(icon);
+        i.setImageTintList(Ui.tint(Ui.TEXT));
+        b.addView(i, new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20)));
+        TextView t = Ui.text(this, text, 15, Ui.TEXT, true);
+        t.setPadding(Ui.dp(this, 10), 0, 0, 0);
+        b.addView(t);
+        return b;
+    }
+
+    private void showCategory(int cat)
+    {
+        if (mList == null) return;
+        if (cat == mCategory && mList.getChildCount() > 0) return;
+        mCategory = cat;
+        for (int i = 0; i < mTabs.getChildCount(); i++) mTabs.getChildAt(i).setSelected(i == cat);
+        mList.removeAllViews();
+        switch (cat) {
+            case 0: buildTheme(); buildMusic(); break;
+            case 1: buildScreen(); break;
+            case 2: buildControls(); buildTurbo(); break;
+            case 3: buildGames(); buildSaves(); buildGameUpdates(); buildRtp(); break;
+            case 4: buildCloud(); buildFrontends(); break;
+            case 5: buildPerformance(); break;
+            default: buildUpdates(); buildAbout(); break;
+        }
+        mScroll.scrollTo(0, 0);
     }
 
     // ------------------------------------------------------------ sections
+
+    private void buildTheme()
+    {
+        section(R.string.set_theme_title, R.string.set_theme_desc);
+        android.widget.GridLayout grid = new android.widget.GridLayout(this);
+        grid.setColumnCount(4);
+        String current = Ui.theme(this);
+        int[] names = { R.string.theme_esencia, R.string.theme_oceano, R.string.theme_bosque, R.string.theme_fuego,
+            R.string.theme_electrico, R.string.theme_rosa, R.string.theme_noche };
+        for (int i = 0; i < Ui.THEMES.length; i++) {
+            final String[] t = Ui.THEMES[i];
+            LinearLayout swatch = new LinearLayout(this);
+            swatch.setOrientation(LinearLayout.VERTICAL);
+            swatch.setGravity(Gravity.CENTER);
+            swatch.setFocusable(true);
+            swatch.setClickable(true);
+            int p = Ui.dp(this, 8);
+            swatch.setPadding(p, p, p, p);
+            android.graphics.drawable.GradientDrawable sel = Ui.rounded(this, android.graphics.Color.parseColor(t[2]), 14);
+            sel.setStroke(Ui.dp(this, t[0].equals(current) ? 3 : 1),
+                t[0].equals(current) ? Ui.GOLD : android.graphics.Color.parseColor(t[3]));
+            android.graphics.drawable.GradientDrawable foc = Ui.rounded(this, android.graphics.Color.parseColor(t[3]), 14);
+            foc.setStroke(Ui.dp(this, 3), Ui.TEXT);
+            android.graphics.drawable.StateListDrawable st = new android.graphics.drawable.StateListDrawable();
+            st.addState(new int[]{android.R.attr.state_focused}, foc);
+            st.addState(new int[]{}, sel);
+            swatch.setBackground(st);
+            View dot = new View(this);
+            android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                new int[]{ android.graphics.Color.parseColor(t[4]), android.graphics.Color.parseColor(t[5]) });
+            d.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            dot.setBackground(d);
+            swatch.addView(dot, new LinearLayout.LayoutParams(Ui.dp(this, 34), Ui.dp(this, 34)));
+            TextView name = Ui.text(this, getString(names[i]), 13, Ui.TEXT, t[0].equals(current));
+            name.setGravity(Gravity.CENTER);
+            name.setPadding(0, Ui.dp(this, 6), 0, 0);
+            swatch.addView(name);
+            swatch.setOnClickListener(v -> {
+                Ui.setTheme(this, t[0]);
+                recreate();
+            });
+            android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
+            lp.width = Ui.dp(this, 108);
+            lp.setMargins(0, 0, Ui.dp(this, 8), Ui.dp(this, 8));
+            grid.addView(swatch, lp);
+        }
+        mList.addView(grid);
+    }
+
+    private void buildGames()
+    {
+        section(R.string.set_comfort_title, 0);
+        flagRow(R.string.set_fast_text, EssentiaSettings.FAST_TEXT, false);
+        flagRow(R.string.set_skip_intro, EssentiaSettings.SKIP_INTRO, false);
+        flagRow(R.string.set_resume_last, EssentiaSettings.RESUME_LAST, false);
+        flagRow(R.string.set_rescan, EssentiaSettings.RESCAN, true);
+    }
 
     private void buildMusic()
     {
@@ -249,12 +404,6 @@ public class SettingsActivity extends ControllerActivity
     {
         section(R.string.set_auto_update_title, R.string.set_auto_update_desc);
         flagRow(R.string.set_auto_update, EssentiaSettings.AUTO_UPDATE, true);
-        section(R.string.set_comfort_title, 0);
-        flagRow(R.string.set_resume_last, EssentiaSettings.RESUME_LAST, false);
-        flagRow(R.string.set_rescan, EssentiaSettings.RESCAN, true);
-        flagRow(R.string.set_fast_text, EssentiaSettings.FAST_TEXT, false);
-        flagRow(R.string.set_skip_intro, EssentiaSettings.SKIP_INTRO, false);
-        buildCloud();
     }
 
     private void buildSaves()

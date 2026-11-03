@@ -95,6 +95,9 @@ public class LibraryActivity extends ControllerActivity
     private View mEmpty;
     private View mZoomed;
     private View mRoot;
+    private int mThemeStamp;
+    /** The intro plays once per app start. */
+    private static boolean sIntroShown = false;
     /** Details of games (saves, version, size...), measured in the background. */
     private final java.util.Map<String, GameStats> mStats = new java.util.HashMap<>();
     private final java.util.concurrent.ExecutorService mStatsExec =
@@ -114,13 +117,18 @@ public class LibraryActivity extends ControllerActivity
         mSort = EssentiaSettings.sortMode(this);
 
         setContentView(buildUi());
+        mThemeStamp = Ui.themeStamp();
+        if (savedInstanceState == null && !sIntroShown) {
+            sIntroShown = true;
+            showIntro();
+        }
         applyViewMode();
 
         if (!Games.hasAllFilesAccess()) {
             Games.askAllFilesAccess(this, REQ_ALL_FILES, this::finish);
         } else if (savedInstanceState == null) {
             Updater.check(this, () -> { }, false);
-            com.hatkid.mkxpz.ui.WhatsNew.showIfNew(this);
+            mRoot.postDelayed(() -> { if (!isFinishing()) com.hatkid.mkxpz.ui.WhatsNew.showIfNew(this); }, 1800);
             rescanFolders();
             if (EssentiaSettings.flag(this, EssentiaSettings.RESUME_LAST, false)) {
                 List<Library.Entry> all = Library.load(this);
@@ -135,6 +143,7 @@ public class LibraryActivity extends ControllerActivity
     protected void onResume()
     {
         super.onResume();
+        if (mThemeStamp != Ui.themeStamp()) { recreate(); return; }
         MusicPlayer.resume(this);
         UpdateService.setListener(() -> runOnUiThread(this::refreshUpdates));
         reload();
@@ -163,6 +172,66 @@ public class LibraryActivity extends ControllerActivity
 
     // ================================================================== UI
 
+    // ------------------------------------------------------------ intro
+
+    /** A short intro when Essentia opens: the flask glows in, then the library appears. */
+    private void showIntro()
+    {
+        if (!(mRoot instanceof FrameLayout)) return;
+        FrameLayout root = (FrameLayout) mRoot;
+        FrameLayout intro = new FrameLayout(this);
+        intro.setBackgroundColor(Ui.BG);
+        intro.setClickable(true);
+
+        View glow = new View(this);
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{ Ui.alpha(Ui.ACCENT, 0x70), Ui.alpha(Ui.ACCENT, 0x00) });
+        g.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        g.setGradientRadius(Ui.dp(this, 170));
+        glow.setBackground(g);
+        int gs = Ui.dp(this, 360);
+        intro.addView(glow, new FrameLayout.LayoutParams(gs, gs, Gravity.CENTER));
+
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER);
+        ImageView flask = new ImageView(this);
+        flask.setImageResource(R.drawable.ic_launcher_foreground);
+        int fs = Ui.dp(this, 150);
+        col.addView(flask, new LinearLayout.LayoutParams(fs, fs));
+        TextView name = Ui.text(this, getString(R.string.app_name), 34, Ui.TEXT, true);
+        name.setLetterSpacing(0.12f);
+        name.setGravity(Gravity.CENTER);
+        col.addView(name);
+        TextView tag = Ui.text(this, getString(R.string.intro_tagline), 14, Ui.ACCENT_LIGHT, false);
+        tag.setGravity(Gravity.CENTER);
+        tag.setPadding(0, Ui.dp(this, 4), 0, 0);
+        col.addView(tag);
+        intro.addView(col, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+        root.addView(intro, match());
+
+        flask.setScaleX(0.6f); flask.setScaleY(0.6f); flask.setAlpha(0f);
+        flask.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(650)
+            .setInterpolator(new android.view.animation.OvershootInterpolator(1.4f)).start();
+        glow.setScaleX(0.3f); glow.setScaleY(0.3f); glow.setAlpha(0f);
+        glow.animate().scaleX(1.15f).scaleY(1.15f).alpha(1f).setDuration(900).start();
+        name.setAlpha(0f); name.setTranslationY(Ui.dp(this, 16));
+        name.animate().alpha(1f).translationY(0).setStartDelay(300).setDuration(450).start();
+        tag.setAlpha(0f);
+        tag.animate().alpha(1f).setStartDelay(550).setDuration(450).start();
+
+        Runnable close = () -> {
+            if (intro.getParent() == null) return;
+            intro.animate().alpha(0f).setDuration(320).withEndAction(() -> {
+                root.removeView(intro);
+                focusSelected();
+            }).start();
+        };
+        intro.setOnClickListener(v -> close.run());
+        intro.postDelayed(close, 1600);
+    }
+
     private boolean isPortrait()
     {
         return getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
@@ -184,7 +253,7 @@ public class LibraryActivity extends ControllerActivity
         root.addView(mBackdrop, match());
         View fade = new View(this);
         fade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ 0x6614162B, 0xCC14162B, 0xFF14162B }));
+            new int[]{ Ui.alpha(Ui.BG, 0x66), Ui.alpha(Ui.BG, 0xCC), Ui.alpha(Ui.BG, 0xFF) }));
         root.addView(fade, match());
 
         LinearLayout col = new LinearLayout(this);
@@ -470,7 +539,7 @@ public class LibraryActivity extends ControllerActivity
         int stroke = Ui.dp(this, 3);
         GradientDrawable ring = Ui.rounded(this, 0x00000000, 21);
         ring.setStroke(stroke, Ui.ACCENT_LIGHT);
-        GradientDrawable press = Ui.rounded(this, 0x408A5CF6, 21);
+        GradientDrawable press = Ui.rounded(this, Ui.alpha(Ui.ACCENT, 0x40), 21);
         StateListDrawable s = new StateListDrawable();
         s.addState(new int[]{android.R.attr.state_pressed}, press);
         s.addState(new int[]{android.R.attr.state_focused}, ring);
@@ -651,7 +720,7 @@ public class LibraryActivity extends ControllerActivity
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setBackground(Ui.rounded(this, 0x991E2240, 14));
+        row.setBackground(Ui.rounded(this, Ui.alpha(Ui.SURFACE, 0x99), 14));
         int p = Ui.dp(this, 8);
         row.setPadding(p, p, p, p);
 

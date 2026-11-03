@@ -44,6 +44,7 @@ public class ReportActivity extends Activity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        Ui.applyTheme(this);
         String path = getIntent().getStringExtra(EXTRA_PATH);
         String error = getIntent().getStringExtra(EXTRA_ERROR);
         if (path == null) { finish(); return; }

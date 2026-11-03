@@ -83,6 +83,17 @@ DEF_GFX_PROP_OBJ_VAL(Viewport, Tone, Tone, "tone")
 DEF_GFX_PROP_I(Viewport, OX)
 DEF_GFX_PROP_I(Viewport, OY)
 
+/* Essentia: draw this viewport right below another one (same Z, just under
+ * it), e.g. the widened backdrop of a 4:3 screen */
+RB_METHOD(viewportDrawBelow) {
+    VALUE otherObj;
+    rb_get_args(argc, argv, "o", &otherObj RB_ARG_END);
+    Viewport *v = getPrivateData<Viewport>(self);
+    Viewport *o = getPrivateDataCheck<Viewport>(otherObj, ViewportType);
+    GFX_GUARD_EXC( v->drawRightBelow(*o); );
+    return Qnil;
+}
+
 void viewportBindingInit() {
     VALUE klass = rb_define_class("Viewport", rb_cObject);
 #if RAPI_FULL > 187
@@ -102,4 +113,5 @@ void viewportBindingInit() {
     INIT_PROP_BIND(Viewport, OY, "oy");
     INIT_PROP_BIND(Viewport, Color, "color");
     INIT_PROP_BIND(Viewport, Tone, "tone");
+    _rb_define_method(klass, "essentia_draw_below", viewportDrawBelow);
 }

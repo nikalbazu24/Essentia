@@ -105,6 +105,7 @@ void Scene::composite()
 SceneElement::SceneElement(Scene &scene, int z, int spriteY)
     : link(this),
       creationStamp(shState->genTimeStamp()),
+      drawBelowTwin(false),
       z(z),
       visible(true),
       scene(&scene),
@@ -180,6 +181,9 @@ bool SceneElement::operator<(const SceneElement &o) const
 					return (spriteY < o.spriteY);
 			}
 
+			if (creationStamp == o.creationStamp)
+				return drawBelowTwin && !o.drawBelowTwin;
+
 			return (creationStamp < o.creationStamp);
 		}
 
@@ -187,6 +191,15 @@ bool SceneElement::operator<(const SceneElement &o) const
 	}
 
 	return false;
+}
+
+void SceneElement::drawRightBelow(const SceneElement &other)
+{
+	z = other.z;
+	creationStamp = other.creationStamp;
+	drawBelowTwin = true;
+	if (scene)
+		scene->reinsert(*this);
 }
 
 void SceneElement::setSpriteY(int value)

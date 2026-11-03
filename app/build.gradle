@@ -21,7 +21,7 @@ android {
         minSdk 21
         targetSdk 33
         versionCode 100 + buildNumber
-        versionName "0.1.${buildNumber}"
+        versionName "1.0-beta1.${buildNumber}"
         archivesBaseName = "essentia"
         ndk {
             // AYN Thor y equipos actuales: solo 64 bits

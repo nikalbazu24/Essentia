@@ -105,7 +105,7 @@ public final class SecondScreen extends Presentation
         root.addView(mBackdrop, match());
         View shade = new View(c);
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ 0x5014162B, 0xF014162B }));
+            new int[]{ Ui.alpha(Ui.BG, 0x50), Ui.alpha(Ui.BG, 0xF0) }));
         root.addView(shade, match());
 
         LinearLayout col = new LinearLayout(c);
@@ -212,7 +212,7 @@ public final class SecondScreen extends Presentation
             LinearLayout tile = new LinearLayout(c);
             tile.setOrientation(LinearLayout.VERTICAL);
             tile.setGravity(Gravity.CENTER_VERTICAL);
-            tile.setBackground(Ui.rounded(c, 0x66262B52, 12));
+            tile.setBackground(Ui.rounded(c, Ui.alpha(Ui.SURFACE_HI, 0x88), 12));
             int p = Ui.dp(c, 10);
             tile.setPadding(p, Ui.dp(c, 4), p, Ui.dp(c, 4));
             TextView v = Ui.text(c, s.value, 16, Ui.TEXT, true);

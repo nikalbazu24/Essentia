@@ -280,12 +280,24 @@ module EssentiaWide
       @making_backdrop = true
       b = Viewport.new(0, r.y, wide_w, r.height)
       @making_backdrop = false
-      b.z = v.z - 1
+      place_below(b, v)
       v.instance_variable_set(:@essentia_back, b)
       (@backdrops ||= []) << [v, b]
       b
     ensure
       @making_backdrop = false
+    end
+
+    # Right under its screen: same height (z) and order, even when another
+    # screen-wide layer (a fade to black) sits between them in creation order
+    def place_below(b, v)
+      if b.respond_to?(:essentia_draw_below)
+        b.essentia_draw_below(v)
+      else
+        b.z = v.z - 1
+      end
+      b.instance_variable_set(:@essentia_bz, v.z)
+    rescue StandardError
     end
 
     # The backdrop follows its screen (shown/hidden, fades, colors, gone).
@@ -302,7 +314,7 @@ module EssentiaWide
             b.visible = v.visible
             b.color = v.color
             b.tone = v.tone
-            b.z = v.z - 1
+            place_below(b, v) if b.instance_variable_get(:@essentia_bz) != v.z
             r = v.essentia_rect
             br = b.essentia_rect
             b.essentia_raw_rect = Rect.new(0, r.y, wide_w, r.height) if br.y != r.y || br.height != r.height

@@ -126,6 +126,7 @@ public final class GamePanel extends Presentation
         super.onCreate(savedInstanceState);
         SecondScreen.notFocusable(this);
         Context c = getContext();
+        Ui.applyTheme(c);
 
         FrameLayout root = new FrameLayout(c);
         if (mBlack) {
@@ -226,7 +227,7 @@ public final class GamePanel extends Presentation
 
         ImageView zoom = new ImageView(c);
         zoom.setImageResource(R.drawable.ic_p_zoom);
-        zoom.setBackground(Ui.rounded(c, 0xAA14162B, 14));
+        zoom.setBackground(Ui.rounded(c, Ui.alpha(Ui.BG, 0xAA), 14));
         int zp = Ui.dp(c, 6);
         zoom.setPadding(zp, zp, zp, zp);
         zoom.setOnClickListener(v -> mMap.setZoom(!mMap.isZoom()));

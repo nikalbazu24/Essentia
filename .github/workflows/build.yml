@@ -162,7 +162,7 @@ jobs:
           cat > version.json <<JSON
           {
             "versionCode": $((100 + ESSENTIA_BUILD_NUMBER)),
-            "versionName": "0.1.${ESSENTIA_BUILD_NUMBER}",
+            "versionName": "1.0-beta1.${ESSENTIA_BUILD_NUMBER}",
             "signed": ${ESSENTIA_SIGNED},
             "apk": "essentia.apk",
             "commit": "${GITHUB_SHA}"

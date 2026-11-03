@@ -910,6 +910,98 @@ bool evalScript(VALUE string, const char *filename)
 #define SCRIPT_SECTION_FMT (rgssVer >= 3 ? "{%04ld}" : "Section%03ld")
 
 #if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
+/* Essentia: faster game start. Each script section is compiled once and the
+ * compiled form is kept (ESSENTIA_ISEQ_DIR); the next time the game starts it
+ * is loaded instead of parsing and compiling the Ruby code again. */
+struct IseqArgs { VALUE code; VALUE fname; VALUE bin; };
+
+static VALUE essentiaIseqClass()
+{
+    return rb_path2class("RubyVM::InstructionSequence");
+}
+
+static VALUE essentiaIseqLoadCb(VALUE a)
+{
+    IseqArgs *args = (IseqArgs*) a;
+    VALUE iseq = rb_funcall(essentiaIseqClass(), rb_intern("load_from_binary"), 1, args->bin);
+    return rb_funcall(iseq, rb_intern("eval"), 0);
+}
+
+static VALUE essentiaIseqCompileCb(VALUE a)
+{
+    IseqArgs *args = (IseqArgs*) a;
+    VALUE iseq = rb_funcall(essentiaIseqClass(), rb_intern("compile"), 3,
+                            args->code, args->fname, args->fname);
+    args->bin = rb_funcall(iseq, rb_intern("to_binary"), 0);
+    return Qnil;
+}
+
+static VALUE essentiaIseqEvalCb(VALUE a)
+{
+    IseqArgs *args = (IseqArgs*) a;
+    VALUE iseq = rb_funcall(essentiaIseqClass(), rb_intern("load_from_binary"), 1, args->bin);
+    return rb_funcall(iseq, rb_intern("eval"), 0);
+}
+
+/* Returns true if the script ran from the cache (state tells how it went);
+ * false: run it the normal way. */
+static bool essentiaCachedEval(VALUE code, VALUE fname, int &state)
+{
+    const char *dir = getenv("ESSENTIA_ISEQ_DIR");
+    if (!dir || !*dir)
+        return false;
+    unsigned long crc = crc32(0L, (const Bytef*) RSTRING_PTR(code), (uInt) RSTRING_LEN(code));
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/%08lx-%lx.bin", dir, crc, (unsigned long) RSTRING_LEN(code));
+
+    IseqArgs args = { code, fname, Qnil };
+    FILE *f = fopen(path, "rb");
+    if (f) {
+        fseek(f, 0, SEEK_END);
+        long n = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        std::string data;
+        data.resize(n > 0 ? n : 0);
+        size_t got = n > 0 ? fread(&data[0], 1, n, f) : 0;
+        fclose(f);
+        if ((long) got == n && n > 0) {
+            args.bin = rb_str_new(data.data(), n);
+            int st = 0;
+            rb_protect(essentiaIseqLoadCb, (VALUE) &args, &st);
+            if (!st) { state = 0; return true; }
+            VALUE err = rb_errinfo();
+            /* a broken cache file: forget it and run the script normally */
+            if (!NIL_P(err) && (rb_obj_is_kind_of(err, rb_eTypeError) ||
+                                rb_obj_is_kind_of(err, rb_eArgError) ||
+                                rb_obj_is_kind_of(err, rb_eRuntimeError)) &&
+                strstr(RSTRING_PTR(rb_funcall(err, rb_intern("message"), 0)), "binary")) {
+                rb_set_errinfo(Qnil);
+                remove(path);
+                return false;
+            }
+            state = st; /* the game's own error */
+            return true;
+        }
+    }
+    int st = 0;
+    rb_protect(essentiaIseqCompileCb, (VALUE) &args, &st);
+    if (st || NIL_P(args.bin)) {
+        rb_set_errinfo(Qnil);
+        return false; /* e.g. old syntax: the normal path fixes it */
+    }
+    FILE *out = fopen(path, "wb");
+    if (out) {
+        fwrite(RSTRING_PTR(args.bin), 1, RSTRING_LEN(args.bin), out);
+        fclose(out);
+    }
+    st = 0;
+    rb_protect(essentiaIseqEvalCb, (VALUE) &args, &st);
+    state = st;
+    return true;
+}
+#endif
+
+#if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
 static VALUE essentiaFixSyntaxCb(VALUE args)
 {
     VALUE mod = rb_const_get(rb_cObject, rb_intern("Essentia"));
@@ -1086,8 +1178,11 @@ static void runRMXPScripts(BacktraceData &btData) {
              }
              */
             
-            int state;
+            int state = 0;
             
+#if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
+            if (!essentiaCachedEval(string, fname, state))
+#endif
             evalString(string, fname, &state);
 #if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
             // Essentia: a script written for Ruby 1.8 (old Essentials games) may not

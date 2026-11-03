@@ -18,6 +18,7 @@ public abstract class ControllerActivity extends Activity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        Ui.applyTheme(this);
         Window w = getWindow();
         w.getDecorView().setBackgroundColor(Ui.BG);
         w.setStatusBarColor(Ui.BG);

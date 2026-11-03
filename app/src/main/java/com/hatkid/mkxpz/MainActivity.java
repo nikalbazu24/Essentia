@@ -165,6 +165,9 @@ public class MainActivity extends SDLActivity
             // Orientation (the engine tells SDL which ones are allowed)
             android.system.Os.setenv("ESSENTIA_ORIENTATION", EssentiaSettings.orientation(this), true);
 
+            // Faster start: compiled game scripts are kept here (per Essentia version)
+            android.system.Os.setenv("ESSENTIA_ISEQ_DIR", scriptCacheDir().getAbsolutePath(), true);
+
             // Errors, for the "send report" button
             java.io.File errorFile = new java.io.File(getCacheDir(), "game_error.txt");
             //noinspection ResultOfMethodCallIgnored
@@ -502,7 +505,7 @@ public class MainActivity extends SDLActivity
     {
         if (mBadge == null && mLayout != null) {
             mBadge = new TextView(this);
-            mBadge.setTextColor(0xFF14162B);
+            mBadge.setTextColor(com.hatkid.mkxpz.ui.Ui.BG);
             mBadge.setTextSize(14);
             mBadge.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             mBadge.setBackground(com.hatkid.mkxpz.ui.Ui.rounded(this, com.hatkid.mkxpz.ui.Ui.GOLD, 10));
@@ -786,6 +789,34 @@ public class MainActivity extends SDLActivity
         applyImmersive();
         showGamePanel();
         startPlayClock();
+    }
+
+    /** Compiled scripts for this version of Essentia (older versions' are removed). */
+    private java.io.File scriptCacheDir()
+    {
+        java.io.File base = new java.io.File(getCacheDir(), "scripts");
+        String name = "v" + BuildConfig.VERSION_CODE;
+        java.io.File[] old = base.listFiles();
+        if (old != null) {
+            for (java.io.File d : old) {
+                if (d.getName().equals(name)) continue;
+                java.io.File[] files = d.listFiles();
+                if (files != null) for (java.io.File f : files) //noinspection ResultOfMethodCallIgnored
+                    f.delete();
+                //noinspection ResultOfMethodCallIgnored
+                d.delete();
+            }
+        }
+        java.io.File dir = new java.io.File(base, name);
+        //noinspection ResultOfMethodCallIgnored
+        dir.mkdirs();
+        // keep it reasonable: start over past 200 MB
+        long total = 0;
+        java.io.File[] files = dir.listFiles();
+        if (files != null) for (java.io.File f : files) total += f.length();
+        if (total > 200L * 1024 * 1024 && files != null) for (java.io.File f : files) //noinspection ResultOfMethodCallIgnored
+            f.delete();
+        return dir;
     }
 
     // Essentia: orientation of the game screen
