@@ -177,6 +177,8 @@ public class MainActivity extends SDLActivity
             shots.mkdirs();
             android.system.Os.setenv("ESSENTIA_SHOTS_DIR", shots.getAbsolutePath(), true);
 
+            android.system.Os.setenv("ESSENTIA_LANG", Locale.getDefault().getLanguage(), true);
+
             // Screen shape, for the smart widescreen
             DisplayMetrics dm = new DisplayMetrics();
             getWindowManager().getDefaultDisplay().getRealMetrics(dm);

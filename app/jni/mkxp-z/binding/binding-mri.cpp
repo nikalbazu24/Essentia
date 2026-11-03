@@ -29,6 +29,8 @@
 #include "util/sdl-util.h"
 #include "util/debugwriter.h"
 #include "essentia-android.h"
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef MKXPZ_LEGACY_RUBY
 /* Ruby 1.8: registers the statically linked extensions (ext/extinit.c) */
@@ -1169,6 +1171,17 @@ static void showExc(VALUE exc, const BacktraceData &btData) {
     snprintf(&ms[0], ms.size(), "Script '%s' line %s: %s occured.\n\n%s",
              file.c_str(), line, RSTRING_PTR(name), RSTRING_PTR(msg));
     
+#if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
+    /* Essentia: old games often need the classic engine (Ruby 1.8) */
+    {
+        ms.resize(strlen(ms.c_str()));
+        const char *lang = getenv("ESSENTIA_LANG");
+        if (lang && !strncmp(lang, "es", 2))
+            ms += "\n\n(Essentia: si es un juego antiguo, prueba en la biblioteca: Opciones \u2192 Motor de Ruby \u2192 Cl\u00e1sico)";
+        else
+            ms += "\n\n(Essentia: if this is an old game, try in the library: Options \u2192 Ruby engine \u2192 Classic)";
+    }
+#endif
     showMsg(ms);
 }
 
@@ -1225,6 +1238,10 @@ static void mriBindingExecute() {
     rb_enc_set_default_internal(rb_enc_from_encoding(rb_utf8_encoding()));
     rb_enc_set_default_external(rb_enc_from_encoding(rb_utf8_encoding()));
 #else
+#ifdef MKXPZ_LEGACY_RUBY
+    /* Ruby 1.8 must scan this function's frame too (rbArgv, lpaths...) */
+    RUBY_INIT_STACK;
+#endif
     ruby_init();
 #ifdef MKXPZ_LEGACY_RUBY
     {

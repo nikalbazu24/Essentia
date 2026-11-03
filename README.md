@@ -23,7 +23,11 @@ El APK más reciente está en **[Releases → dev](../../releases/tag/dev)**. Po
 - **Biblioteca:** al abrir Essentia aparece tu biblioteca. Con **+ Agregar juegos** eliges la carpeta de un juego (la que tiene `Game.exe` o `Game.ini`), o una carpeta con varios juegos, y Essentia los encuentra todos, con su nombre y su portada.
 - **Controles:** A confirma (Enter), B cancela o abre el menú (Esc), Start abre el menú, X es Shift y L/R pasan de página. En el juego, **Atrás** o **Select + Start** abren el menú para salir.
 - **Controles en pantalla:** para celulares y tablets. En *Ajustes* se eligen el modo (automático, siempre visibles o desactivados), el tamaño y la opacidad.
-- **Dos pantallas:** en equipos como la AYN Thor, la segunda pantalla muestra la portada del juego elegido. Se puede desactivar en *Ajustes*.
+- **Dos pantallas:** en equipos como la AYN Thor, la segunda pantalla muestra la portada del juego elegido y, mientras juegas, un mapa en vivo con acciones (equipo, mochila, Pokédex, guardar, turbo, captura y trucos). Se puede desactivar en *Ajustes*.
+- **Dos motores de Ruby:** *Moderno* (Ruby 3.1, el predeterminado) y *Clásico* (Ruby 1.8.7, el mismo de RPG Maker XP) para juegos muy antiguos. Se elige por juego: *Opciones → Motor de Ruby*.
+- **Formato de pantalla:** bordes ambientales, original, estirado o panorámico inteligente (mapa ancho; menús y batallas en su tamaño original, centrados).
+- **Turbo y capturas:** turbo x2–x4 (Select + R1) y capturas en *Imágenes/Essentia* (Select + L1).
+- **RTP:** si un juego antiguo pide el RTP de RPG Maker, cópialo en `Essentia/RTP/XP` (o `VX`, `VXAce`).
 - **Actualizaciones:** Essentia avisa sola cuando hay una versión nueva y se actualiza desde la propia app.
 - **Desde un frontend:** lanza la actividad `io.github.nikalbazu24.essentia/com.hatkid.mkxpz.LauncherActivity` con la ruta del juego, ya sea como dato (`file://` o `content://` del almacenamiento) o como extra de texto `path`. Puede ser la carpeta del juego o cualquier archivo dentro de ella, como `Game.ini`.
 
@@ -35,6 +39,7 @@ Essentia se basa en:
 
 - [mkxp-z](https://github.com/mkxp-z/mkxp-z), la reimplementación libre de RPG Maker XP/VX/VX Ace.
 - [mkxp-z-android](https://github.com/thehatkid/mkxp-z-android), el port para Android de thehatkid (Sasha Ermohin).
+- [Ruby](https://www.ruby-lang.org) 3.1 y 1.8.7 (licencia Ruby / GPLv2).
 - Los scripts de compatibilidad de mkxp-z (`win32_wrap.rb`, `mkxp_wrap.rb`, `ruby_classic_wrap.rb`), de Ancurio, Splendide Imaginarius y WaywardHeart, en dominio público (CC0). Essentia los carga automáticamente para que funcionen juegos más antiguos, salvo que el juego traiga los suyos en su `mkxp.json`.
 
 Se distribuye bajo la licencia **GNU GPL v2**, igual que mkxp-z (ver [LICENSE](LICENSE)).
