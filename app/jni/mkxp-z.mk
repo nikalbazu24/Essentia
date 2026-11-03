@@ -14,9 +14,16 @@ ESSENTIA_MKXPZ_FLAGS := \
 	-DMKXPZ_SSL \
 	-DMKXPZ_MINIFFI \
 	-Wno-undefined-var-template \
-	-Wno-uninitialized
+	-Wno-uninitialized \
+	-ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden
+
+# Essentia: smaller library (drop unused code, merge identical code, keep only
+# the symbols Android needs, like SDL_main, exported)
+ESSENTIA_MKXPZ_LDFLAGS := -Wl,--gc-sections -Wl,--icf=safe -Wl,--exclude-libs,ALL
 
 LOCAL_CPPFLAGS := $(ESSENTIA_MKXPZ_FLAGS)
+LOCAL_CFLAGS := -ffunction-sections -fdata-sections -fvisibility=hidden
+LOCAL_LDFLAGS := $(ESSENTIA_MKXPZ_LDFLAGS)
 
 ESSENTIA_MKXPZ_INC := \
 	$(LOCAL_PATH)/xxd/assets \

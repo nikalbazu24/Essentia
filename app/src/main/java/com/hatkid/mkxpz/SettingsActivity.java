@@ -86,9 +86,12 @@ public class SettingsActivity extends ControllerActivity
         slider(R.string.set_osc_opacity, 10, 100, EssentiaSettings.oscOpacity(this),
             v -> EssentiaSettings.setOscOpacity(this, v));
 
-        TextView map = Ui.text(this, getString(R.string.set_buttons_map), 14, Ui.TEXT_DIM, false);
-        map.setPadding(Ui.dp(this, 4), Ui.dp(this, 8), 0, 0);
-        mList.addView(map);
+        flagRow(R.string.set_haptics, EssentiaSettings.HAPTICS, true);
+        flagRow(R.string.set_diagonal, EssentiaSettings.DIAGONAL, false);
+
+        Button buttons = Ui.button(this, getString(R.string.set_button_map), false);
+        buttons.setOnClickListener(v -> startActivity(new Intent(this, ControlsActivity.class)));
+        card(buttons);
     }
 
     private void buildScreen()

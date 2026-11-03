@@ -36,6 +36,22 @@ public class Gamepad
         mOnKeyDownListener = onKeyDownListener;
     }
 
+    /** Essentia actions on controller buttons (turbo, Auto Fire, screenshot...). */
+    public interface OnActionListener
+    {
+        void onAction(String action, boolean down);
+    }
+
+    private OnActionListener mOnActionListener = (a, d) -> {};
+
+    /** Short vibration when touching the on-screen controls. */
+    public static boolean sHaptics = true;
+
+    public void setOnActionListener(OnActionListener l)
+    {
+        mOnActionListener = l;
+    }
+
     public void setOnKeyUpListener(OnKeyUpListener onKeyUpListener)
     {
         mOnKeyUpListener = onKeyUpListener;
@@ -167,6 +183,7 @@ public class Gamepad
      * Essentia: physical controller buttons -> keyboard keys that RPG Maker games
      * understand. The engine only reads these keycodes as keyboard keys, so raw
      * gamepad keycodes (BUTTON_A...) would otherwise do nothing in game.
+     * The user can change them (ButtonMap); the defaults are:
      *
      *   A -> Enter (confirm)          B -> Esc (cancel / menu)
      *   X -> Shift (RGSS "A")         Y -> A key (RGSS "X")
@@ -179,18 +196,9 @@ public class Gamepad
      */
     public static int mapControllerKey(int keycode)
     {
+        com.hatkid.mkxpz.ButtonMap.Action a = com.hatkid.mkxpz.ButtonMap.forButton(keycode);
+        if (a != null) return a.isKey() ? a.keycode : -1;
         switch (keycode) {
-            case KeyEvent.KEYCODE_BUTTON_A:      return KeyEvent.KEYCODE_ENTER;
-            case KeyEvent.KEYCODE_BUTTON_B:      return KeyEvent.KEYCODE_ESCAPE;
-            case KeyEvent.KEYCODE_BUTTON_X:      return KeyEvent.KEYCODE_SHIFT_LEFT;
-            case KeyEvent.KEYCODE_BUTTON_Y:      return KeyEvent.KEYCODE_A;
-            case KeyEvent.KEYCODE_BUTTON_L1:     return KeyEvent.KEYCODE_Q;
-            case KeyEvent.KEYCODE_BUTTON_R1:     return KeyEvent.KEYCODE_W;
-            case KeyEvent.KEYCODE_BUTTON_L2:     return KeyEvent.KEYCODE_S;
-            case KeyEvent.KEYCODE_BUTTON_R2:     return KeyEvent.KEYCODE_D;
-            case KeyEvent.KEYCODE_BUTTON_THUMBL: return KeyEvent.KEYCODE_S;
-            case KeyEvent.KEYCODE_BUTTON_THUMBR: return KeyEvent.KEYCODE_D;
-            case KeyEvent.KEYCODE_BUTTON_START:  return KeyEvent.KEYCODE_ESCAPE;
             case KeyEvent.KEYCODE_BUTTON_SELECT: return -1;
             case KeyEvent.KEYCODE_BUTTON_MODE:   return -1;
             case KeyEvent.KEYCODE_BUTTON_C:      return KeyEvent.KEYCODE_C;
@@ -214,6 +222,16 @@ public class Gamepad
             !KeyEvent.isGamepadButton(evt.getKeyCode())
         )
             return false;
+
+        // Essentia actions set in the button map (turbo, Auto Fire...)
+        com.hatkid.mkxpz.ButtonMap.Action action = com.hatkid.mkxpz.ButtonMap.forButton(evt.getKeyCode());
+        if (action != null && !action.isKey()) {
+            if (evt.getRepeatCount() == 0) {
+                if (evt.getAction() == KeyEvent.ACTION_DOWN) mOnActionListener.onAction(action.id, true);
+                else if (evt.getAction() == KeyEvent.ACTION_UP) mOnActionListener.onAction(action.id, false);
+            }
+            return true;
+        }
 
         int keycode = mapControllerKey(evt.getKeyCode());
 

@@ -20,7 +20,8 @@ LOCAL_PATH := $(ESSENTIA_LEGACY_DIR)/mkxp-z
 LOCAL_MODULE := mkxp-z-legacy
 LOCAL_CPPFLAGS := $(ESSENTIA_MKXPZ_FLAGS) -DMKXPZ_LEGACY_RUBY -fwrapv \
 	-Wno-register -Wno-deprecated-register -Wno-c++11-narrowing -Wno-writable-strings
-LOCAL_CFLAGS := -fwrapv
+LOCAL_CFLAGS := -fwrapv -ffunction-sections -fdata-sections -fvisibility=hidden
+LOCAL_LDFLAGS := $(ESSENTIA_MKXPZ_LDFLAGS)
 # Ruby's headers go last: its util.h must not hide mkxp-z's util.h
 # (ruby.h finds its own config.h/defines.h next to itself)
 LOCAL_C_INCLUDES := $(ESSENTIA_LEGACY_DIR)/build-$(TARGET_ARCH_ABI)/include $(ESSENTIA_MKXPZ_INC) $(ESSENTIA_RUBY18)/include

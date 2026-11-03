@@ -22,6 +22,48 @@ public class ControlsActivity extends ControllerActivity
 {
     private TextView mLastButton;
     private TextView mSticks;
+    private LinearLayout mMapRows;
+    private LinearLayout mManual;
+
+    /** One row per button: "A  ·  Confirm (Enter)"; tap to change it. */
+    private void refreshMap()
+    {
+        ButtonMap.load(this);
+        mMapRows.removeAllViews();
+        for (int b : ButtonMap.BUTTONS) {
+            ButtonMap.Action a = ButtonMap.forButton(b);
+            Button row = Ui.button(this, ButtonMap.buttonName(b) + "   \u2192   "
+                + (a != null ? getString(a.labelRes) : "?"), false);
+            row.setGravity(android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
+            row.setOnClickListener(v -> chooseAction(b));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = Ui.dp(this, 4);
+            mMapRows.addView(row, lp);
+        }
+        mManual.removeAllViews();
+        mManual.addView(ControlsGuide.buildTable(this));
+    }
+
+    private void chooseAction(int button)
+    {
+        String[] labels = new String[ButtonMap.ACTIONS.length];
+        int checked = -1;
+        ButtonMap.Action current = ButtonMap.forButton(button);
+        for (int i = 0; i < labels.length; i++) {
+            labels[i] = getString(ButtonMap.ACTIONS[i].labelRes);
+            if (current != null && current.id.equals(ButtonMap.ACTIONS[i].id)) checked = i;
+        }
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(getString(R.string.btn_map_choose, ButtonMap.buttonName(button)))
+            .setSingleChoiceItems(labels, checked, (d, which) -> {
+                ButtonMap.set(this, button, ButtonMap.ACTIONS[which].id);
+                d.dismiss();
+                refreshMap();
+            })
+            .setNegativeButton(R.string.cancel, null)
+            .show();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -62,11 +104,35 @@ public class ControlsActivity extends ControllerActivity
         list.addView(box, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        // Button map (which button does what)
+        TextView mapTitle = Ui.text(this, getString(R.string.btn_map_title), 18, Ui.ACCENT_LIGHT, true);
+        mapTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 22), 0, Ui.dp(this, 2));
+        list.addView(mapTitle);
+        TextView mapDesc = Ui.text(this, getString(R.string.btn_map_desc), 14, Ui.TEXT_DIM, false);
+        mapDesc.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 8));
+        list.addView(mapDesc);
+        mMapRows = new LinearLayout(this);
+        mMapRows.setOrientation(LinearLayout.VERTICAL);
+        list.addView(mMapRows);
+        LinearLayout presets = new LinearLayout(this);
+        Button nintendo = Ui.button(this, getString(R.string.btn_map_nintendo), false);
+        nintendo.setOnClickListener(v -> { ButtonMap.nintendoLayout(this); refreshMap(); });
+        Button reset = Ui.button(this, getString(R.string.btn_map_reset), false);
+        reset.setOnClickListener(v -> { ButtonMap.reset(this); refreshMap(); });
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        plp.setMargins(0, Ui.dp(this, 6), Ui.dp(this, 6), 0);
+        presets.addView(nintendo, plp);
+        presets.addView(reset, new LinearLayout.LayoutParams(plp));
+        list.addView(presets);
+
         // Manual
         TextView manual = Ui.text(this, getString(R.string.ctl_manual_title), 18, Ui.ACCENT_LIGHT, true);
         manual.setPadding(Ui.dp(this, 4), Ui.dp(this, 22), 0, Ui.dp(this, 6));
         list.addView(manual);
-        list.addView(ControlsGuide.buildTable(this));
+        mManual = new LinearLayout(this);
+        mManual.setOrientation(LinearLayout.VERTICAL);
+        list.addView(mManual);
+        refreshMap();
 
         setContentView(scroll);
         back.requestFocus();
@@ -79,7 +145,9 @@ public class ControlsActivity extends ControllerActivity
         if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
             int mapped = Gamepad.mapControllerKey(code);
             String name = KeyEvent.keyCodeToString(code).replace("KEYCODE_", "");
-            String key = mapped < 0 ? getString(R.string.ctl_test_essentia)
+            ButtonMap.Action act = ButtonMap.forButton(code);
+            String key = act != null ? getString(act.labelRes)
+                : mapped < 0 ? getString(R.string.ctl_test_essentia)
                 : KeyEvent.keyCodeToString(mapped).replace("KEYCODE_", "");
             mLastButton.setText(getString(R.string.ctl_test_result, name, key));
         }

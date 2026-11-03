@@ -178,6 +178,8 @@ public class MainActivity extends SDLActivity
             android.system.Os.setenv("ESSENTIA_SHOTS_DIR", shots.getAbsolutePath(), true);
 
             android.system.Os.setenv("ESSENTIA_LANG", Locale.getDefault().getLanguage(), true);
+            android.system.Os.setenv("ESSENTIA_DIAGONAL",
+                EssentiaSettings.flag(this, EssentiaSettings.DIAGONAL, false) ? "1" : "0", true);
 
             // Screen shape, for the smart widescreen
             DisplayMetrics dm = new DisplayMetrics();
@@ -254,13 +256,17 @@ public class MainActivity extends SDLActivity
                 || EssentiaSettings.hasPhysicalController(this);
         }
 
+        ButtonMap.load(this);
+        Gamepad.sHaptics = EssentiaSettings.flag(this, EssentiaSettings.HAPTICS, true);
         GamepadConfig gpadConfig = new GamepadConfig();
+        gpadConfig.diagonalMovement = EssentiaSettings.flag(this, EssentiaSettings.DIAGONAL, false);
         gpadConfig.opacity = EssentiaSettings.oscOpacity(this);
         gpadConfig.scale = EssentiaSettings.oscScale(this);
         mGamepad.init(gpadConfig, mGamepadInvisible);
         mDebugInput = EssentiaSettings.flag(this, EssentiaSettings.DEBUG_INPUT, false);
-        mGamepad.setOnKeyDownListener(k -> { SDLActivity.onNativeKeyDown(k); debugKey(k, true); });
-        mGamepad.setOnKeyUpListener(k -> { SDLActivity.onNativeKeyUp(k); debugKey(k, false); });
+        mGamepad.setOnKeyDownListener(k -> sendKey(k, true));
+        mGamepad.setOnKeyUpListener(k -> sendKey(k, false));
+        mGamepad.setOnActionListener(this::handleAction);
 
         if (mLayout != null && !EssentiaSettings.OSC_NEVER.equals(mOscMode)) {
             mGamepad.attachTo(this, mLayout);
@@ -405,37 +411,140 @@ public class MainActivity extends SDLActivity
         return out.toString();
     }
 
-    // Essentia: turbo (fast forward)
+    // Essentia: turbo (fast forward) and Auto Fire, with small badges on the game
     private boolean mTurbo = false;
-    private TextView mTurboBadge;
+    private boolean mAutoFire = false;
+    private TextView mBadge;
 
     public boolean isTurbo() { return mTurbo; }
 
     public void toggleTurbo()
     {
-        mTurbo = !mTurbo;
+        setTurbo(!mTurbo);
+    }
+
+    public void setTurbo(boolean on)
+    {
+        if (on == mTurbo) return;
+        mTurbo = on;
         int speed = EssentiaSettings.turboSpeed(this);
         GameLink.send(this, "speed " + (mTurbo ? speed : 1));
-        if (mTurboBadge == null && mLayout != null) {
-            mTurboBadge = new TextView(this);
-            mTurboBadge.setTextColor(0xFF14162B);
-            mTurboBadge.setTextSize(14);
-            mTurboBadge.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-            mTurboBadge.setBackground(com.hatkid.mkxpz.ui.Ui.rounded(this, com.hatkid.mkxpz.ui.Ui.GOLD, 10));
+        updateBadge();
+        if (mPanel != null) mPanel.setTurbo(mTurbo, speed);
+    }
+
+    public void toggleAutoFire()
+    {
+        mAutoFire = !mAutoFire;
+        if (!mAutoFire) stopAutoFire();
+        updateBadge();
+        if (mPanel != null) mPanel.setAutoFire(mAutoFire);
+        android.widget.Toast.makeText(this, mAutoFire ? R.string.act_autofire_on : R.string.act_autofire_off,
+            android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void updateBadge()
+    {
+        if (mBadge == null && mLayout != null) {
+            mBadge = new TextView(this);
+            mBadge.setTextColor(0xFF14162B);
+            mBadge.setTextSize(14);
+            mBadge.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            mBadge.setBackground(com.hatkid.mkxpz.ui.Ui.rounded(this, com.hatkid.mkxpz.ui.Ui.GOLD, 10));
             int p = com.hatkid.mkxpz.ui.Ui.dp(this, 8);
-            mTurboBadge.setPadding(p, p / 3, p, p / 3);
+            mBadge.setPadding(p, p / 3, p, p / 3);
             android.widget.RelativeLayout.LayoutParams lp = new android.widget.RelativeLayout.LayoutParams(
                 LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
             lp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_TOP);
             lp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_RIGHT);
             lp.setMargins(0, p * 2, p * 2, 0);
-            mLayout.addView(mTurboBadge, lp);
+            mLayout.addView(mBadge, lp);
         }
-        if (mTurboBadge != null) {
-            mTurboBadge.setText("\u25B6\u25B6 x" + speed);
-            mTurboBadge.setVisibility(mTurbo ? View.VISIBLE : View.GONE);
+        if (mBadge == null) return;
+        StringBuilder t = new StringBuilder();
+        if (mTurbo) t.append("\u25B6\u25B6 x").append(EssentiaSettings.turboSpeed(this));
+        if (mAutoFire) t.append(t.length() > 0 ? "   " : "").append("AUTO");
+        mBadge.setText(t);
+        mBadge.setVisibility(t.length() > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    // Keys sent to the game. With Auto Fire, held buttons (not the arrows) are
+    // pressed again and again, as if tapped very fast.
+    private final java.util.HashSet<Integer> mAutoKeys = new java.util.HashSet<>();
+    private boolean mAutoPhase = false;
+    private final Runnable mAutoPulse = new Runnable() {
+        @Override public void run() {
+            if (mAutoKeys.isEmpty()) return;
+            mAutoPhase = !mAutoPhase;
+            for (int k : mAutoKeys) {
+                if (mAutoPhase) SDLActivity.onNativeKeyUp(k); else SDLActivity.onNativeKeyDown(k);
+            }
+            mMainHandler.postDelayed(this, 45);
         }
-        if (mPanel != null) mPanel.setTurbo(mTurbo, speed);
+    };
+
+    private static boolean isArrow(int k)
+    {
+        return k == KeyEvent.KEYCODE_DPAD_UP || k == KeyEvent.KEYCODE_DPAD_DOWN
+            || k == KeyEvent.KEYCODE_DPAD_LEFT || k == KeyEvent.KEYCODE_DPAD_RIGHT;
+    }
+
+    public void sendKey(int k, boolean down)
+    {
+        debugKey(k, down);
+        if (mAutoFire && !isArrow(k) && mMainHandler != null) {
+            if (down) {
+                SDLActivity.onNativeKeyDown(k);
+                boolean start = mAutoKeys.isEmpty();
+                mAutoKeys.add(k);
+                if (start) { mAutoPhase = false; mMainHandler.postDelayed(mAutoPulse, 45); }
+            } else {
+                mAutoKeys.remove(k);
+                SDLActivity.onNativeKeyUp(k);
+            }
+            return;
+        }
+        if (down) SDLActivity.onNativeKeyDown(k); else SDLActivity.onNativeKeyUp(k);
+    }
+
+    private void stopAutoFire()
+    {
+        if (mMainHandler != null) mMainHandler.removeCallbacks(mAutoPulse);
+        for (int k : mAutoKeys) SDLActivity.onNativeKeyUp(k);
+        mAutoKeys.clear();
+    }
+
+    /** Android's keyboard, to type names in games that accept typing. */
+    public void toggleKeyboard()
+    {
+        try {
+            if (SDLActivity.isScreenKeyboardShown() && mTextEdit != null) {
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager)
+                    getSystemService(INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(mTextEdit.getWindowToken(), 0);
+                mTextEdit.setLayoutParams(new android.widget.RelativeLayout.LayoutParams(0, 0));
+                mScreenKeyboardShown = false;
+                if (mSurface != null) mSurface.requestFocus();
+            } else {
+                SDLActivity.showTextInput(0, 0, 1, 1);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Keyboard: " + e);
+        }
+    }
+
+    /** Essentia actions set on controller buttons (ButtonMap). */
+    private void handleAction(String action, boolean down)
+    {
+        switch (action) {
+            case "turbo": if (down) toggleTurbo(); break;
+            case "turbo_hold": setTurbo(down); break;
+            case "autofire": if (down) toggleAutoFire(); break;
+            case "shot": if (down) gameAction("shot"); break;
+            case "keyboard": if (down) toggleKeyboard(); break;
+            case "menu": if (down) showExitDialog(); break;
+            default: break;
+        }
     }
 
     /** Sends a quick action to the game (screenshot, team, bag, save...). */
@@ -557,16 +666,21 @@ public class MainActivity extends SDLActivity
             EssentiaSettings.GAME2_BLACK.equals(mode), title != null ? title : "",
             GAME_PATH, new java.io.File(getCacheDir(), "essentia_live.txt"),
             new com.hatkid.mkxpz.ui.GamePanel.Keys() {
-                @Override public void down(int k) { SDLActivity.onNativeKeyDown(k); debugKey(k, true); }
-                @Override public void up(int k) { SDLActivity.onNativeKeyUp(k); debugKey(k, false); }
+                @Override public void down(int k) { sendKey(k, true); }
+                @Override public void up(int k) { sendKey(k, false); }
             },
             new com.hatkid.mkxpz.ui.GamePanel.Actions() {
                 @Override public void controls() { com.hatkid.mkxpz.ui.ControlsGuide.showDialog(MainActivity.this); }
                 @Override public void menu() { showExitDialog(); }
                 @Override public void game(String command) { gameAction(command); }
                 @Override public void turbo() { toggleTurbo(); }
+                @Override public void autoFire() { toggleAutoFire(); }
+                @Override public void keyboard() { toggleKeyboard(); }
             });
-        if (mPanel != null) mPanel.setTurbo(mTurbo, EssentiaSettings.turboSpeed(this));
+        if (mPanel != null) {
+            mPanel.setTurbo(mTurbo, EssentiaSettings.turboSpeed(this));
+            mPanel.setAutoFire(mAutoFire);
+        }
     }
 
     @Override

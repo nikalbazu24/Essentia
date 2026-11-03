@@ -117,6 +117,16 @@ module EssentiaActions
         end
         @hooked[:map] = true
       end
+      if ENV['ESSENTIA_DIAGONAL'] == '1' && defined?(Game_Player) && !@hooked[:diag]
+        Game_Player.class_eval do
+          alias_method :essentia_diag_update, :update
+          def update(*args)
+            EssentiaActions.diagonal_step(self)
+            essentia_diag_update(*args)
+          end
+        end
+        @hooked[:diag] = true
+      end
       if defined?(PokemonEncounters) && !@hooked[:enc]
         [:encounter_triggered?, :pbCanEncounter?, :pbEncounterTriggered?].each do |m|
           next unless PokemonEncounters.method_defined?(m)
@@ -128,6 +138,31 @@ module EssentiaActions
           end
         end
         @hooked[:enc] = true
+      end
+    rescue Exception
+    end
+
+    # ------------------------------------------------------------ diagonal
+
+    # Two directions held: step diagonally (if the way is free; otherwise the
+    # game moves straight as usual).
+    def diagonal_step(player)
+      return if player.moving?
+      d = Input.dir8
+      return unless d == 1 || d == 3 || d == 7 || d == 9
+      return if player.respond_to?(:move_route_forcing) && player.move_route_forcing
+      return unless map_safe?
+      horz = (d == 1 || d == 7) ? 4 : 6
+      vert = (d == 1 || d == 3) ? 2 : 8
+      if player.respond_to?(:move_diagonal)
+        player.move_diagonal(horz, vert)
+      else
+        case d
+        when 1 then player.move_lower_left
+        when 3 then player.move_lower_right
+        when 7 then player.move_upper_left
+        when 9 then player.move_upper_right
+        end
       end
     rescue Exception
     end

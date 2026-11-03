@@ -51,6 +51,8 @@ public final class GamePanel extends Presentation
         /** A quick action for the game (see essentia_actions.rb). */
         void game(String command);
         void turbo();
+        void autoFire();
+        void keyboard();
     }
 
     private static final int PAGE_ACTIONS = 0, PAGE_KEYS = 1, PAGE_CHEATS = 2;
@@ -68,6 +70,7 @@ public final class GamePanel extends Presentation
     private TextView mMessage;
     private TextView mTurboChip;
     private Tile mTurboTile;
+    private Tile mAutoTile;
     private FrameLayout mPages;
     private final View[] mPageViews = new View[3];
     private final TextView[] mTabs = new TextView[3];
@@ -262,9 +265,12 @@ public final class GamePanel extends Presentation
         keyTile(g, R.string.panel_menu, KeyEvent.KEYCODE_ESCAPE, true);
         keyTile(g, R.string.panel_enter, KeyEvent.KEYCODE_ENTER, true);
         keyTile(g, R.string.panel_shift, KeyEvent.KEYCODE_SHIFT_LEFT, false);
+        keyTile(g, R.string.panel_key_a, KeyEvent.KEYCODE_A, false);
+        keyTile(g, R.string.panel_key_d, KeyEvent.KEYCODE_D, false);
         keyTile(g, R.string.panel_f1, KeyEvent.KEYCODE_F1, false);
         keyTile(g, R.string.panel_ctrl, KeyEvent.KEYCODE_CTRL_LEFT, false);
-        keyTile(g, R.string.panel_fps, KeyEvent.KEYCODE_F2, false);
+        mAutoTile = addTile(g, R.drawable.ic_p_auto, R.string.btn_autofire_short, false, v -> mActions.autoFire());
+        addTile(g, R.drawable.ic_p_keys, R.string.btn_keyboard, false, v -> mActions.keyboard());
         return g;
     }
 
@@ -409,6 +415,11 @@ public final class GamePanel extends Presentation
         mTurboTile.label.setText(label);
         mTurboChip.setText("▶▶ x" + speed);
         mTurboChip.setVisibility(on ? View.VISIBLE : View.GONE);
+    }
+
+    public void setAutoFire(boolean on)
+    {
+        if (mAutoTile != null) setTileOn(mAutoTile, on);
     }
 
     /** Cheat toggles ("through", "noenc") confirmed by the game. */

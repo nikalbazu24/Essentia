@@ -105,6 +105,10 @@ public final class EssentiaSettings
     public static final String PERF_SUSTAINED = "perf_sustained";
     public static final String PERF_60HZ = "perf_60hz";
     public static final String DEBUG_INPUT = "debug_input";
+    /** Move diagonally when two directions are held (off by default). */
+    public static final String DIAGONAL = "diagonal_movement";
+    /** Short vibration when touching the on-screen controls. */
+    public static final String HAPTICS = "touch_haptics";
 
     /** Turbo speed (2..4x), switched on from the panel or with Select + R1. */
     private static final String KEY_TURBO = "turbo_speed";

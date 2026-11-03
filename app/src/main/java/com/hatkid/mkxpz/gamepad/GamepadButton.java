@@ -213,6 +213,9 @@ public class GamepadButton extends ImageView
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
                 this.setAlpha(0.5f);
+                if (Gamepad.sHaptics)
+                    performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY,
+                        android.view.HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
                 mOnKeyDownListener.onKeyDown(mKey);
                 break;
 

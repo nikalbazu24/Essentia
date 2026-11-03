@@ -24,7 +24,6 @@ android {
         versionName "0.1.${buildNumber}"
         archivesBaseName = "essentia"
         ndk {
-            debugSymbolLevel 'FULL'
             // AYN Thor y equipos actuales: solo 64 bits
             abiFilters 'arm64-v8a'
         }

@@ -109,6 +109,9 @@ public class GamepadDPad extends GamepadButton
                     }
 
                     angle = nAngle;
+                    if (Gamepad.sHaptics && angle != Direction.UNKNOWN)
+                        performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY,
+                            android.view.HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
 
                     switch (angle)
                     {

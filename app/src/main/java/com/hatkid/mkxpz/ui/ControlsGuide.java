@@ -19,33 +19,31 @@ public final class ControlsGuide
 {
     private ControlsGuide() { }
 
-    /** Rows: button, PC key, typical use. Strings are resource ids. */
-    private static final int[][] ROWS = {
-        { R.string.ctl_btn_a,      R.string.ctl_key_a,      R.string.ctl_use_a },
-        { R.string.ctl_btn_b,      R.string.ctl_key_b,      R.string.ctl_use_b },
-        { R.string.ctl_btn_start,  R.string.ctl_key_start,  R.string.ctl_use_start },
-        { R.string.ctl_btn_x,      R.string.ctl_key_x,      R.string.ctl_use_x },
-        { R.string.ctl_btn_y,      R.string.ctl_key_y,      R.string.ctl_use_y },
-        { R.string.ctl_btn_l1r1,   R.string.ctl_key_l1r1,   R.string.ctl_use_l1r1 },
-        { R.string.ctl_btn_l2,     R.string.ctl_key_l2,     R.string.ctl_use_l2 },
-        { R.string.ctl_btn_r2,     R.string.ctl_key_r2,     R.string.ctl_use_r2 },
-        { R.string.ctl_btn_move,   R.string.ctl_key_move,   R.string.ctl_use_move },
-        { R.string.ctl_btn_menu,   R.string.ctl_key_menu,   R.string.ctl_use_menu },
-        { R.string.ctl_btn_f1,     R.string.ctl_key_f1,     R.string.ctl_use_f1 },
-        { R.string.ctl_btn_turbo,  R.string.ctl_key_essentia, R.string.ctl_use_turbo },
-        { R.string.ctl_btn_shot,   R.string.ctl_key_essentia, R.string.ctl_use_shot },
-    };
-
-    /** The table as a view. */
+    /** The table as a view: the controller buttons (as set by the user), then the fixed ones. */
     public static LinearLayout buildTable(Context c)
     {
+        com.hatkid.mkxpz.ButtonMap.load(c);
         LinearLayout table = new LinearLayout(c);
         table.setOrientation(LinearLayout.VERTICAL);
 
         table.addView(row(c, c.getString(R.string.ctl_col_button), c.getString(R.string.ctl_col_key),
             c.getString(R.string.ctl_col_use), true, false));
         boolean alt = false;
-        for (int[] r : ROWS) {
+        for (int b : com.hatkid.mkxpz.ButtonMap.BUTTONS) {
+            com.hatkid.mkxpz.ButtonMap.Action a = com.hatkid.mkxpz.ButtonMap.forButton(b);
+            if (a == null || "none".equals(a.id)) continue;
+            String key = a.isKey() ? a.keyName : c.getString(R.string.ctl_key_essentia);
+            table.addView(row(c, com.hatkid.mkxpz.ButtonMap.buttonName(b), key, c.getString(a.useRes), false, alt));
+            alt = !alt;
+        }
+        int[][] fixed = {
+            { R.string.ctl_btn_move,   R.string.ctl_key_move,     R.string.ctl_use_move },
+            { R.string.ctl_btn_menu,   R.string.ctl_key_menu,     R.string.ctl_use_menu },
+            { R.string.ctl_btn_turbo,  R.string.ctl_key_essentia, R.string.ctl_use_turbo },
+            { R.string.ctl_btn_shot,   R.string.ctl_key_essentia, R.string.ctl_use_shot },
+            { R.string.ctl_btn_f1,     R.string.ctl_key_f1,       R.string.ctl_use_f1 },
+        };
+        for (int[] r : fixed) {
             table.addView(row(c, c.getString(r[0]), c.getString(r[1]), c.getString(r[2]), false, alt));
             alt = !alt;
         }
