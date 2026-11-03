@@ -94,6 +94,7 @@ public class LibraryActivity extends ControllerActivity
     private GamesAdapter mAdapter;
     private View mEmpty;
     private View mZoomed;
+    private View mRoot;
     /** Details of games (saves, version, size...), measured in the background. */
     private final java.util.Map<String, GameStats> mStats = new java.util.HashMap<>();
     private final java.util.concurrent.ExecutorService mStatsExec =
@@ -120,6 +121,13 @@ public class LibraryActivity extends ControllerActivity
         } else if (savedInstanceState == null) {
             Updater.check(this, () -> { }, false);
             com.hatkid.mkxpz.ui.WhatsNew.showIfNew(this);
+            rescanFolders();
+            if (EssentiaSettings.flag(this, EssentiaSettings.RESUME_LAST, false)) {
+                List<Library.Entry> all = Library.load(this);
+                if (!all.isEmpty() && all.get(0).lastPlayed > 0) {
+                    mRoot.postDelayed(() -> { if (!isFinishing()) play(0); }, 600);
+                }
+            }
         }
     }
 
@@ -163,6 +171,7 @@ public class LibraryActivity extends ControllerActivity
     private View buildUi()
     {
         FrameLayout root = new FrameLayout(this);
+        mRoot = root;
         root.setBackgroundColor(Ui.BG);
 
         // Backdrop: the selected game's art, blurred and dimmed
@@ -569,7 +578,14 @@ public class LibraryActivity extends ControllerActivity
                 System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString());
         String mode = screenLabel(e.screenMode);
         String out = mode == null ? when : when + "  ·  " + mode;
-        return EssentiaSettings.ENGINE_CLASSIC.equals(e.engine) ? out + "  ·  Ruby 1.8" : out;
+        return usesClassic(e) ? out + "  ·  Ruby 1.8" : out;
+    }
+
+    /** The classic engine, chosen or found by the automatic engine. */
+    private boolean usesClassic(Library.Entry e)
+    {
+        return EssentiaSettings.ENGINE_CLASSIC.equals(e.engine)
+            || (EssentiaSettings.ENGINE_AUTO.equals(e.engine) && EssentiaSettings.learnedClassic(this, e.path));
     }
 
     private static final class Holder
@@ -869,7 +885,7 @@ public class LibraryActivity extends ControllerActivity
 
         StringBuilder sub = new StringBuilder();
         if (!st.kind.isEmpty()) sub.append(st.kind);
-        sub.append(sub.length() > 0 ? "  ·  " : "").append(EssentiaSettings.ENGINE_CLASSIC.equals(e.engine)
+        sub.append(sub.length() > 0 ? "  ·  " : "").append(usesClassic(e)
             ? getString(R.string.eng_classic_short) : getString(R.string.eng_modern_short));
         String mode = screenLabel(e.screenMode);
         if (mode != null) sub.append("  ·  ").append(mode);
@@ -923,7 +939,7 @@ public class LibraryActivity extends ControllerActivity
         if (!st.version.isEmpty()) chip("v" + st.version.replaceFirst("^[vV]", ""), false);
         String mode = screenLabel(e.screenMode);
         if (mode != null) chip(mode, false);
-        if (EssentiaSettings.ENGINE_CLASSIC.equals(e.engine)) chip("Ruby 1.8", false);
+        if (usesClassic(e)) chip("Ruby 1.8", false);
 
         if (st.saves > 0) {
             String when = st.lastSave > 0 ? DateUtils.getRelativeTimeSpanString(st.lastSave,
@@ -985,6 +1001,13 @@ public class LibraryActivity extends ControllerActivity
         if (GameUpdater.supported(new File(e.path))) {
             labels.add(getString(R.string.upd_game)); actions.add(() -> updateGame(e));
         }
+        if (Shortcuts.canPin(this)) {
+            labels.add(getString(R.string.opt_pin)); actions.add(() -> {
+                boolean ok = Shortcuts.pin(this, e);
+                Toast.makeText(this, ok ? R.string.opt_pin_done : R.string.opt_pin_failed, Toast.LENGTH_LONG).show();
+            });
+        }
+        labels.add(getString(R.string.opt_send_scripts)); actions.add(() -> sendScripts(e));
         labels.add(getString(R.string.lib_remove)); actions.add(() -> { Library.remove(this, e.path); reload(); });
 
         new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
@@ -1025,6 +1048,36 @@ public class LibraryActivity extends ControllerActivity
         }
     }
 
+    // ------------------------------------------------------------ scripts for review
+
+    /** Takes the game's scripts file (also from packed games) and opens the share menu. */
+    private void sendScripts(Library.Entry e)
+    {
+        Toast.makeText(this, R.string.scripts_working, Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            File out = new File(ShareProvider.folder(this), Saves.safeName(e.displayTitle()) + " - Scripts.rxdata");
+            boolean ok;
+            try {
+                ok = GameScripts.extract(new File(e.path), out);
+            } catch (Exception ex) {
+                ok = false;
+            }
+            final boolean found = ok;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (!found) {
+                    Toast.makeText(this, R.string.scripts_none, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                try {
+                    ShareProvider.share(this, out, getString(R.string.opt_send_scripts));
+                } catch (Exception ex) {
+                    Toast.makeText(this, R.string.err_no_picker, Toast.LENGTH_LONG).show();
+                }
+            });
+        }, "EssentiaScripts").start();
+    }
+
     // ------------------------------------------------------------ game updates (PokéUpdater)
 
     private void updateGame(Library.Entry e)
@@ -1035,17 +1088,22 @@ public class LibraryActivity extends ControllerActivity
     private void chooseEngine(Library.Entry e)
     {
         boolean available = Games.classicEngineAvailable(this);
-        final String[] values = { EssentiaSettings.ENGINE_MODERN, EssentiaSettings.ENGINE_CLASSIC };
-        final String[] labels = { getString(R.string.eng_modern), getString(R.string.eng_classic) };
-        int checked = EssentiaSettings.ENGINE_CLASSIC.equals(e.engine) ? 1 : 0;
+        final String[] values = { EssentiaSettings.ENGINE_AUTO, EssentiaSettings.ENGINE_MODERN, EssentiaSettings.ENGINE_CLASSIC };
+        String auto = getString(R.string.eng_auto);
+        if (EssentiaSettings.learnedClassic(this, e.path)) auto += "  " + getString(R.string.eng_auto_learned);
+        final String[] labels = { auto, getString(R.string.eng_modern), getString(R.string.eng_classic) };
+        int checked = EssentiaSettings.ENGINE_CLASSIC.equals(e.engine) ? 2
+            : EssentiaSettings.ENGINE_MODERN.equals(e.engine) ? 1 : 0;
         new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(R.string.opt_engine)
             .setSingleChoiceItems(labels, checked, (d, which) -> {
-                if (which == 1 && !available) {
+                if (which == 2 && !available) {
                     Toast.makeText(this, R.string.eng_missing, Toast.LENGTH_LONG).show();
                     return;
                 }
                 e.engine = values[which];
+                // choosing a fixed engine forgets what the automatic one learned
+                if (which != 0) EssentiaSettings.setLearnedClassic(this, e.path, false);
                 Library.update(this, e);
                 d.dismiss();
                 reload();
@@ -1278,8 +1336,42 @@ public class LibraryActivity extends ControllerActivity
         }
     }
 
+    /** New games in the folders already added (in the background). */
+    private void rescanFolders()
+    {
+        if (!EssentiaSettings.flag(this, EssentiaSettings.RESCAN, true)) return;
+        java.util.Set<String> known = EssentiaSettings.gameRoots(this);
+        if (known.isEmpty()) {
+            // games added before this was remembered: their parent folders
+            for (Library.Entry e : Library.load(this)) {
+                File parent = new File(e.path).getParentFile();
+                if (parent != null) EssentiaSettings.addGameRoot(this, parent.getAbsolutePath());
+            }
+            known = EssentiaSettings.gameRoots(this);
+        }
+        final java.util.Set<String> roots = known;
+        if (roots.isEmpty()) return;
+        new Thread(() -> {
+            int added = 0;
+            for (String r : roots) {
+                File root = new File(r);
+                if (!root.isDirectory()) continue;
+                for (File f : Games.findGames(root)) if (Library.add(this, f)) added++;
+            }
+            if (added == 0) return;
+            Shortcuts.refresh(this);
+            final int n = added;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                Toast.makeText(this, getResources().getQuantityString(R.plurals.lib_found_new, n, n), Toast.LENGTH_LONG).show();
+                reload();
+            });
+        }, "EssentiaRescan").start();
+    }
+
     private void addGamesFrom(File root)
     {
+        EssentiaSettings.addGameRoot(this, root.getAbsolutePath());
         Toast.makeText(this, R.string.lib_scanning, Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             List<File> found = Games.findGames(root);

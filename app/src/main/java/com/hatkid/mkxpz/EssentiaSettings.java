@@ -95,6 +95,14 @@ public final class EssentiaSettings
     public static String screenMode(Context c) { return prefs(c).getString(KEY_SCREEN, SCREEN_WIDE); }
     public static void setScreenMode(Context c, String v) { prefs(c).edit().putString(KEY_SCREEN, v).commit(); }
 
+    /** Game screen orientation: horizontal (default), vertical (game on top, controls below) or both. */
+    public static final String ORIENT_LANDSCAPE = "landscape";
+    public static final String ORIENT_PORTRAIT = "portrait";
+    public static final String ORIENT_AUTO = "auto";
+    private static final String KEY_ORIENT = "game_orientation";
+    public static String orientation(Context c) { return prefs(c).getString(KEY_ORIENT, ORIENT_LANDSCAPE); }
+    public static void setOrientation(Context c, String v) { prefs(c).edit().putString(KEY_ORIENT, v).commit(); }
+
     // Performance and diagnostics (booleans)
     public static final String PERF_FAST_LOAD = "perf_fast_load";
     public static final String PERF_LOAD_TIMES = "perf_load_times";
@@ -115,6 +123,22 @@ public final class EssentiaSettings
     public static final String AUTO_UPDATE = "auto_game_updates";
     /** Move diagonally when two directions are held (off by default). */
     public static final String DIAGONAL = "diagonal_movement";
+    /** Open the last played game when Essentia starts (off by default). */
+    public static final String RESUME_LAST = "resume_last_game";
+    /** Look for new games in the folders already added, when Essentia starts. */
+    public static final String RESCAN = "rescan_folders";
+
+    private static final String KEY_ROOTS = "game_roots";
+    public static java.util.Set<String> gameRoots(Context c)
+    {
+        return new java.util.HashSet<>(prefs(c).getStringSet(KEY_ROOTS, new java.util.HashSet<>()));
+    }
+    public static void addGameRoot(Context c, String root)
+    {
+        java.util.Set<String> s = gameRoots(c);
+        if (s.add(root)) prefs(c).edit().putStringSet(KEY_ROOTS, s).apply();
+    }
+
     /** Short vibration when touching the on-screen controls. */
     public static final String HAPTICS = "touch_haptics";
 
@@ -126,6 +150,25 @@ public final class EssentiaSettings
     /** Ruby engine: modern (Ruby 3.1) or classic (Ruby 1.8, for very old games). */
     public static final String ENGINE_MODERN = "modern";
     public static final String ENGINE_CLASSIC = "classic";
+    /** Automatic (default): modern; if the game turns out to need Ruby 1.8, classic from then on. */
+    public static final String ENGINE_AUTO = "";
+
+    private static SharedPreferences learned(Context c)
+    {
+        return c.getSharedPreferences("essentia_engine_auto", Context.MODE_PRIVATE);
+    }
+
+    /** The automatic engine found that this game needs the classic engine. */
+    public static boolean learnedClassic(Context c, String path)
+    {
+        return learned(c).getBoolean(path, false);
+    }
+
+    public static void setLearnedClassic(Context c, String path, boolean v)
+    {
+        if (v) learned(c).edit().putBoolean(path, true).commit();
+        else learned(c).edit().remove(path).commit();
+    }
 
     /** Folder with the RPG Maker RTP (Essentia/RTP/XP, VX, VXAce). */
     public static java.io.File rtpRoot()

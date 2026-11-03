@@ -92,9 +92,14 @@ public final class Games
         intent.putExtra(MainActivity.EXTRA_GAME_PATH, path);
         intent.putExtra(MainActivity.EXTRA_TITLE, title);
         intent.putExtra(MainActivity.EXTRA_SCREEN_MODE, screen);
-        boolean classic = entry != null && EssentiaSettings.ENGINE_CLASSIC.equals(entry.engine)
-            && classicEngineAvailable(a);
+        String chosen = entry != null && entry.engine != null ? entry.engine : EssentiaSettings.ENGINE_AUTO;
+        boolean auto = !EssentiaSettings.ENGINE_MODERN.equals(chosen) && !EssentiaSettings.ENGINE_CLASSIC.equals(chosen);
+        boolean classic = classicEngineAvailable(a) && (EssentiaSettings.ENGINE_CLASSIC.equals(chosen)
+            || (auto && EssentiaSettings.learnedClassic(a, path)));
         intent.putExtra(MainActivity.EXTRA_ENGINE, classic ? EssentiaSettings.ENGINE_CLASSIC : EssentiaSettings.ENGINE_MODERN);
+        // automatic engine, first try with the modern one: may switch to classic
+        intent.putExtra(MainActivity.EXTRA_AUTO_ENGINE, auto && !classic && classicEngineAvailable(a));
+        intent.putExtra(MainActivity.EXTRA_FROM_FRONTEND, newTask);
         intent.putExtra(MainActivity.EXTRA_DATA_DIR, Saves.dirFor(a, gameDir, title).getAbsolutePath());
         if (newTask) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

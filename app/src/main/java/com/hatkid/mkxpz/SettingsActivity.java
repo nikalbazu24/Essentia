@@ -133,6 +133,23 @@ public class SettingsActivity extends ControllerActivity
         fmtNote.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 10));
         mList.addView(fmtNote);
 
+        TextView orLabel = Ui.text(this, getString(R.string.set_orient_title), 15, Ui.TEXT, true);
+        orLabel.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 4));
+        mList.addView(orLabel);
+        RadioGroup orient = new RadioGroup(this);
+        String om = EssentiaSettings.orientation(this);
+        orient.addView(radio(R.string.set_orient_landscape, EssentiaSettings.ORIENT_LANDSCAPE, om));
+        orient.addView(radio(R.string.set_orient_portrait, EssentiaSettings.ORIENT_PORTRAIT, om));
+        orient.addView(radio(R.string.set_orient_auto, EssentiaSettings.ORIENT_AUTO, om));
+        orient.setOnCheckedChangeListener((g, id) -> {
+            RadioButton r = g.findViewById(id);
+            if (r != null) EssentiaSettings.setOrientation(this, (String) r.getTag());
+        });
+        card(orient);
+        TextView orNote = Ui.text(this, getString(R.string.set_orient_note), 13, Ui.TEXT_DIM, false);
+        orNote.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 10));
+        mList.addView(orNote);
+
         CheckBox smooth = check(R.string.set_smooth, EssentiaSettings.smoothScaling(this));
         smooth.setOnCheckedChangeListener((b, on) -> EssentiaSettings.setSmoothScaling(this, on));
         card(smooth);
@@ -221,6 +238,9 @@ public class SettingsActivity extends ControllerActivity
     {
         section(R.string.set_auto_update_title, R.string.set_auto_update_desc);
         flagRow(R.string.set_auto_update, EssentiaSettings.AUTO_UPDATE, true);
+        section(R.string.set_comfort_title, 0);
+        flagRow(R.string.set_resume_last, EssentiaSettings.RESUME_LAST, false);
+        flagRow(R.string.set_rescan, EssentiaSettings.RESCAN, true);
     }
 
     private void buildSaves()

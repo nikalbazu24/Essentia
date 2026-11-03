@@ -16,4 +16,8 @@
         <item quantity="one">%1$d shortcut created in:\n%2$s</item>
         <item quantity="other">%1$d shortcuts created in:\n%2$s</item>
     </plurals>
+    <plurals name="lib_found_new">
+        <item quantity="one">%d new game found</item>
+        <item quantity="other">%d new games found</item>
+    </plurals>
 </resources>

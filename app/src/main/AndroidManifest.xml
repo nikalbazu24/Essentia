@@ -129,5 +129,11 @@
             <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />
         </activity>
 
+        <!-- Files Essentia shares (e.g. a game's scripts for review) -->
+        <provider
+            android:name=".ShareProvider"
+            android:authorities="${applicationId}.share"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>

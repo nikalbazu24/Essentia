@@ -146,10 +146,10 @@ module EssentiaWide
       key = [wide_w, tall]
       ext = cache[key]
       return ext if ext && !ext.disposed?
-      w = wide_w
       h = src.height
       bw = src.width
       m = off
+      w = bw + 2 * m   # pictures a bit wider than the screen (scrolling) too
       ext = Bitmap.new(w, h)
       if tall
         # Backgrounds: the outer strip of the picture is widened a little to
@@ -175,7 +175,8 @@ module EssentiaWide
     # solid at its left and right edges (drawn layers for text are transparent
     # there). Decided once per picture.
     def full_picture?(bmp)
-      return false unless bmp && !(bmp.disposed? rescue true) && bmp.width == base[0]
+      return false unless bmp && !(bmp.disposed? rescue true)
+      return false if bmp.width < base[0] || bmp.width >= wide_w   # (wider: a screenshot)
       return true if bmp.instance_variable_get(:@essentia_file)
       known = bmp.instance_variable_get(:@essentia_solid)
       return known unless known.nil?
@@ -564,7 +565,7 @@ class Sprite
     if vp && vp.instance_variable_get(:@essentia_cfull)
       # 4:3 screen: everything as designed; a background picture goes, extended,
       # to the wide layer behind
-      if gx == 0 && ox == 0 && EssentiaWide.full_picture?(gb) &&
+      if ox == 0 && gx <= 0 && EssentiaWide.full_picture?(gb) && gx + gb.width >= EssentiaWide.base[0] &&
          (ext = EssentiaWide.extended(gb, false))
         back = EssentiaWide.backdrop_for(vp)
         unless @essentia_moved
@@ -573,7 +574,8 @@ class Sprite
           self.essentia_raw_viewport = back
         end
         self.essentia_raw_bitmap = ext unless essentia_raw_bitmap.equal?(ext)
-        self.essentia_raw_x = 0
+        self.essentia_raw_x = gx
+        essentia_full_src(ext)
       else
         if @essentia_moved
           @essentia_moved = false
@@ -594,10 +596,11 @@ class Sprite
       return
     end
     m = EssentiaWide.off
-    if gx == 0 && ox == 0 && EssentiaWide.full_picture?(gb) &&
+    if ox == 0 && gx <= 0 && EssentiaWide.full_picture?(gb) && gx + gb.width >= EssentiaWide.base[0] &&
        (ext = EssentiaWide.extended(gb, @essentia_battle))
       self.essentia_raw_bitmap = ext unless essentia_raw_bitmap.equal?(ext)
-      self.essentia_raw_x = shift - m
+      self.essentia_raw_x = gx + shift - m
+      essentia_full_src(ext)
     elsif gx == 0 && ox == 0 && gb && !(gb.disposed? rescue true) && gb.width >= EssentiaWide.wide_w
       # already a wide picture (a snapshot of the screen)
       self.essentia_raw_bitmap = gb unless essentia_raw_bitmap.equal?(gb)
@@ -614,6 +617,24 @@ class Sprite
       self.essentia_raw_x = gx + shift + extra
     end
   rescue StandardError
+  end
+
+  # A sprite showing an extended picture shows all of it (the game may have
+  # set a source rectangle for the original picture).
+  def essentia_full_src(ext)
+    r = src_rect
+    gb = @essentia_gbmp
+    if r && gb && r.x == 0 && r.y == 0 && (r.width == gb.width || r.width == 0 || r.width == ext.width)
+      r.set(0, 0, ext.width, ext.height) if r.width != ext.width || r.height != ext.height
+    end
+  rescue StandardError
+  end
+
+  alias_method :essentia_raw_src_rect=, :src_rect=
+  def src_rect=(r)
+    self.essentia_raw_src_rect = r
+    ext = essentia_raw_bitmap
+    essentia_full_src(ext) if @essentia_screen && ext && @essentia_gbmp && !ext.equal?(@essentia_gbmp)
   end
 
   alias_method :essentia_raw_y=, :y=

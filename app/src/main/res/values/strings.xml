@@ -212,7 +212,7 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="ctl_use_turbo">Turbo on / off</string>
     <string name="ctl_use_shot">Screenshot</string>
     <string name="opt_engine">Ruby engine…</string>
-    <string name="eng_modern">Modern (Ruby 3) — recommended, fast</string>
+    <string name="eng_modern">Modern (Ruby 3) — fast</string>
     <string name="eng_classic">Classic (Ruby 1.8) — for very old games that show Ruby errors</string>
     <string name="eng_missing">This version of Essentia doesn\'t include the classic engine yet.</string>
     <string name="btn_enter">Confirm (Enter)</string>
@@ -290,8 +290,6 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="wn_next">Next</string>
     <string name="wn_done">Let\'s play!</string>
     <string name="wn_show">See what\'s new</string>
-    <string name="wn_wide_title">True widescreen</string>
-    <string name="wn_wide_text">The map fills the screen, battles have more room and menus keep their design, with backgrounds that reach the edges.</string>
     <string name="lib_continue">Continue playing</string>
     <string name="stat_less_minute">less than 1 min</string>
     <string name="stat_minutes">%1$d min</string>
@@ -320,4 +318,22 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="wn_compat_text">Older Pokémon Essentials games (like Pokémon Z) start at their right size and no longer stop at errors that only worked on Windows.</string>
     <string name="wn_fast_title">Faster menus</string>
     <string name="wn_fast_text">Text is remembered once drawn, so bags and menus that redraw the same words move more smoothly.</string>
+    <string name="eng_auto">Automatic — recommended: modern, and classic if the game needs it</string>
+    <string name="eng_auto_learned">(this game: classic)</string>
+    <string name="opt_pin">Add shortcut to home screen</string>
+    <string name="opt_pin_done">Confirm in the launcher to add the shortcut</string>
+    <string name="opt_pin_failed">This launcher doesn\'t accept shortcuts</string>
+    <string name="opt_send_scripts">Send scripts for review…</string>
+    <string name="scripts_working">Getting the game\'s scripts…</string>
+    <string name="scripts_none">This game\'s scripts file wasn\'t found</string>
+    <string name="set_orient_title">Game orientation</string>
+    <string name="set_orient_landscape">Horizontal</string>
+    <string name="set_orient_portrait">Vertical: game on top, controls below</string>
+    <string name="set_orient_auto">Automatic (turns with the device)</string>
+    <string name="set_orient_note">Vertical mode shows the game in its own shape (no widescreen) and leaves the bottom part for the on-screen controls.</string>
+    <string name="set_comfort_title">Comfort</string>
+    <string name="set_resume_last">Open the last game when Essentia starts</string>
+    <string name="set_rescan">Look for new games in your folders when Essentia starts</string>
+    <string name="wn_comfort_title">More comfortable</string>
+    <string name="wn_comfort_text">Automatic engine (uses the classic one by itself when a game needs it), home screen shortcuts for each game, vertical mode, and new games found by themselves.</string>
 </resources>

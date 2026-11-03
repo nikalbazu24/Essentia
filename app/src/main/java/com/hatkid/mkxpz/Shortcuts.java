@@ -1,6 +1,13 @@
 package com.hatkid.mkxpz;
 
 import android.content.Context;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.os.Build;
 import android.util.Log;
 
 import java.io.File;
@@ -48,5 +55,74 @@ public final class Shortcuts
             }
         }
         return n;
+    }
+
+    // ------------------------------------------------------------ home screen
+
+    /** True when the launcher can add game shortcuts to the home screen. */
+    public static boolean canPin(Context c)
+    {
+        if (Build.VERSION.SDK_INT < 26) return false;
+        android.content.pm.ShortcutManager sm = c.getSystemService(android.content.pm.ShortcutManager.class);
+        return sm != null && sm.isRequestPinShortcutSupported();
+    }
+
+    /** Asks the launcher to add a shortcut that opens this game directly, with its cover as icon. */
+    public static boolean pin(Context c, Library.Entry e)
+    {
+        if (!canPin(c)) return false;
+        try {
+            Intent open = new Intent(c, LauncherActivity.class);
+            open.setAction(Intent.ACTION_VIEW);
+            open.putExtra("path", e.path);
+            open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+
+            android.graphics.drawable.Icon icon;
+            Bitmap art = coverIcon(e);
+            icon = art != null ? android.graphics.drawable.Icon.createWithBitmap(art)
+                : android.graphics.drawable.Icon.createWithResource(c, R.mipmap.ic_launcher);
+
+            android.content.pm.ShortcutInfo info = new android.content.pm.ShortcutInfo.Builder(c,
+                    "game-" + Integer.toHexString(e.path.hashCode()))
+                .setShortLabel(e.displayTitle())
+                .setLongLabel(e.displayTitle())
+                .setIcon(icon)
+                .setIntent(open)
+                .build();
+            android.content.pm.ShortcutManager sm = c.getSystemService(android.content.pm.ShortcutManager.class);
+            return sm.requestPinShortcut(info, null);
+        } catch (Exception ex) {
+            Log.w(TAG, "Pin shortcut: " + ex);
+            return false;
+        }
+    }
+
+    /** Square, rounded picture from the game's cover. */
+    private static Bitmap coverIcon(Library.Entry e)
+    {
+        File f = e.cover != null && !e.cover.isEmpty() ? new File(e.cover) : Games.findCover(new File(e.path));
+        if (f == null || !f.isFile()) return null;
+        BitmapFactory.Options o = new BitmapFactory.Options();
+        o.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(f.getAbsolutePath(), o);
+        int sample = 1;
+        while (o.outWidth / (sample * 2) >= 256 && o.outHeight / (sample * 2) >= 256) sample *= 2;
+        o = new BitmapFactory.Options();
+        o.inSampleSize = sample;
+        Bitmap src = BitmapFactory.decodeFile(f.getAbsolutePath(), o);
+        if (src == null) return null;
+        int side = Math.min(src.getWidth(), src.getHeight());
+        int size = 192;
+        Bitmap out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(out);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        android.graphics.Path clip = new android.graphics.Path();
+        clip.addRoundRect(0, 0, size, size, size * 0.22f, size * 0.22f, android.graphics.Path.Direction.CW);
+        canvas.clipPath(clip);
+        Rect from = new Rect((src.getWidth() - side) / 2, (src.getHeight() - side) / 2,
+            (src.getWidth() + side) / 2, (src.getHeight() + side) / 2);
+        canvas.drawBitmap(src, from, new Rect(0, 0, size, size), p);
+        src.recycle();
+        return out;
     }
 }

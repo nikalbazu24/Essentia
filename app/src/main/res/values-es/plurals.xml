@@ -16,4 +16,8 @@
         <item quantity="one">Se creó %1$d acceso en:\n%2$s</item>
         <item quantity="other">Se crearon %1$d accesos en:\n%2$s</item>
     </plurals>
+    <plurals name="lib_found_new">
+        <item quantity="one">Se encontró %d juego nuevo</item>
+        <item quantity="other">Se encontraron %d juegos nuevos</item>
+    </plurals>
 </resources>

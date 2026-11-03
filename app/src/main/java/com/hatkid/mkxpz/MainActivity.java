@@ -50,6 +50,9 @@ public class MainActivity extends SDLActivity
     public static final String EXTRA_SCREEN_MODE = "essentia.SCREEN_MODE";
     /** Ruby engine: modern (Ruby 3.1) or classic (Ruby 1.8). */
     public static final String EXTRA_ENGINE = "essentia.ENGINE";
+    /** Automatic engine: switch to the classic one if the game needs it. */
+    public static final String EXTRA_AUTO_ENGINE = "essentia.AUTO_ENGINE";
+    public static final String EXTRA_FROM_FRONTEND = "essentia.FROM_FRONTEND";
     private boolean mClassicEngine = false;
     private static final String GAME_PATH_DEFAULT = Environment.getExternalStorageDirectory() + "/mkxp-z";
     private static String GAME_PATH = GAME_PATH_DEFAULT;
@@ -158,6 +161,16 @@ public class MainActivity extends SDLActivity
                 android.system.Os.setenv(k, tmp.getAbsolutePath(), true);
             }
 
+            // Orientation (the engine tells SDL which ones are allowed)
+            android.system.Os.setenv("ESSENTIA_ORIENTATION", EssentiaSettings.orientation(this), true);
+
+            // Automatic engine: the engine writes here when the game needs Ruby 1.8
+            java.io.File fallback = new java.io.File(getCacheDir(), "engine_fallback.txt");
+            //noinspection ResultOfMethodCallIgnored
+            fallback.delete();
+            boolean autoEngine = in != null && in.getBooleanExtra(EXTRA_AUTO_ENGINE, false);
+            android.system.Os.setenv("ESSENTIA_AUTO_FALLBACK", autoEngine ? fallback.getAbsolutePath() : "", true);
+
             // Live map for the second screen (written by essentia_live.rb)
             //noinspection ResultOfMethodCallIgnored
             new java.io.File(getCacheDir(), "essentia_live.txt").delete();
@@ -216,9 +229,11 @@ public class MainActivity extends SDLActivity
             Log.w(TAG, "Could not pass settings to the engine: " + e);
         }
 
+        applyOrientationSetting();
         super.onCreate(savedInstanceState);
 
         mMainHandler = new Handler(getMainLooper());
+        applyOrientationLayout();
 
         // Essentia: performance options for the game window
         applyWindowPerformance();
@@ -281,6 +296,7 @@ public class MainActivity extends SDLActivity
         if (mLayout != null && !EssentiaSettings.OSC_NEVER.equals(mOscMode)) {
             mGamepad.attachTo(this, mLayout);
         }
+        applyOrientationLayout();
 
         // Setup FPS textview
         tvFps = new TextView(this);
@@ -332,6 +348,7 @@ public class MainActivity extends SDLActivity
     protected void onDestroy()
     {
         stopPlayClock();
+        retryWithClassicEngine();
         super.onDestroy();
 
         // HACK: Exiting the JVM (process) since Ruby does not likes when we
@@ -742,6 +759,83 @@ public class MainActivity extends SDLActivity
         applyImmersive();
         showGamePanel();
         startPlayClock();
+    }
+
+    // Essentia: orientation of the game screen
+    private void applyOrientationSetting()
+    {
+        String o = EssentiaSettings.orientation(this);
+        int req = EssentiaSettings.ORIENT_PORTRAIT.equals(o) ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            : EssentiaSettings.ORIENT_AUTO.equals(o) ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+            : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;
+        try { setRequestedOrientation(req); } catch (Exception ignored) { }
+    }
+
+    /**
+     * Vertical: the game sits at the top (as wide as the screen) and the space
+     * below is for the on-screen controls. Horizontal: the game fills the screen.
+     */
+    private void applyOrientationLayout()
+    {
+        if (mSurface == null) return;
+        try {
+            boolean portrait = getResources().getConfiguration().orientation
+                == android.content.res.Configuration.ORIENTATION_PORTRAIT;
+            android.view.ViewGroup.LayoutParams lp = mSurface.getLayoutParams();
+            if (lp == null) return;
+            int w = getResources().getDisplayMetrics().widthPixels;
+            int h = portrait ? w * 3 / 4 : android.view.ViewGroup.LayoutParams.MATCH_PARENT;
+            if (lp.height != h || lp.width != android.view.ViewGroup.LayoutParams.MATCH_PARENT) {
+                lp.width = android.view.ViewGroup.LayoutParams.MATCH_PARENT;
+                lp.height = h;
+                mSurface.setLayoutParams(lp);
+            }
+            // L / R sit at the top corners: below the game when vertical
+            float dens = getResources().getDisplayMetrics().density;
+            for (int id : new int[] { R.id.buttons_misc_left_layout, R.id.buttons_misc_right_layout }) {
+                View v = findViewById(id);
+                if (v != null && v.getLayoutParams() instanceof android.view.ViewGroup.MarginLayoutParams) {
+                    android.view.ViewGroup.MarginLayoutParams m = (android.view.ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                    if (!(v.getTag(R.id.buttons_misc_left_layout) instanceof Integer)) {
+                        v.setTag(R.id.buttons_misc_left_layout, m.topMargin);
+                    }
+                    int original = (Integer) v.getTag(R.id.buttons_misc_left_layout);
+                    int top = portrait ? h + (int) (12 * dens) : original;
+                    if (m.topMargin != top) { m.topMargin = top; v.setLayoutParams(m); }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Orientation layout: " + e);
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig)
+    {
+        super.onConfigurationChanged(newConfig);
+        applyOrientationLayout();
+    }
+
+    // Essentia: automatic engine. The game stopped with an error typical of Ruby 1.8
+    // games: open it again with the classic engine (the launcher remembers it).
+    private void retryWithClassicEngine()
+    {
+        try {
+            java.io.File f = new java.io.File(getCacheDir(), "engine_fallback.txt");
+            if (!f.isFile() || f.length() == 0) return;
+            //noinspection ResultOfMethodCallIgnored
+            f.delete();
+            String path = gamePath();
+            if (path == null) return;
+            Intent i = new Intent(this, LauncherActivity.class);
+            i.putExtra("path", path);
+            i.putExtra(LauncherActivity.EXTRA_RETRY_CLASSIC, true);
+            i.putExtra(EXTRA_FROM_FRONTEND, getIntent().getBooleanExtra(EXTRA_FROM_FRONTEND, false));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            Log.w(TAG, "Classic engine retry: " + e);
+        }
     }
 
     // Essentia: play time for the library (counted while the game is on screen)

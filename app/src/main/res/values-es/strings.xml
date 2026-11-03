@@ -209,7 +209,7 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="ctl_use_turbo">Turbo sí / no</string>
     <string name="ctl_use_shot">Captura de pantalla</string>
     <string name="opt_engine">Motor de Ruby…</string>
-    <string name="eng_modern">Moderno (Ruby 3): recomendado, rápido</string>
+    <string name="eng_modern">Moderno (Ruby 3): rápido</string>
     <string name="eng_classic">Clásico (Ruby 1.8): para juegos muy antiguos que dan errores de Ruby</string>
     <string name="eng_missing">Esta versión de Essentia todavía no trae el motor clásico.</string>
     <string name="btn_enter">Confirmar (Enter)</string>
@@ -287,8 +287,6 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="wn_next">Siguiente</string>
     <string name="wn_done">¡A jugar!</string>
     <string name="wn_show">Ver novedades</string>
-    <string name="wn_wide_title">Panorámico real</string>
-    <string name="wn_wide_text">El mapa ocupa toda la pantalla, las batallas tienen más espacio y los menús mantienen su diseño, con fondos que llegan hasta los bordes.</string>
     <string name="lib_continue">Seguir jugando</string>
     <string name="stat_less_minute">menos de 1 min</string>
     <string name="stat_minutes">%1$d min</string>
@@ -317,4 +315,22 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="wn_compat_text">Los juegos con Pokémon Essentials antiguo (como Pokémon Z) abren a su tamaño correcto y ya no se detienen en errores que solo funcionaban en Windows.</string>
     <string name="wn_fast_title">Menús más fluidos</string>
     <string name="wn_fast_text">El texto ya dibujado se recuerda, así la mochila y los menús que redibujan las mismas palabras se mueven con más fluidez.</string>
+    <string name="eng_auto">Automático — recomendado: moderno, y clásico si el juego lo necesita</string>
+    <string name="eng_auto_learned">(este juego: clásico)</string>
+    <string name="opt_pin">Crear acceso directo en el inicio</string>
+    <string name="opt_pin_done">Confirma en el launcher para agregar el acceso directo</string>
+    <string name="opt_pin_failed">Este launcher no acepta accesos directos</string>
+    <string name="opt_send_scripts">Enviar scripts para revisión…</string>
+    <string name="scripts_working">Sacando los scripts del juego…</string>
+    <string name="scripts_none">No se encontró el archivo de scripts de este juego</string>
+    <string name="set_orient_title">Orientación del juego</string>
+    <string name="set_orient_landscape">Horizontal</string>
+    <string name="set_orient_portrait">Vertical: juego arriba, controles abajo</string>
+    <string name="set_orient_auto">Automática (gira con el equipo)</string>
+    <string name="set_orient_note">En vertical el juego se ve en su forma original (sin panorámico) y la parte de abajo queda para los controles en pantalla.</string>
+    <string name="set_comfort_title">Comodidad</string>
+    <string name="set_resume_last">Abrir el último juego al iniciar Essentia</string>
+    <string name="set_rescan">Buscar juegos nuevos en tus carpetas al iniciar Essentia</string>
+    <string name="wn_comfort_title">Más cómoda</string>
+    <string name="wn_comfort_text">Motor automático (usa el clásico solo cuando el juego lo necesita), accesos directos de cada juego en el inicio, modo vertical, y los juegos nuevos aparecen solos.</string>
 </resources>

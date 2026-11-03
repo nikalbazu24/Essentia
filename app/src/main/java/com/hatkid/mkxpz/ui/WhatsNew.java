@@ -32,7 +32,7 @@ public final class WhatsNew
         { R.drawable.ic_e_grid, R.string.wn_stats_title, R.string.wn_stats_text },
         { R.drawable.ic_e_gamepad, R.string.wn_compat_title, R.string.wn_compat_text },
         { R.drawable.ic_w_speed, R.string.wn_fast_title, R.string.wn_fast_text },
-        { R.drawable.ic_w_wide, R.string.wn_wide_title, R.string.wn_wide_text },
+        { R.drawable.ic_e_settings, R.string.wn_comfort_title, R.string.wn_comfort_text },
     };
 
     private WhatsNew() { }

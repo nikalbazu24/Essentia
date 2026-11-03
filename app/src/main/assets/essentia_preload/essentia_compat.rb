@@ -54,7 +54,7 @@ module Essentia
 
   def self.fix_reported_lines(source, message)
     lines = source.split("\n", -1)
-    message.scan(/:(\d+): (Invalid retry|Invalid redo|invalid multibyte escape: (\/.*\/))/) do |num, kind, regex|
+    message.scan(/:(\d+): (Invalid retry|Invalid redo|Invalid next|Invalid break|invalid multibyte escape: (\/.*\/))/) do |num, kind, regex|
       i = num.to_i - 1
       next if i < 0 || i >= lines.size
       line = lines[i]
@@ -65,6 +65,9 @@ module Essentia
         lines[i] = line.sub(/\bretry\b/, 'redo')
       when 'Invalid redo'
         lines[i] = line.sub(/\bredo\b/, 'nil')
+      when 'Invalid next', 'Invalid break'
+        # Ruby 1.8 accepted "next"/"break" directly in a method: it left it
+        lines[i] = line.sub(/\b(next|break)\b/, 'return')
       else
         # "\x80"-style bytes in a regexp: in UTF-8 they mean characters U+0080...
         if regex && line.include?(regex)
@@ -166,6 +169,7 @@ class Array
 end
 
 class Hash
+  def index(value); key(value); end unless method_defined?(:index)
   def indexes(*k); values_at(*k); end unless method_defined?(:indexes)
   alias_method :indices, :indexes unless method_defined?(:indices)
 end

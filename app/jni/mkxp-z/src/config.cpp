@@ -350,7 +350,10 @@ try { exp } catch (...) {}
         const char *mode = getenv("ESSENTIA_SCREEN_MODE");
         if (mode && !strcmp(mode, "stretch"))
             fixedAspectRatio = false;
-        if (mode && !strcmp(mode, "wide"))
+        // (a vertical screen keeps the game's own shape: it's as wide as the screen)
+        const char *orient = getenv("ESSENTIA_ORIENTATION");
+        bool portrait = orient && !strcmp(orient, "portrait");
+        if (mode && !strcmp(mode, "wide") && !portrait)
             preloadScripts.push_back("essentia_preload/widescreen.rb");
     }
 #endif

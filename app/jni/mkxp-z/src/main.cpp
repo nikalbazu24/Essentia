@@ -31,6 +31,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 #include <string>
 #include <unistd.h>
 #include <regex>
@@ -221,8 +222,16 @@ int main(int argc, char *argv[])
 	SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
 
 #ifdef MKXPZ_BUILD_ANDROID
-	// Set application window orientation to landscape
-	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+	// Essentia: orientation chosen in the settings (landscape by default)
+	{
+		const char *o = getenv("ESSENTIA_ORIENTATION");
+		if (o && !strcmp(o, "portrait"))
+			SDL_SetHint(SDL_HINT_ORIENTATIONS, "Portrait PortraitUpsideDown");
+		else if (o && !strcmp(o, "auto"))
+			SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown");
+		else
+			SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+	}
 #endif
 
 #ifdef GLES2_HEADER
