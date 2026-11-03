@@ -22,6 +22,9 @@ import com.hatkid.mkxpz.R;
 public final class WhatsNew
 {
     private static final String KEY = "whats_new_seen";
+    private static final String KEY_TOUR = "whats_new_tour";
+    /** Raise this when PAGES change: small fix releases don't show the tour again. */
+    private static final int TOUR = 1;
 
     /** Icon, title, text for this release. */
     private static final int[][] PAGES = {
@@ -34,22 +37,13 @@ public final class WhatsNew
 
     private WhatsNew() { }
 
-    private static int versionCode(Context c)
-    {
-        try {
-            return c.getPackageManager().getPackageInfo(c.getPackageName(), 0).versionCode;
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
     /** Shows the tour if this version is new for the user. */
     public static void showIfNew(Activity a)
     {
         SharedPreferences p = a.getSharedPreferences(EssentiaSettings.PREFS, Context.MODE_PRIVATE);
-        int current = versionCode(a);
-        if (current == 0 || p.getInt(KEY, 0) >= current) return;
-        p.edit().putInt(KEY, current).apply();
+        int seen = p.getInt(KEY_TOUR, p.getInt(KEY, 0) > 0 ? 1 : 0);
+        if (seen >= TOUR) return;
+        p.edit().putInt(KEY_TOUR, TOUR).apply();
         show(a);
     }
 

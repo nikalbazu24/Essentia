@@ -948,8 +948,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
      * This method is called by SDL using JNI.
      */
     public static void setWindowStyle(boolean fullscreen) {
+        // Essentia: a phone or console is always full screen. Games that switch
+        // to "windowed" (Graphics.fullscreen = false, Alt+Enter...) would bring
+        // back the status bar and push the picture off-center.
         // Called from SDLMain() thread and can't directly affect the view
-        mSingleton.sendCommand(COMMAND_CHANGE_WINDOW_STYLE, fullscreen ? 1 : 0);
+        mSingleton.sendCommand(COMMAND_CHANGE_WINDOW_STYLE, 1);
     }
 
     /**

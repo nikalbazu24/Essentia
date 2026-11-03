@@ -190,7 +190,11 @@ public class LibraryActivity extends ControllerActivity
         mShelfScroll.setHorizontalScrollBarEnabled(false);
         mShelfScroll.setClipToPadding(false);
         // room around the cards for the zoomed one and its highlight
-        mShelfScroll.setPadding(Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16));
+        mShelfScroll.setPadding(Ui.dp(this, 16), Ui.dp(this, 12), Ui.dp(this, 16), Ui.dp(this, 12));
+        // the cards always fit the height there is (zoom and highlight included)
+        mShelfScroll.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (b - t != ob - ot) v.post(this::fitShelfCards);
+        });
         mShelf = new LinearLayout(this);
         mShelf.setOrientation(LinearLayout.HORIZONTAL);
         mShelf.setGravity(Gravity.CENTER_VERTICAL);
@@ -659,7 +663,7 @@ public class LibraryActivity extends ControllerActivity
         mShelf.removeAllViews();
         if (!isShelf()) return;
 
-        int h = Ui.dp(this, isPortrait() ? 120 : 132);
+        int h = shelfCardHeight();
         int w = h * 4 / 3;
         for (int i = 0; i < mGames.size(); i++) {
             final int pos = i;
@@ -683,6 +687,30 @@ public class LibraryActivity extends ControllerActivity
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(w, h);
             lp.rightMargin = Ui.dp(this, 14);
             mShelf.addView(card, lp);
+        }
+    }
+
+    /** Card height on the shelf: as designed, or smaller if the screen is short. */
+    private int shelfCardHeight()
+    {
+        int h = Ui.dp(this, isPortrait() ? 120 : 132);
+        int avail = mShelfScroll.getHeight() - mShelfScroll.getPaddingTop() - mShelfScroll.getPaddingBottom();
+        if (avail > 0) h = Math.min(h, (int) (avail / 1.08f)); // room for the 6% zoom
+        return Math.max(h, Ui.dp(this, 48));
+    }
+
+    private void fitShelfCards()
+    {
+        int h = shelfCardHeight();
+        int w = h * 4 / 3;
+        for (int i = 0; i < mShelf.getChildCount(); i++) {
+            View c = mShelf.getChildAt(i);
+            ViewGroup.LayoutParams lp = c.getLayoutParams();
+            if (lp.height != h || lp.width != w) {
+                lp.height = h;
+                lp.width = w;
+                c.setLayoutParams(lp);
+            }
         }
     }
 

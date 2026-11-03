@@ -4,12 +4,15 @@
 # (no size changes when a battle or menu opens):
 #
 #   * on the map, the game simply sees a wider screen: more map, player centered
-#   * menus, battles, title and other screens made for 4:3 are laid out exactly
-#     as designed, in the middle, and their full-width pieces reach the edges:
+#   * battles get a wider field: the Pokémon and their boxes spread to the
+#     sides, the battle background is extended to the edges
+#   * title, menus and other screens made for 4:3 stay exactly as designed, in
+#     the middle (nothing that should be hidden shows up); their backgrounds
+#     reach the edges on a layer just behind them:
+#       - full-screen pictures are extended (the outer strip is widened a
+#         little; bars continue with their edge colors)
+#       - scrolling patterns keep tiling across the whole width
 #       - windows that span the screen (message boxes...) are made wider
-#       - full-screen pictures (backgrounds, bars) are extended to the sides:
-#         landscapes continue as a mirror image, menu backgrounds and bars
-#         continue with their edge colors
 #
 # Everything here only changes where things are drawn; the game keeps seeing
 # its own coordinates (x, width, Graphics.width...).
@@ -117,13 +120,12 @@ module EssentiaWide
     # ------------------------------------------------------------ pictures
 
     # A copy of a 4:3 full-width picture, extended to the wide screen.
-    # Backgrounds (landscapes, title screens) continue as a mirror image, which
-    # has no seams; bars and strips repeat their edge colors.
+    # Backgrounds get their outer strip widened; bars repeat their edge colors.
     # Made once per picture and remembered.
     def extended(src, battle)
-      mirror = src.height >= base[1] / 2
+      tall = src.height >= base[1] / 2
       cache = (src.instance_variable_get(:@essentia_ext) || {})
-      key = [wide_w, mirror]
+      key = [wide_w, tall]
       ext = cache[key]
       return ext if ext && !ext.disposed?
       w = wide_w
@@ -131,13 +133,16 @@ module EssentiaWide
       bw = src.width
       m = off
       ext = Bitmap.new(w, h)
-      ext.blt(m, 0, src, Rect.new(0, 0, bw, h))
-      if mirror
-        m.times do |i|
-          ext.blt(m - 1 - i, 0, src, Rect.new([i, bw - 1].min, 0, 1, h))
-          ext.blt(m + bw + i, 0, src, Rect.new([bw - 1 - i, 0].max, 0, 1, h))
-        end
+      if tall
+        # Backgrounds: the outer strip of the picture is widened a little to
+        # reach the edge (no fold, no seam); the middle stays exactly as drawn.
+        k = [m * 2, bw / 3].min
+        ext.stretch_blt(Rect.new(0, 0, m + k, h), src, Rect.new(0, 0, k, h))
+        ext.blt(m + k, 0, src, Rect.new(k, 0, bw - 2 * k, h))
+        ext.stretch_blt(Rect.new(m + bw - k, 0, w - (m + bw - k), h), src, Rect.new(bw - k, 0, k, h))
       else
+        # bars and strips: their edge colors continue
+        ext.blt(m, 0, src, Rect.new(0, 0, bw, h))
         ext.stretch_blt(Rect.new(0, 0, m, h), src, Rect.new(0, 0, 1, h))
         ext.stretch_blt(Rect.new(m + bw, 0, w - m - bw, h), src, Rect.new(bw - 1, 0, 1, h))
       end
@@ -159,7 +164,15 @@ module EssentiaWide
     def adopt_viewport(v)
       r = v.rect
       bw = base[0]
-      if r.x == 0 && (r.width == bw || r.width == wide_w)
+      return if @making_backdrop
+      if r.x == 0 && (r.width == bw || r.width == wide_w) && !in_battle?
+        # Title, menus, bag...: the screen stays exactly as designed, in the
+        # middle (nothing hidden off-screen shows up); only its background
+        # pictures reach the edges, on a layer just behind (see backdrop_for).
+        v.instance_variable_set(:@essentia_cfull, true)
+        v.essentia_raw_rect = Rect.new(off, r.y, bw, r.height)
+      elsif r.x == 0 && (r.width == bw || r.width == wide_w)
+        # Battles: the wide field (things spread to the sides)
         # (Viewport.new with no size, in VX Ace, already covers the wide screen)
         v.instance_variable_set(:@essentia_full, true)
         v.essentia_raw_rect = Rect.new(0, r.y, wide_w, r.height)
@@ -187,8 +200,9 @@ module EssentiaWide
           gox = v.instance_variable_get(:@essentia_gox) || 0
           v.instance_variable_set(:@essentia_gox, nil)
           v.essentia_raw_ox = gox
-        elsif v.instance_variable_get(:@essentia_shifted)
+        elsif v.instance_variable_get(:@essentia_shifted) || v.instance_variable_get(:@essentia_cfull)
           v.instance_variable_set(:@essentia_shifted, nil)
+          v.instance_variable_set(:@essentia_cfull, nil)
           r = v.rect
           v.essentia_raw_rect = Rect.new(r.x - off, r.y, r.width, r.height)
         end
@@ -196,6 +210,47 @@ module EssentiaWide
       @viewports.clear
       expand_map_viewports
     rescue StandardError
+    end
+
+    # A wide layer just behind a 4:3 screen, for its background pictures.
+    def backdrop_for(v)
+      b = v.instance_variable_get(:@essentia_back)
+      return b if b && !(b.disposed? rescue true)
+      r = v.rect
+      @making_backdrop = true
+      b = Viewport.new(0, r.y, wide_w, r.height)
+      @making_backdrop = false
+      b.z = v.z - 1
+      v.instance_variable_set(:@essentia_back, b)
+      (@backdrops ||= []) << [v, b]
+      b
+    ensure
+      @making_backdrop = false
+    end
+
+    # The backdrop follows its screen (shown/hidden, fades, colors, gone).
+    def sync_backdrops
+      return unless @backdrops && !@backdrops.empty?
+      @backdrops.reject! do |v, b|
+        if (b.disposed? rescue true)
+          true
+        elsif (v.disposed? rescue true)
+          b.dispose rescue nil
+          true
+        else
+          begin
+            b.visible = v.visible
+            b.color = v.color
+            b.tone = v.tone
+            b.z = v.z - 1
+            r = v.rect
+            br = b.rect
+            b.rect = Rect.new(0, r.y, wide_w, r.height) if br.y != r.y || br.height != r.height
+          rescue StandardError
+          end
+          false
+        end
+      end
     end
 
     # Full-screen 4:3 viewports used by the map grow to the wide size
@@ -275,6 +330,8 @@ module EssentiaWide
       raw = :essentia_wide_raw_initialize
       klass.send(:alias_method, raw, :initialize)
       klass.send(:define_method, :initialize) do |*args, &block|
+        # the map is being built: from here the game must see the wide screen
+        EssentiaWide.forget_mode
         EssentiaWide.entering_map if EssentiaWide.depth_zero?
         __send__(raw, *args, &block)
       end
@@ -296,6 +353,7 @@ module EssentiaWide
         Graphics.essentia_raw_resize_screen(w, h) if Graphics.essentia_raw_width != w
       end
       install_hooks if @frame == 1 || (@frame % 120).zero?
+      sync_backdrops
       if map_mode? && !@was_map
         entering_map
       end
@@ -368,8 +426,8 @@ class Viewport
 
   def rect=(r)
     self.essentia_raw_rect = r
-    if @essentia_full || @essentia_shifted
-      @essentia_full = @essentia_shifted = nil
+    if @essentia_full || @essentia_shifted || @essentia_cfull
+      @essentia_full = @essentia_shifted = @essentia_cfull = nil
       self.essentia_raw_ox = @essentia_gox if @essentia_gox
       @essentia_gox = nil
       EssentiaWide.adopt_viewport(self)
@@ -386,14 +444,23 @@ class Sprite
   alias_method :essentia_raw_bitmap, :bitmap
   alias_method :essentia_raw_bitmap=, :bitmap=
   alias_method :essentia_raw_viewport=, :viewport=
+  alias_method :essentia_raw_viewport, :viewport
 
   def initialize(*args)
     essentia_wide_init(*args)
     if EssentiaWide.centered?
       @essentia_screen = true # made for a 4:3 screen
       @essentia_battle = EssentiaWide.in_battle?
-      essentia_place if args[0].nil? || args[0].instance_variable_get(:@essentia_full)
+      vp = args[0]
+      essentia_place if vp.nil? || vp.instance_variable_get(:@essentia_full) ||
+                        vp.instance_variable_get(:@essentia_cfull)
     end
+  end
+
+  # The game always sees its own viewport (a background picture may really be
+  # drawn on the wide layer behind it).
+  def viewport
+    @essentia_moved ? @essentia_gvp : essentia_raw_viewport
   end
 
   def x
@@ -424,6 +491,8 @@ class Sprite
   end
 
   def viewport=(value)
+    @essentia_moved = false
+    @essentia_gvp = nil
     self.essentia_raw_viewport = value
     essentia_place if @essentia_screen
   end
@@ -438,6 +507,29 @@ class Sprite
     gx = @essentia_gx
     gb = @essentia_gbmp
     vp = viewport
+    if vp && vp.instance_variable_get(:@essentia_cfull)
+      # 4:3 screen: everything as designed; a background picture goes, extended,
+      # to the wide layer behind
+      if gx == 0 && ox == 0 && EssentiaWide.full_picture?(gb) &&
+         (ext = EssentiaWide.extended(gb, false))
+        back = EssentiaWide.backdrop_for(vp)
+        unless @essentia_moved
+          @essentia_gvp = vp
+          @essentia_moved = true
+          self.essentia_raw_viewport = back
+        end
+        self.essentia_raw_bitmap = ext unless essentia_raw_bitmap.equal?(ext)
+        self.essentia_raw_x = 0
+      else
+        if @essentia_moved
+          @essentia_moved = false
+          self.essentia_raw_viewport = vp
+        end
+        self.essentia_raw_bitmap = gb unless essentia_raw_bitmap.equal?(gb)
+        self.essentia_raw_x = gx
+      end
+      return
+    end
     shift = if vp.nil? then EssentiaWide.off
             elsif vp.instance_variable_get(:@essentia_full) then 0
             else nil
@@ -485,15 +577,38 @@ class Plane
   alias_method :essentia_raw_bitmap=, :bitmap=
   alias_method :essentia_raw_ox, :ox
   alias_method :essentia_raw_ox=, :ox=
+  alias_method :essentia_raw_viewport, :viewport
+  alias_method :essentia_raw_viewport=, :viewport=
+  alias_method :essentia_raw_z=, :z=
 
   def initialize(*args)
     essentia_wide_init(*args)
     vp = args[0]
-    if EssentiaWide.centered? && (vp.nil? || vp.instance_variable_get(:@essentia_full))
+    if EssentiaWide.centered? && (vp.nil? || vp.instance_variable_get(:@essentia_full) ||
+                                  vp.instance_variable_get(:@essentia_cfull))
       @essentia_screen = true
       @essentia_battle = EssentiaWide.in_battle?
       @essentia_moves = 0
     end
+  end
+
+  # the game always sees its own viewport
+  def viewport
+    @essentia_moved ? @essentia_gvp : essentia_raw_viewport
+  end
+
+  def viewport=(value)
+    if @essentia_moved
+      @essentia_moved = false
+      @essentia_gvp = nil
+    end
+    self.essentia_raw_viewport = value
+    essentia_place if @essentia_screen
+  end
+
+  def z=(value)
+    self.essentia_raw_z = value
+    essentia_place if @essentia_screen
   end
 
   def bitmap
@@ -522,7 +637,36 @@ class Plane
   def essentia_place
     gb = @essentia_tracked ? @essentia_gbmp : essentia_raw_bitmap
     gox = @essentia_gox || 0
-    in_view = !viewport.nil?
+    vp = viewport
+    if vp && vp.instance_variable_get(:@essentia_cfull)
+      # 4:3 screen: background planes (the lowest ones) cover the whole width
+      # on the layer behind it; anything else stays inside the screen
+      if z <= 0 && gb && !(gb.disposed? rescue true)
+        back = EssentiaWide.backdrop_for(vp)
+        unless @essentia_moved
+          @essentia_gvp = vp
+          @essentia_moved = true
+          self.essentia_raw_viewport = back
+        end
+        if @essentia_moves < 3 && EssentiaWide.full_picture?(gb) &&
+           (ext = EssentiaWide.extended(gb, false))
+          self.essentia_raw_bitmap = ext unless essentia_raw_bitmap.equal?(ext)
+          self.essentia_raw_ox = gox
+        else
+          self.essentia_raw_bitmap = gb unless essentia_raw_bitmap.equal?(gb)
+          self.essentia_raw_ox = gox - EssentiaWide.off
+        end
+      else
+        if @essentia_moved
+          @essentia_moved = false
+          self.essentia_raw_viewport = vp
+        end
+        self.essentia_raw_bitmap = gb unless essentia_raw_bitmap.equal?(gb)
+        self.essentia_raw_ox = gox
+      end
+      return
+    end
+    in_view = !vp.nil?
     if @essentia_moves < 3 && EssentiaWide.full_picture?(gb) &&
        (ext = EssentiaWide.extended(gb, @essentia_battle))
       self.essentia_raw_bitmap = ext unless essentia_raw_bitmap.equal?(ext)

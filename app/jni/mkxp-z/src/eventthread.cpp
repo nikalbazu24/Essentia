@@ -718,6 +718,10 @@ void EventThread::resetInputStates()
 
 void EventThread::setFullscreen(SDL_Window *win, bool mode)
 {
+#ifdef __ANDROID__
+	/* Essentia: always full screen on Android (no status bar, centered) */
+	mode = true;
+#endif
 	SDL_SetWindowFullscreen(win, mode ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 	fullscreen = mode;
 }

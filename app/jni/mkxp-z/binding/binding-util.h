@@ -216,6 +216,18 @@ template <class C> inline C *getPrivateData(VALUE self) {
     return c;
 }
 
+/* Essentia: like getPrivateData, but returns null instead of raising. RPG Maker
+ * games (Pokémon Essentials' SpriteWindow, LargePlane...) subclass engine classes
+ * without calling super and still call dispose/disposed? on them, which works on
+ * RPG Maker itself. */
+template <class C> inline C *getPrivateDataOrNull(VALUE self) {
+#if RAPI_FULL > 187
+    return static_cast<C *>(RTYPEDDATA_DATA(self));
+#else
+    return static_cast<C *>(DATA_PTR(self));
+#endif
+}
+
 template <class C>
 static inline C *
 #if RAPI_FULL > 187
