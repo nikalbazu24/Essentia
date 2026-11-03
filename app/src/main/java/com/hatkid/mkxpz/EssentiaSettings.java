@@ -106,6 +106,21 @@ public final class EssentiaSettings
     public static final String PERF_60HZ = "perf_60hz";
     public static final String DEBUG_INPUT = "debug_input";
 
+    /** Turbo speed (2..4x), switched on from the panel or with Select + R1. */
+    private static final String KEY_TURBO = "turbo_speed";
+    public static int turboSpeed(Context c) { return prefs(c).getInt(KEY_TURBO, 3); }
+    public static void setTurboSpeed(Context c, int v) { prefs(c).edit().putInt(KEY_TURBO, v).commit(); }
+
+    /** Ruby engine: modern (Ruby 3.1) or classic (Ruby 1.8, for very old games). */
+    public static final String ENGINE_MODERN = "modern";
+    public static final String ENGINE_CLASSIC = "classic";
+
+    /** Folder with the RPG Maker RTP (Essentia/RTP/XP, VX, VXAce). */
+    public static java.io.File rtpRoot()
+    {
+        return new java.io.File(android.os.Environment.getExternalStorageDirectory(), "Essentia/RTP");
+    }
+
     public static boolean flag(Context c, String key, boolean def) { return prefs(c).getBoolean(key, def); }
     public static void setFlag(Context c, String key, boolean v) { prefs(c).edit().putBoolean(key, v).commit(); }
 

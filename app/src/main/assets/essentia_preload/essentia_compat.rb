@@ -102,17 +102,34 @@ class Thread
 end
 
 class String
-  # Only answers when a game really calls it, so modern games that use
-  # respond_to?(:each) keep behaving like Ruby 3. (String#to_a is left out:
-  # Array(text) and *text would change for every game.)
+  # Only answers when a game really calls it, so modern games are unaffected.
+  # - each: Ruby 1.8 strings could be walked line by line.
+  # - number methods: in Ruby 1.8, text[i] gave a number (the byte), now it gives
+  #   a one-letter string. When an old game does text[i].times, text[i] & 0xFF...
+  #   the one-letter string answers as that number.
+  # (String#to_a is left out: Array(text) and *text would change for every game.)
   alias_method :essentia_method_missing, :method_missing
   def method_missing(name, *args, &block)
-    case name
-    when :each then each_line(*args, &block)
-    else essentia_method_missing(name, *args, &block)
+    if name == :each
+      each_line(*args, &block)
+    elsif bytesize == 1 && Integer.method_defined?(name)
+      getbyte(0).__send__(name, *args, &block)
+    else
+      essentia_method_missing(name, *args, &block)
     end
   end
   private :method_missing
+
+  # 5 + text[i] (Ruby 1.8 style): the one-letter string acts as its byte.
+  unless method_defined?(:coerce)
+    def coerce(other)
+      if bytesize == 1 && other.is_a?(Numeric)
+        [other, getbyte(0)]
+      else
+        raise TypeError, "String can't be coerced into #{other.class}"
+      end
+    end
+  end
 end
 
 class Array

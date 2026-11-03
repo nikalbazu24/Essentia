@@ -53,7 +53,9 @@ public class SettingsActivity extends ControllerActivity
         buildControls();
         buildScreen();
         buildPerformance();
+        buildTurbo();
         buildSaves();
+        buildRtp();
         buildFrontends();
         buildUpdates();
         buildAbout();
@@ -161,6 +163,38 @@ public class SettingsActivity extends ControllerActivity
         CheckBox c = check(textRes, EssentiaSettings.flag(this, key, def));
         c.setOnCheckedChangeListener((b, on) -> EssentiaSettings.setFlag(this, key, on));
         card(c);
+    }
+
+    private void buildTurbo()
+    {
+        section(R.string.set_turbo_title, R.string.set_turbo_desc);
+        RadioGroup group = new RadioGroup(this);
+        String cur = String.valueOf(EssentiaSettings.turboSpeed(this));
+        group.addView(radio(R.string.set_turbo_2, "2", cur));
+        group.addView(radio(R.string.set_turbo_3, "3", cur));
+        group.addView(radio(R.string.set_turbo_4, "4", cur));
+        group.setOnCheckedChangeListener((g, id) -> {
+            RadioButton r = g.findViewById(id);
+            if (r != null) EssentiaSettings.setTurboSpeed(this, Integer.parseInt((String) r.getTag()));
+        });
+        card(group);
+    }
+
+    private void buildRtp()
+    {
+        section(R.string.set_rtp_title, 0);
+        java.io.File root = EssentiaSettings.rtpRoot();
+        TextView t = Ui.text(this, getString(R.string.set_rtp_desc, root.getAbsolutePath()), 14, Ui.TEXT_DIM, false);
+        t.setPadding(Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4));
+        card(t);
+        Button make = Ui.button(this, getString(R.string.set_rtp_make), false);
+        make.setOnClickListener(v -> {
+            boolean ok = true;
+            for (String n : new String[] { "XP", "VX", "VXAce" }) ok &= new java.io.File(root, n).mkdirs() || new java.io.File(root, n).isDirectory();
+            android.widget.Toast.makeText(this, ok ? R.string.set_rtp_made : R.string.act_fail,
+                android.widget.Toast.LENGTH_LONG).show();
+        });
+        card(make);
     }
 
     private void buildSaves()

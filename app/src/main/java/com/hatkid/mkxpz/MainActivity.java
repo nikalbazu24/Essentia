@@ -161,6 +161,26 @@ public class MainActivity extends SDLActivity
                 android.system.Os.setenv("RUBY_GC_OLDMALLOC_LIMIT", "67108864", true);
                 android.system.Os.setenv("RUBY_GC_OLDMALLOC_LIMIT_MAX", "268435456", true);
             }
+            // Quick actions (panel buttons, turbo, screenshots) and their answers
+            GameLink.reset(this);
+            android.system.Os.setenv("ESSENTIA_CMD_FILE", GameLink.commandFile(this).getAbsolutePath(), true);
+            android.system.Os.setenv("ESSENTIA_ACK_FILE", GameLink.answerFile(this).getAbsolutePath(), true);
+            java.io.File shots = new java.io.File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Essentia");
+            //noinspection ResultOfMethodCallIgnored
+            shots.mkdirs();
+            android.system.Os.setenv("ESSENTIA_SHOTS_DIR", shots.getAbsolutePath(), true);
+
+            // Screen shape, for the smart widescreen
+            DisplayMetrics dm = new DisplayMetrics();
+            getWindowManager().getDefaultDisplay().getRealMetrics(dm);
+            float aspect = (float) Math.max(dm.widthPixels, dm.heightPixels)
+                / Math.max(1, Math.min(dm.widthPixels, dm.heightPixels));
+            android.system.Os.setenv("ESSENTIA_ASPECT", String.format(Locale.ROOT, "%.4f", aspect), true);
+
+            // RPG Maker RTP (graphics/sounds that old games expect to be installed)
+            android.system.Os.setenv("ESSENTIA_RTP", findRtp(new java.io.File(GAME_PATH)), true);
+
             // The phone's motion sensor must not count as "controller 0", or the engine
             // ignores the real controller (and its sticks).
             android.system.Os.setenv("SDL_ACCELEROMETER_AS_JOYSTICK", "0", true);
@@ -256,6 +276,8 @@ public class MainActivity extends SDLActivity
             EssentiaSettings.flag(this, EssentiaSettings.PERF_LOAD_TIMES, true));
         mLayout.addView(mLoading, new android.widget.RelativeLayout.LayoutParams(
             LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+        mMainHandler.postDelayed(mAnswerPoll, 1000);
     }
 
     @Override
@@ -296,6 +318,7 @@ public class MainActivity extends SDLActivity
     // Essentia: exit menu (Android Back button, or Select + Start)
     private boolean mSelectHeld = false;
     private boolean mStartSwallowed = false;
+    private final java.util.HashSet<Integer> mShortcutKeys = new java.util.HashSet<>();
     private AlertDialog mExitDialog = null;
 
     private void showExitDialog()
@@ -329,6 +352,135 @@ public class MainActivity extends SDLActivity
             .setPositiveButton(R.string.exit_confirm, (d, w) -> finish())
             .setNegativeButton(R.string.exit_cancel, (d, w) -> d.dismiss())
             .show();
+    }
+
+    // Essentia: RTP folders for this game's RPG Maker version
+    private static String findRtp(java.io.File game)
+    {
+        String kind = "XP";
+        java.io.File data = null;
+        String[] names = game.list();
+        if (names != null) {
+            for (String n : names) {
+                String l = n.toLowerCase(Locale.ROOT);
+                if (l.equals("game.rgss3a")) kind = "VXAce";
+                else if (l.equals("game.rgss2a") && !kind.equals("VXAce")) kind = "VX";
+                else if (l.equals("data")) data = new java.io.File(game, n);
+            }
+        }
+        if (data != null && kind.equals("XP")) {
+            String[] d = data.list();
+            if (d != null) for (String n : d) {
+                String l = n.toLowerCase(Locale.ROOT);
+                if (l.endsWith(".rvdata2")) { kind = "VXAce"; break; }
+                if (l.endsWith(".rvdata")) kind = "VX";
+            }
+        }
+        String[][] candidates = {
+            { "XP", "RPGXP", "RMXP", "Standard" },
+            { "VX", "RPGVX", "RMVX" },
+            { "VXAce", "VX Ace", "RPGVXAce", "RMVXAce", "VXA", "Ace" },
+        };
+        String[] wanted = kind.equals("XP") ? candidates[0] : kind.equals("VX") ? candidates[1] : candidates[2];
+        StringBuilder out = new StringBuilder();
+        java.io.File root = EssentiaSettings.rtpRoot();
+        String[] present = root.list();
+        if (present == null) return "";
+        for (String w : wanted) {
+            for (String p : present) {
+                if (p.equalsIgnoreCase(w) && new java.io.File(root, p).isDirectory()) {
+                    if (out.length() > 0) out.append(':');
+                    out.append(new java.io.File(root, p).getAbsolutePath());
+                }
+            }
+        }
+        return out.toString();
+    }
+
+    // Essentia: turbo (fast forward)
+    private boolean mTurbo = false;
+    private TextView mTurboBadge;
+
+    public boolean isTurbo() { return mTurbo; }
+
+    public void toggleTurbo()
+    {
+        mTurbo = !mTurbo;
+        int speed = EssentiaSettings.turboSpeed(this);
+        GameLink.send(this, "speed " + (mTurbo ? speed : 1));
+        if (mTurboBadge == null && mLayout != null) {
+            mTurboBadge = new TextView(this);
+            mTurboBadge.setTextColor(0xFF14162B);
+            mTurboBadge.setTextSize(14);
+            mTurboBadge.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            mTurboBadge.setBackground(com.hatkid.mkxpz.ui.Ui.rounded(this, com.hatkid.mkxpz.ui.Ui.GOLD, 10));
+            int p = com.hatkid.mkxpz.ui.Ui.dp(this, 8);
+            mTurboBadge.setPadding(p, p / 3, p, p / 3);
+            android.widget.RelativeLayout.LayoutParams lp = new android.widget.RelativeLayout.LayoutParams(
+                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+            lp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_TOP);
+            lp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_RIGHT);
+            lp.setMargins(0, p * 2, p * 2, 0);
+            mLayout.addView(mTurboBadge, lp);
+        }
+        if (mTurboBadge != null) {
+            mTurboBadge.setText("\u25B6\u25B6 x" + speed);
+            mTurboBadge.setVisibility(mTurbo ? View.VISIBLE : View.GONE);
+        }
+        if (mPanel != null) mPanel.setTurbo(mTurbo, speed);
+    }
+
+    /** Sends a quick action to the game (screenshot, team, bag, save...). */
+    public void gameAction(String command)
+    {
+        GameLink.send(this, command);
+    }
+
+    // Essentia: answers from the game (shown as a short message on screen / panel)
+    private final Runnable mAnswerPoll = new Runnable() {
+        @Override public void run() {
+            for (String a : GameLink.answers(MainActivity.this)) handleAnswer(a);
+            if (mMainHandler != null) mMainHandler.postDelayed(this, 300);
+        }
+    };
+
+    private void handleAnswer(String answer)
+    {
+        String[] p = answer.split(" ", 2);
+        String what = p[0], result = p.length > 1 ? p[1] : "";
+        String msg = null;
+        switch (what) {
+            case "shot":
+                if (!result.equals("fail")) {
+                    android.media.MediaScannerConnection.scanFile(this, new String[] { result },
+                        new String[] { "image/png" }, null);
+                    msg = getString(R.string.act_shot_ok);
+                } else msg = getString(R.string.act_fail);
+                break;
+            case "save":
+                msg = getString(result.equals("ok") ? R.string.act_save_ok
+                    : result.equals("disabled") ? R.string.act_save_disabled : R.string.act_save_fail);
+                break;
+            case "wait": msg = getString(R.string.act_wait); break;
+            case "through":
+                msg = getString(result.equals("1") ? R.string.act_through_on : R.string.act_through_off);
+                if (mPanel != null) mPanel.setToggle("through", result.equals("1"));
+                break;
+            case "noenc":
+                msg = getString(result.equals("1") ? R.string.act_noenc_on : R.string.act_noenc_off);
+                if (mPanel != null) mPanel.setToggle("noenc", result.equals("1"));
+                break;
+            case "heal": msg = getString(result.equals("ok") ? R.string.act_heal_ok : R.string.act_unsupported); break;
+            case "money": msg = getString(result.equals("ok") ? R.string.act_money_ok : R.string.act_unsupported); break;
+            case "speed": break;
+            default:
+                if (result.equals("locked")) msg = getString(R.string.act_dex_locked);
+                else if (result.equals("unsupported")) msg = getString(R.string.act_unsupported);
+                else if (!result.equals("ok")) msg = getString(R.string.act_fail);
+        }
+        if (msg == null) return;
+        if (mPanel != null && mPanel.isShowing()) mPanel.showMessage(msg);
+        else android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show();
     }
 
     // Essentia: performance options for the game window
@@ -403,7 +555,10 @@ public class MainActivity extends SDLActivity
             new com.hatkid.mkxpz.ui.GamePanel.Actions() {
                 @Override public void controls() { com.hatkid.mkxpz.ui.ControlsGuide.showDialog(MainActivity.this); }
                 @Override public void menu() { showExitDialog(); }
+                @Override public void game(String command) { gameAction(command); }
+                @Override public void turbo() { toggleTurbo(); }
             });
+        if (mPanel != null) mPanel.setTurbo(mTurbo, EssentiaSettings.turboSpeed(this));
     }
 
     @Override
@@ -492,6 +647,20 @@ public class MainActivity extends SDLActivity
             if (!down && !evt.isCanceled())
                 showExitDialog();
             return true;
+        }
+
+        // Select + R1 -> turbo on/off, Select + L1 -> screenshot (not sent to the game)
+        if (code == KeyEvent.KEYCODE_BUTTON_R1 || code == KeyEvent.KEYCODE_BUTTON_L1) {
+            if (down && mSelectHeld && evt.getRepeatCount() == 0) {
+                mShortcutKeys.add(code);
+                if (code == KeyEvent.KEYCODE_BUTTON_R1) toggleTurbo();
+                else gameAction("shot");
+                return true;
+            }
+            if (mShortcutKeys.contains(code)) {
+                if (!down) mShortcutKeys.remove(code);
+                return true;
+            }
         }
 
         // Select + Start -> exit menu (Start is not sent to the game in that case)

@@ -165,7 +165,7 @@
     <string name="panel_actions">Essentia</string>
     <string name="panel_essentia_menu">Menú / Salir</string>
     <string name="set_game2_title">Al jugar, la segunda pantalla muestra:</string>
-    <string name="set_game2_panel">Mapa en vivo + panel táctil (teclas extra, controles, salir)</string>
+    <string name="set_game2_panel">Mapa en vivo + acciones del juego (equipo, mochila, guardar, turbo, trucos)</string>
     <string name="set_game2_black">Pantalla negra (sin distracciones)</string>
     <string name="set_game2_off">Nada (no usarla)</string>
     <string name="loading_files">leyendo archivos del juego</string>
@@ -193,4 +193,49 @@
     <string name="panel_map_waiting">Esperando al juego…</string>
     <string name="panel_map_none">Este juego no tiene un mapa de región para mostrar</string>
     <string name="panel_map_position">Posición en el mapa: %1$d, %2$d</string>
+    <string name="act_party">Equipo</string>
+    <string name="act_bag">Mochila</string>
+    <string name="act_dex">Pokédex</string>
+    <string name="act_save">Guardar ya</string>
+    <string name="act_turbo">Turbo</string>
+    <string name="act_shot">Captura</string>
+    <string name="act_through">Atravesar paredes</string>
+    <string name="act_noenc">Sin combates salvajes</string>
+    <string name="act_heal">Curar equipo</string>
+    <string name="act_money">+10.000 dinero</string>
+    <string name="panel_tab_actions">Juego</string>
+    <string name="panel_tab_keys">Teclas</string>
+    <string name="panel_tab_cheats">Trucos</string>
+    <string name="act_shot_ok">Captura guardada en Imágenes/Essentia</string>
+    <string name="act_fail">Eso no funcionó en este juego</string>
+    <string name="act_save_ok">Partida guardada ✓</string>
+    <string name="act_save_disabled">El juego no permite guardar aquí</string>
+    <string name="act_save_fail">No se pudo guardar</string>
+    <string name="act_wait">Se abrirá cuando tu personaje esté libre (sin hablar ni caminar)</string>
+    <string name="act_through_on">Atravesar paredes: activado</string>
+    <string name="act_through_off">Atravesar paredes: desactivado</string>
+    <string name="act_noenc_on">Combates salvajes: desactivados</string>
+    <string name="act_noenc_off">Combates salvajes: de vuelta</string>
+    <string name="act_heal_ok">Equipo curado ✓</string>
+    <string name="act_money_ok">+10.000 de dinero ✓</string>
+    <string name="act_unsupported">Este juego no tiene esa función (solo juegos de Pokémon Essentials)</string>
+    <string name="act_dex_locked">Aún no tienes la Pokédex</string>
+    <string name="set_turbo_title">Turbo</string>
+    <string name="set_turbo_desc">Acelera el juego (ideal para entrenar y diálogos largos). Se activa desde la segunda pantalla o con Select + R1. Select + L1 saca una captura.</string>
+    <string name="set_turbo_2">x2</string>
+    <string name="set_turbo_3">x3 (recomendado)</string>
+    <string name="set_turbo_4">x4</string>
+    <string name="set_rtp_title">RTP de RPG Maker</string>
+    <string name="set_rtp_desc">Algunos juegos antiguos de RPG Maker necesitan el RTP (gráficos y sonidos estándar). Cópialo en:
+%1$s/XP  (RPG Maker XP)
+%1$s/VX
+%1$s/VXAce
+Essentia lo usa solo, sin tocar la carpeta del juego.</string>
+    <string name="set_rtp_make">Crear las carpetas del RTP</string>
+    <string name="set_rtp_made">Carpetas creadas. Copia dentro las carpetas Graphics y Audio del RTP.</string>
+    <string name="ctl_btn_turbo">Select + R1</string>
+    <string name="ctl_btn_shot">Select + L1</string>
+    <string name="ctl_key_essentia">(Essentia)</string>
+    <string name="ctl_use_turbo">Turbo sí / no</string>
+    <string name="ctl_use_shot">Captura de pantalla</string>
 </resources>

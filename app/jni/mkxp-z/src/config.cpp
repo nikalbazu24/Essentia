@@ -327,6 +327,13 @@ try { exp } catch (...) {}
             preloadScripts.push_back("essentia_preload/essentia_live.rb");
     }
 
+    // Essentia: quick actions (turbo, screenshots, team/bag/save from the panel)
+    {
+        const char *cmd = getenv("ESSENTIA_CMD_FILE");
+        if (cmd && *cmd)
+            preloadScripts.push_back("essentia_preload/essentia_actions.rb");
+    }
+
     // Essentia: screen format (chosen in the settings or per game)
     //   original: game shape, black bars   ambient: game shape, blurred picture on the sides
     //   stretch: fill the screen           wide: wider game resolution (experimental)
@@ -339,6 +346,22 @@ try { exp } catch (...) {}
     }
 #endif
     fillStringVec(opts["RTP"], rtps);
+#ifdef MKXPZ_BUILD_ANDROID
+    // Essentia: RPG Maker RTP folders found by the app (Essentia/RTP/...)
+    {
+        const char *rtp = getenv("ESSENTIA_RTP");
+        if (rtp && *rtp) {
+            std::string all(rtp);
+            size_t start = 0;
+            while (start <= all.size()) {
+                size_t end = all.find(':', start);
+                if (end == std::string::npos) end = all.size();
+                if (end > start) rtps.push_back(all.substr(start, end - start));
+                start = end + 1;
+            }
+        }
+    }
+#endif
     fillStringVec(opts["fontSub"], fontSubs);
     fillStringVec(opts["rubyLoadpath"], rubyLoadpaths);
     

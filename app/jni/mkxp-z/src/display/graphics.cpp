@@ -940,7 +940,7 @@ struct GraphicsPrivate {
 
 #ifdef MKXPZ_BUILD_ANDROID
         const char *mode = getenv("ESSENTIA_SCREEN_MODE");
-        essentiaAmbientOn = mode && !strcmp(mode, "ambient");
+        essentiaAmbientOn = mode && (!strcmp(mode, "ambient") || !strcmp(mode, "wide"));
 #endif
     }
     
@@ -1513,7 +1513,30 @@ void Graphics::resizeScreen(int width, int height) {
     if (p->integerScaleActive)
         p->rebuildIntegerScaleBuffer();
     
+#ifdef MKXPZ_BUILD_ANDROID
+    /* Essentia: the smart widescreen switches resolution during scene changes,
+     * while a transition may be pending. Keep the frozen picture instead of
+     * leaving garbage behind. */
+    {
+        TEXFBO old = p->frozenScene;
+        TEXFBO fresh;
+        TEXFBO::init(fresh);
+        TEXFBO::allocEmpty(fresh, width, height);
+        TEXFBO::linkFBO(fresh);
+        FBO::bind(fresh.fbo);
+        FBO::clear();
+        int cw = std::min(old.width, width), ch = std::min(old.height, height);
+        GLMeta::blitBegin(fresh);
+        GLMeta::blitSource(old);
+        GLMeta::blitRectangle(IntRect(0, 0, cw, ch), Vec2i(0, 0));
+        GLMeta::blitEnd();
+        FBO::unbind();
+        TEXFBO::fini(old);
+        p->frozenScene = fresh;
+    }
+#else
     TEXFBO::allocEmpty(p->frozenScene, width, height);
+#endif
     
     FloatRect screenRect(0, 0, width, height);
     p->screenQuad.setTexPosRect(screenRect, screenRect);

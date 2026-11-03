@@ -32,6 +32,8 @@ public final class ControlsGuide
         { R.string.ctl_btn_move,   R.string.ctl_key_move,   R.string.ctl_use_move },
         { R.string.ctl_btn_menu,   R.string.ctl_key_menu,   R.string.ctl_use_menu },
         { R.string.ctl_btn_f1,     R.string.ctl_key_f1,     R.string.ctl_use_f1 },
+        { R.string.ctl_btn_turbo,  R.string.ctl_key_essentia, R.string.ctl_use_turbo },
+        { R.string.ctl_btn_shot,   R.string.ctl_key_essentia, R.string.ctl_use_shot },
     };
 
     /** The table as a view. */
