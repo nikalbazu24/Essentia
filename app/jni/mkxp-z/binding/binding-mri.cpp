@@ -343,7 +343,10 @@ RB_METHOD(mriP) {
 RB_METHOD(mkxpDelta) {
     RB_UNUSED_PARAM;
     
-    return ULL2NUM(shState->runTime());
+    // Essentia (as in current mkxp-z): seconds as a Float. Pokémon Essentials v21
+    // times every animation and step with System.uptime; microseconds made the
+    // whole game run "a million times" too fast and broke walking.
+    return rb_float_new(shState->runTime() / 1000000.0);
 }
 
 RB_METHOD(mkxpDataDirectory) {
@@ -897,6 +900,36 @@ bool evalScript(VALUE string, const char *filename)
 
 #define SCRIPT_SECTION_FMT (rgssVer >= 3 ? "{%04ld}" : "Section%03ld")
 
+#ifdef MKXPZ_BUILD_ANDROID
+static VALUE essentiaFixSyntaxCb(VALUE str)
+{
+    VALUE mod = rb_const_get(rb_cObject, rb_intern("Essentia"));
+    return rb_funcall(mod, rb_intern("fix_legacy_syntax"), 1, str);
+}
+
+/* Essentia: if a game script failed with a SyntaxError, rewrite old Ruby 1.8
+ * syntax (see essentia_compat.rb) and evaluate it again. */
+static void essentiaRetryLegacy(VALUE string, VALUE fname, int &state)
+{
+    VALUE err = rb_errinfo();
+    if (NIL_P(err) || !rb_obj_is_kind_of(err, rb_eSyntaxError))
+        return;
+    if (!rb_const_defined(rb_cObject, rb_intern("Essentia")))
+        return;
+
+    int st = 0;
+    VALUE fixed = rb_protect(essentiaFixSyntaxCb, string, &st);
+    if (st || NIL_P(fixed) || rb_str_equal(fixed, string) == Qtrue) {
+        rb_set_errinfo(err); /* keep the original error */
+        return;
+    }
+
+    Debug() << "Essentia: retrying" << RSTRING_PTR(fname) << "with Ruby 1.8 syntax fixes";
+    rb_set_errinfo(Qnil);
+    evalString(fixed, fname, &state);
+}
+#endif
+
 static void runRMXPScripts(BacktraceData &btData) {
     const Config &conf = shState->rtData().config;
     const std::string &scriptPack = conf.game.scripts;
@@ -1035,6 +1068,12 @@ static void runRMXPScripts(BacktraceData &btData) {
             int state;
             
             evalString(string, fname, &state);
+#ifdef MKXPZ_BUILD_ANDROID
+            // Essentia: a script written for Ruby 1.8 (old Essentials games) may not
+            // parse in modern Ruby. Rewrite the old syntax and try once more.
+            if (state)
+                essentiaRetryLegacy(string, fname, state);
+#endif
             if (state)
                 break;
         }

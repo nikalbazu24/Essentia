@@ -75,6 +75,18 @@ public final class EssentiaSettings
     public static String saveLocation(Context c) { return prefs(c).getString(KEY_SAVES, SAVES_GAME); }
     public static void setSaveLocation(Context c, String v) { prefs(c).edit().putString(KEY_SAVES, v).commit(); }
 
+    // Performance and diagnostics (booleans)
+    public static final String PERF_SHOW_FPS = "perf_show_fps";
+    public static final String PERF_FRAMESKIP = "perf_frameskip";
+    public static final String PERF_VSYNC = "perf_vsync";
+    public static final String PERF_INTEGER = "perf_integer_scale";
+    public static final String PERF_SUSTAINED = "perf_sustained";
+    public static final String PERF_60HZ = "perf_60hz";
+    public static final String DEBUG_INPUT = "debug_input";
+
+    public static boolean flag(Context c, String key, boolean def) { return prefs(c).getBoolean(key, def); }
+    public static void setFlag(Context c, String key, boolean v) { prefs(c).edit().putBoolean(key, v).commit(); }
+
     /** True when a physical controller (gamepad / joystick) is connected. */
     public static boolean hasPhysicalController(Context c)
     {

@@ -291,11 +291,20 @@ try { exp } catch (...) {}
     fillStringVec(opts["preloadScript"], preloadScripts);
 
 #ifdef MKXPZ_BUILD_ANDROID
-    // Essentia: smooth scaling chosen in Essentia's settings
+    // Essentia: picture and performance options chosen in Essentia's settings
     {
-        const char *smooth = getenv("ESSENTIA_SMOOTH_SCALING");
-        if (smooth && *smooth)
-            smoothScaling = (smooth[0] == '1');
+        struct { const char *env; bool *opt; } envOpts[] = {
+            { "ESSENTIA_SMOOTH_SCALING", &smoothScaling },
+            { "ESSENTIA_SHOW_FPS",       &printFPS },
+            { "ESSENTIA_FRAMESKIP",      &frameSkip },
+            { "ESSENTIA_VSYNC",          &vsync },
+            { "ESSENTIA_INTEGER_SCALE",  &integerScaling.active },
+        };
+        for (auto &o : envOpts) {
+            const char *v = getenv(o.env);
+            if (v && *v)
+                *o.opt = (v[0] == '1');
+        }
     }
 
     // Essentia: if the game doesn't bring its own preload scripts, load the bundled
@@ -306,6 +315,9 @@ try { exp } catch (...) {}
         preloadScripts.push_back("essentia_preload/mkxp_wrap.rb");
         preloadScripts.push_back("essentia_preload/win32_wrap.rb");
     }
+
+    // Essentia: compatibility helpers for every game (Windows programs, Ruby 1.8 syntax)
+    preloadScripts.insert(preloadScripts.begin(), "essentia_preload/essentia_compat.rb");
 
     // Essentia: optional 16:9 mode (chosen per game in the library)
     {

@@ -34,7 +34,7 @@
 RB_METHOD(inputDelta) {
     RB_UNUSED_PARAM;
     
-    return ULL2NUM(shState->input().getDelta());
+    return rb_float_new(shState->input().getDelta() / 1000000.0); // Essentia: seconds
 }
 
 RB_METHOD(inputUpdate) {

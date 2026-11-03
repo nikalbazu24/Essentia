@@ -142,4 +142,13 @@
     <string name="set_fe_how">Choose a folder in your ROMs (for example ROMs/rpgmaker). Essentia writes a small .essentia file for each game; set up the frontend to open .essentia files with Essentia. New games are added there automatically.</string>
     <string name="set_fe_guide">Setup guide for each frontend</string>
     <string name="set_fe_failed">Could not use that folder. Choose one in the internal storage or SD card.</string>
+    <string name="set_perf_title">Performance</string>
+    <string name="set_perf_desc">Changes apply the next time you open a game.</string>
+    <string name="set_perf_fps">Show FPS (frames per second) while playing</string>
+    <string name="set_perf_frameskip">Skip frames when the game slows down (smoother speed, less smooth picture)</string>
+    <string name="set_perf_vsync">Vertical sync (avoids tearing; may lower speed)</string>
+    <string name="set_perf_integer">Exact pixel scaling (sharper, but smaller picture)</string>
+    <string name="set_perf_sustained">High-performance mode (keeps the processor steady while playing)</string>
+    <string name="set_perf_60hz">Run the screen at 60 Hz while playing (even motion on 120 Hz screens)</string>
+    <string name="set_debug_input">Diagnostics: show the keys Essentia sends to the game</string>
 </resources>

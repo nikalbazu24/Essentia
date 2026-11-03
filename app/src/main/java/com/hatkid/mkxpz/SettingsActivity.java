@@ -52,6 +52,7 @@ public class SettingsActivity extends ControllerActivity
 
         buildControls();
         buildScreen();
+        buildPerformance();
         buildSaves();
         buildFrontends();
         buildUpdates();
@@ -107,6 +108,25 @@ public class SettingsActivity extends ControllerActivity
             13, Ui.TEXT_DIM, false);
         note.setPadding(Ui.dp(this, 4), Ui.dp(this, 6), 0, 0);
         mList.addView(note);
+    }
+
+    private void buildPerformance()
+    {
+        section(R.string.set_perf_title, R.string.set_perf_desc);
+        flagRow(R.string.set_perf_fps, EssentiaSettings.PERF_SHOW_FPS, false);
+        flagRow(R.string.set_perf_frameskip, EssentiaSettings.PERF_FRAMESKIP, false);
+        flagRow(R.string.set_perf_vsync, EssentiaSettings.PERF_VSYNC, false);
+        flagRow(R.string.set_perf_integer, EssentiaSettings.PERF_INTEGER, false);
+        flagRow(R.string.set_perf_sustained, EssentiaSettings.PERF_SUSTAINED, true);
+        flagRow(R.string.set_perf_60hz, EssentiaSettings.PERF_60HZ, true);
+        flagRow(R.string.set_debug_input, EssentiaSettings.DEBUG_INPUT, false);
+    }
+
+    private void flagRow(int textRes, String key, boolean def)
+    {
+        CheckBox c = check(textRes, EssentiaSettings.flag(this, key, def));
+        c.setOnCheckedChangeListener((b, on) -> EssentiaSettings.setFlag(this, key, on));
+        card(c);
     }
 
     private void buildSaves()

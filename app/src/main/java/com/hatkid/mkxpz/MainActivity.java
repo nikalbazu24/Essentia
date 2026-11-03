@@ -144,6 +144,14 @@ public class MainActivity extends SDLActivity
             // The phone's motion sensor must not count as "controller 0", or the engine
             // ignores the real controller (and its sticks).
             android.system.Os.setenv("SDL_ACCELEROMETER_AS_JOYSTICK", "0", true);
+            android.system.Os.setenv("ESSENTIA_SHOW_FPS",
+                EssentiaSettings.flag(this, EssentiaSettings.PERF_SHOW_FPS, false) ? "1" : "0", true);
+            android.system.Os.setenv("ESSENTIA_FRAMESKIP",
+                EssentiaSettings.flag(this, EssentiaSettings.PERF_FRAMESKIP, false) ? "1" : "0", true);
+            android.system.Os.setenv("ESSENTIA_VSYNC",
+                EssentiaSettings.flag(this, EssentiaSettings.PERF_VSYNC, false) ? "1" : "0", true);
+            android.system.Os.setenv("ESSENTIA_INTEGER_SCALE",
+                EssentiaSettings.flag(this, EssentiaSettings.PERF_INTEGER, false) ? "1" : "0", true);
         } catch (Exception e) {
             Log.w(TAG, "Could not pass settings to the engine: " + e);
         }
@@ -151,6 +159,9 @@ public class MainActivity extends SDLActivity
         super.onCreate(savedInstanceState);
 
         mMainHandler = new Handler(getMainLooper());
+
+        // Essentia: performance options for the game window
+        applyWindowPerformance();
 
         mStorageManager = (StorageManager) getSystemService(STORAGE_SERVICE);
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -196,8 +207,9 @@ public class MainActivity extends SDLActivity
         gpadConfig.opacity = EssentiaSettings.oscOpacity(this);
         gpadConfig.scale = EssentiaSettings.oscScale(this);
         mGamepad.init(gpadConfig, mGamepadInvisible);
-        mGamepad.setOnKeyDownListener(SDLActivity::onNativeKeyDown);
-        mGamepad.setOnKeyUpListener(SDLActivity::onNativeKeyUp);
+        mDebugInput = EssentiaSettings.flag(this, EssentiaSettings.DEBUG_INPUT, false);
+        mGamepad.setOnKeyDownListener(k -> { SDLActivity.onNativeKeyDown(k); debugKey(k, true); });
+        mGamepad.setOnKeyUpListener(k -> { SDLActivity.onNativeKeyUp(k); debugKey(k, false); });
 
         if (mLayout != null && !EssentiaSettings.OSC_NEVER.equals(mOscMode)) {
             mGamepad.attachTo(this, mLayout);
@@ -293,6 +305,60 @@ public class MainActivity extends SDLActivity
             .setPositiveButton(R.string.exit_confirm, (d, w) -> finish())
             .setNegativeButton(R.string.exit_cancel, (d, w) -> d.dismiss())
             .show();
+    }
+
+    // Essentia: performance options for the game window
+    private void applyWindowPerformance()
+    {
+        try {
+            if (EssentiaSettings.flag(this, EssentiaSettings.PERF_SUSTAINED, true)
+                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                getWindow().setSustainedPerformanceMode(true);
+            }
+            if (EssentiaSettings.flag(this, EssentiaSettings.PERF_60HZ, true)
+                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                // RPG Maker games run at 40-60 FPS: a 60 Hz screen keeps frames even
+                android.view.Display d = getWindowManager().getDefaultDisplay();
+                android.view.Display.Mode current = d.getMode();
+                android.view.Display.Mode best = null;
+                for (android.view.Display.Mode m : d.getSupportedModes()) {
+                    if (m.getPhysicalWidth() != current.getPhysicalWidth()
+                        || m.getPhysicalHeight() != current.getPhysicalHeight()) continue;
+                    if (Math.abs(m.getRefreshRate() - 60f) < 1f) best = m;
+                }
+                if (best != null) {
+                    android.view.WindowManager.LayoutParams lp = getWindow().getAttributes();
+                    lp.preferredDisplayModeId = best.getModeId();
+                    getWindow().setAttributes(lp);
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Performance options not applied: " + e);
+        }
+    }
+
+    // Essentia: input diagnostics (shows the keys Essentia sends to the game)
+    private boolean mDebugInput = false;
+    private TextView mDebugView;
+    private final java.util.ArrayDeque<String> mDebugLines = new java.util.ArrayDeque<>();
+
+    private void debugKey(int keycode, boolean down)
+    {
+        if (!mDebugInput) return;
+        String line = (down ? "▼ " : "▲ ") + KeyEvent.keyCodeToString(keycode).replace("KEYCODE_", "");
+        runOnUiThread(() -> {
+            if (mDebugView == null) {
+                mDebugView = new TextView(this);
+                mDebugView.setTextColor(Color.YELLOW);
+                mDebugView.setBackgroundColor(Color.argb(150, 0, 0, 0));
+                mDebugView.setTextSize(13);
+                mDebugView.setPadding(16, 8, 16, 8);
+                mLayout.addView(mDebugView);
+            }
+            mDebugLines.addFirst(line);
+            while (mDebugLines.size() > 6) mDebugLines.removeLast();
+            mDebugView.setText(android.text.TextUtils.join("\n", mDebugLines));
+        });
     }
 
     // Essentia: loading screen
