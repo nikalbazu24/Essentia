@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Essentia icon (own drawing) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M7,7h10a5,5 0 0,1 0,10h-10a5,5 0 0,1 0,-10z M7.5,10.5h1.5v1.5h1.5v1.5h-1.5v1.5h-1.5v-1.5h-1.5v-1.5h1.5z M16,10a1.1,1.1 0 1,0 0.01,0z M18.5,12.6a1.1,1.1 0 1,0 0.01,0z"/>
+</vector>

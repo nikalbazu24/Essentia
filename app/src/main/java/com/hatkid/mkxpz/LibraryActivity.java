@@ -3,7 +3,10 @@ package com.hatkid.mkxpz;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.database.Cursor;
+import android.graphics.RenderEffect;
+import android.graphics.Shader;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -23,7 +26,6 @@ import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.GridView;
@@ -48,7 +50,13 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-/** Essentia's home screen: the game library. */
+/**
+ * Essentia's home screen: the game library.
+ *
+ * Shelf view: the selected game is featured at the top (big cover over a blurred
+ * backdrop of its own art) and all games sit on a horizontal shelf below.
+ * Grid and list views show more games at once.
+ */
 public class LibraryActivity extends ControllerActivity
 {
     private static final int REQ_ALL_FILES = 1;
@@ -59,20 +67,31 @@ public class LibraryActivity extends ControllerActivity
     private static final String PREF_LAST_TREE = "last_tree_uri";
 
     private final List<Library.Entry> mGames = new ArrayList<>();
-    private GamesAdapter mAdapter;
-    private GridView mGrid;
     private CoverLoader mCovers;
     private SecondScreen mSecond;
-    private TextView mCount;
-    private Button mViewButton;
-    private Button mSortButton;
-    private View mZoomed;
     private int mSelected = 0;
     private int mBaseColumn;
     private String mView;
     private String mSort;
     /** Game waiting for a picked cover or save files. */
     private Library.Entry mPending;
+
+    // Views
+    private ImageView mBackdrop;
+    private TextView mCount;
+    private ImageView mViewIcon;
+    private TextView mSortLabel;
+    private View mHero;
+    private ImageView mHeroCover;
+    private TextView mHeroTitle;
+    private TextView mHeroDetail;
+    private View mHeroPlay;
+    private HorizontalScrollView mShelfScroll;
+    private LinearLayout mShelf;
+    private GridView mGrid;
+    private GamesAdapter mAdapter;
+    private View mEmpty;
+    private View mZoomed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -82,7 +101,7 @@ public class LibraryActivity extends ControllerActivity
         DisplayMetrics dm = getResources().getDisplayMetrics();
         float widthDp = dm.widthPixels / dm.density;
         mBaseColumn = Ui.dp(this, widthDp >= 900 ? 220 : (widthDp >= 600 ? 190 : 150));
-        mCovers = new CoverLoader(mBaseColumn * 2);
+        mCovers = new CoverLoader(Ui.dp(this, 360));
         mView = EssentiaSettings.viewMode(this);
         mSort = EssentiaSettings.sortMode(this);
 
@@ -121,105 +140,284 @@ public class LibraryActivity extends ControllerActivity
         mCovers.shutdown();
     }
 
-    // ------------------------------------------------------------------ UI
+    // ================================================================== UI
+
+    private boolean isPortrait()
+    {
+        return getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+    }
 
     private View buildUi()
     {
-        int pad = Ui.dp(this, 18);
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Ui.BG);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(pad, pad, pad, Ui.dp(this, 8));
-        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ Ui.SURFACE, Ui.BG, Ui.BG });
-        root.setBackground(bg);
+        // Backdrop: the selected game's art, blurred and dimmed
+        mBackdrop = new ImageView(this);
+        mBackdrop.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        mBackdrop.setAlpha(0.45f);
+        if (Build.VERSION.SDK_INT >= 31) {
+            mBackdrop.setRenderEffect(RenderEffect.createBlurEffect(60f, 60f, Shader.TileMode.CLAMP));
+        }
+        root.addView(mBackdrop, match());
+        View fade = new View(this);
+        fade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{ 0x6614162B, 0xCC14162B, 0xFF14162B }));
+        root.addView(fade, match());
 
-        // Header: icon, name + count, buttons
-        LinearLayout header = new LinearLayout(this);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        int pad = Ui.dp(this, 20);
+        col.setPadding(pad, Ui.dp(this, 14), pad, Ui.dp(this, 8));
+        root.addView(col, match());
 
-        ImageView icon = new ImageView(this);
-        icon.setImageResource(R.drawable.ic_launcher_foreground);
-        icon.setBackground(Ui.rounded(this, Ui.BG, 14));
-        int iconSize = Ui.dp(this, 48);
-        header.addView(icon, new LinearLayout.LayoutParams(iconSize, iconSize));
+        col.addView(buildTopBar(), wrapWidth());
 
-        LinearLayout names = new LinearLayout(this);
-        names.setOrientation(LinearLayout.VERTICAL);
-        names.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
-        names.addView(Ui.text(this, getString(R.string.app_name), 24, Ui.TEXT, true));
-        mCount = Ui.text(this, "", 13, Ui.TEXT_DIM, false);
-        names.addView(mCount);
-        header.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        // Featured game (shelf view)
+        mHero = buildHero();
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.15f);
+        hlp.topMargin = Ui.dp(this, 10);
+        col.addView(mHero, hlp);
 
-        LinearLayout buttons = new LinearLayout(this);
-        buttons.setGravity(Gravity.CENTER_VERTICAL);
-        Button add = Ui.button(this, getString(R.string.lib_add), true);
-        add.setOnClickListener(v -> openFolderPicker());
-        buttons.addView(add);
-        mViewButton = headerButton(buttons, "", v -> cycleView());
-        mSortButton = headerButton(buttons, "", v -> toggleSort());
-        headerButton(buttons, getString(R.string.lib_controls), v -> startActivity(new Intent(this, ControlsActivity.class)));
-        headerButton(buttons, getString(R.string.lib_settings), v -> startActivity(new Intent(this, SettingsActivity.class)));
-
-        HorizontalScrollView hs = new HorizontalScrollView(this);
-        hs.setHorizontalScrollBarEnabled(false);
-        hs.addView(buttons);
-        header.addView(hs, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        root.addView(header, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        // Games + empty state
+        // Body: shelf, grid/list, or the empty state
         FrameLayout body = new FrameLayout(this);
+        mShelfScroll = new HorizontalScrollView(this);
+        mShelfScroll.setHorizontalScrollBarEnabled(false);
+        mShelfScroll.setClipToPadding(false);
+        mShelfScroll.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), Ui.dp(this, 4), Ui.dp(this, 14));
+        mShelf = new LinearLayout(this);
+        mShelf.setOrientation(LinearLayout.HORIZONTAL);
+        mShelf.setGravity(Gravity.CENTER_VERTICAL);
+        mShelf.setClipChildren(false);
+        mShelfScroll.addView(mShelf, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
+        body.addView(mShelfScroll, match());
 
-        mGrid = new GridView(this);
-        mGrid.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
-        int gap = Ui.dp(this, 14);
-        mGrid.setPadding(Ui.dp(this, 6), gap, Ui.dp(this, 6), gap);
-        mGrid.setClipToPadding(false);
-        mGrid.setClipChildren(false);
-        mGrid.setDrawSelectorOnTop(true);
-        mGrid.setSelector(selectorDrawable());
-        mGrid.setFocusable(true);
-        mAdapter = new GamesAdapter();
-        mGrid.setAdapter(mAdapter);
-        mGrid.setOnItemClickListener((p, v, pos, id) -> play(pos));
-        mGrid.setOnItemLongClickListener((p, v, pos, id) -> { showOptions(pos); return true; });
-        mGrid.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
-                mSelected = pos;
-                zoom(v);
-                updateSecondScreen();
-            }
-            @Override public void onNothingSelected(AdapterView<?> p) { zoom(null); }
-        });
-        body.addView(mGrid, new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        mGrid = buildGrid();
+        body.addView(mGrid, match());
 
-        View empty = buildEmptyState();
-        body.addView(empty, new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        mGrid.setEmptyView(empty);
+        mEmpty = buildEmptyState();
+        body.addView(mEmpty, match());
 
-        root.addView(body, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-
-        TextView hints = Ui.text(this, getString(R.string.lib_hints), 13, Ui.TEXT_DIM, false);
-        hints.setGravity(Gravity.CENTER);
-        root.addView(hints, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
+        col.addView(body, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        col.addView(buildHints(), wrapWidth());
         return root;
     }
 
-    private Button headerButton(LinearLayout parent, String text, View.OnClickListener l)
+    private View buildTopBar()
     {
-        Button b = Ui.button(this, text, false);
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+
+        ImageView flask = new ImageView(this);
+        flask.setImageResource(R.drawable.ic_launcher_foreground);
+        flask.setBackground(Ui.rounded(this, Ui.SURFACE, 12));
+        bar.addView(flask, new LinearLayout.LayoutParams(Ui.dp(this, 42), Ui.dp(this, 42)));
+
+        LinearLayout names = new LinearLayout(this);
+        names.setOrientation(LinearLayout.VERTICAL);
+        names.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 8), 0);
+        TextView title = Ui.text(this, getString(R.string.app_name), 22, Ui.TEXT, true);
+        title.setLetterSpacing(0.02f);
+        names.addView(title);
+        mCount = Ui.text(this, "", 12, Ui.TEXT_DIM, false);
+        names.addView(mCount);
+        bar.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        mViewIcon = iconButton(bar, R.drawable.ic_e_shelf, R.string.lib_view_label, v -> cycleView());
+        View sort = pillButton(bar, R.drawable.ic_e_sort, "", false, v -> toggleSort());
+        mSortLabel = sort.findViewWithTag("label");
+        iconButton(bar, R.drawable.ic_e_gamepad, R.string.lib_controls, v -> startActivity(new Intent(this, ControlsActivity.class)));
+        iconButton(bar, R.drawable.ic_e_settings, R.string.lib_settings, v -> startActivity(new Intent(this, SettingsActivity.class)));
+        pillButton(bar, R.drawable.ic_e_add, getString(R.string.lib_add_short), true, v -> openFolderPicker());
+        return bar;
+    }
+
+    private View buildHero()
+    {
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(isPortrait() ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
+        hero.setGravity(Gravity.CENTER_VERTICAL);
+
+        // Text + actions
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.setGravity(Gravity.CENTER_VERTICAL);
+        info.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 20), 0);
+
+        TextView label = Ui.text(this, getString(R.string.lib_featured), 12, Ui.ACCENT_LIGHT, true);
+        label.setLetterSpacing(0.12f);
+        label.setAllCaps(true);
+        info.addView(label);
+
+        mHeroTitle = Ui.text(this, "", 30, Ui.TEXT, true);
+        mHeroTitle.setMaxLines(2);
+        mHeroTitle.setEllipsize(TextUtils.TruncateAt.END);
+        mHeroTitle.setShadowLayer(12, 0, 2, 0x99000000);
+        mHeroTitle.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
+        info.addView(mHeroTitle);
+
+        mHeroDetail = Ui.text(this, "", 14, Ui.TEXT_DIM, false);
+        info.addView(mHeroDetail);
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setPadding(0, Ui.dp(this, 16), 0, 0);
+        mHeroPlay = pillButton(actions, R.drawable.ic_e_play, getString(R.string.lib_play), true, v -> play(mSelected));
+        pillButton(actions, R.drawable.ic_e_more, getString(R.string.lib_options), false, v -> showOptions(mSelected));
+        info.addView(actions);
+
+        // Cover
+        FrameLayout coverFrame = new FrameLayout(this);
+        coverFrame.setBackground(Ui.rounded(this, Ui.SURFACE, 18));
+        coverFrame.setElevation(Ui.dp(this, 12));
+        coverFrame.setClipToOutline(true);
+        mHeroCover = new ImageView(this);
+        coverFrame.addView(mHeroCover, match());
+
+        if (isPortrait()) {
+            hero.addView(coverFrame, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+            hero.addView(info, wrapWidth());
+        } else {
+            hero.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+            hero.addView(coverFrame, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.05f));
+        }
+        return hero;
+    }
+
+    private GridView buildGrid()
+    {
+        GridView g = new GridView(this);
+        g.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
+        g.setPadding(Ui.dp(this, 6), Ui.dp(this, 12), Ui.dp(this, 6), Ui.dp(this, 12));
+        g.setClipToPadding(false);
+        g.setDrawSelectorOnTop(true);
+        g.setSelector(selectorDrawable());
+        g.setFocusable(true);
+        mAdapter = new GamesAdapter();
+        g.setAdapter(mAdapter);
+        g.setOnItemClickListener((p, v, pos, id) -> play(pos));
+        g.setOnItemLongClickListener((p, v, pos, id) -> { showOptions(pos); return true; });
+        g.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                select(pos);
+                zoom(v);
+            }
+            @Override public void onNothingSelected(AdapterView<?> p) { zoom(null); }
+        });
+        return g;
+    }
+
+    private View buildHints()
+    {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER);
+        row.setPadding(0, Ui.dp(this, 4), 0, 0);
+        hint(row, "A", R.string.lib_play);
+        hint(row, "Y", R.string.lib_options);
+        hint(row, "X", R.string.lib_add_short);
+        hint(row, "Select", R.string.lib_view_label);
+        hint(row, "Start", R.string.lib_settings);
+        return row;
+    }
+
+    private void hint(LinearLayout row, String button, int labelRes)
+    {
+        TextView key = Ui.text(this, button, 11, Ui.BG, true);
+        key.setGravity(Gravity.CENTER);
+        key.setBackground(Ui.rounded(this, Ui.TEXT_DIM, 10));
+        key.setPadding(Ui.dp(this, 7), Ui.dp(this, 1), Ui.dp(this, 7), Ui.dp(this, 1));
+        row.addView(key);
+        TextView label = Ui.text(this, getString(labelRes), 12, Ui.TEXT_DIM, false);
+        label.setPadding(Ui.dp(this, 5), 0, Ui.dp(this, 16), 0);
+        row.addView(label);
+    }
+
+    private View buildEmptyState()
+    {
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER);
+        int pad = Ui.dp(this, 24);
+        col.setPadding(pad, pad, pad, pad);
+
+        ImageView flask = new ImageView(this);
+        flask.setImageResource(R.drawable.ic_launcher_foreground);
+        int s = Ui.dp(this, 110);
+        col.addView(flask, new LinearLayout.LayoutParams(s, s));
+
+        TextView title = Ui.text(this, getString(R.string.lib_empty_title), 20, Ui.TEXT, true);
+        title.setGravity(Gravity.CENTER);
+        col.addView(title);
+
+        TextView body = Ui.text(this, getString(R.string.lib_empty_text), 15, Ui.TEXT_DIM, false);
+        body.setGravity(Gravity.CENTER);
+        body.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 16));
+        body.setMaxWidth(Ui.dp(this, 460));
+        col.addView(body);
+
+        LinearLayout holder = new LinearLayout(this);
+        holder.setGravity(Gravity.CENTER);
+        pillButton(holder, R.drawable.ic_e_add, getString(R.string.lib_add), true, v -> openFolderPicker());
+        col.addView(holder);
+        return col;
+    }
+
+    // ------------------------------------------------------------ widgets
+
+    private static FrameLayout.LayoutParams match()
+    {
+        return new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+    }
+
+    private static LinearLayout.LayoutParams wrapWidth()
+    {
+        return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+
+    /** Round icon-only button with a focus ring. */
+    private ImageView iconButton(LinearLayout parent, int icon, int descRes, View.OnClickListener l)
+    {
+        ImageView b = new ImageView(this);
+        b.setImageResource(icon);
+        b.setImageTintList(Ui.tint(Ui.TEXT));
+        b.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        int p = Ui.dp(this, 10);
+        b.setPadding(p, p, p, p);
+        b.setBackground(Ui.focusable(this, 0x33FFFFFF, 22));
+        b.setFocusable(true);
+        b.setClickable(true);
+        b.setContentDescription(getString(descRes));
         b.setOnClickListener(l);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        int size = Ui.dp(this, 44);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
+        lp.leftMargin = Ui.dp(this, 8);
+        parent.addView(b, lp);
+        return b;
+    }
+
+    /** Rounded pill with an icon and a label. */
+    private LinearLayout pillButton(LinearLayout parent, int icon, String text, boolean primary, View.OnClickListener l)
+    {
+        LinearLayout b = new LinearLayout(this);
+        b.setGravity(Gravity.CENTER_VERTICAL);
+        b.setBackground(Ui.focusable(this, primary ? Ui.ACCENT : 0x33FFFFFF, 22));
+        b.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 18), 0);
+        b.setFocusable(true);
+        b.setClickable(true);
+        b.setOnClickListener(l);
+
+        ImageView i = new ImageView(this);
+        i.setImageResource(icon);
+        i.setImageTintList(Ui.tint(Ui.TEXT));
+        b.addView(i, new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20)));
+
+        TextView t = Ui.text(this, text, 15, Ui.TEXT, true);
+        t.setTag("label");
+        t.setPadding(Ui.dp(this, 8), 0, 0, 0);
+        b.addView(t);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 44));
         lp.leftMargin = Ui.dp(this, 8);
         parent.addView(b, lp);
         return b;
@@ -237,49 +435,19 @@ public class LibraryActivity extends ControllerActivity
         return s;
     }
 
-    private View buildEmptyState()
-    {
-        LinearLayout col = new LinearLayout(this);
-        col.setOrientation(LinearLayout.VERTICAL);
-        col.setGravity(Gravity.CENTER);
-        int pad = Ui.dp(this, 24);
-        col.setPadding(pad, pad, pad, pad);
-
-        ImageView flask = new ImageView(this);
-        flask.setImageResource(R.drawable.ic_launcher_foreground);
-        int s = Ui.dp(this, 120);
-        col.addView(flask, new LinearLayout.LayoutParams(s, s));
-
-        TextView title = Ui.text(this, getString(R.string.lib_empty_title), 20, Ui.TEXT, true);
-        title.setGravity(Gravity.CENTER);
-        col.addView(title);
-
-        TextView body = Ui.text(this, getString(R.string.lib_empty_text), 15, Ui.TEXT_DIM, false);
-        body.setGravity(Gravity.CENTER);
-        body.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 16));
-        body.setMaxWidth(Ui.dp(this, 460));
-        col.addView(body);
-
-        Button add = Ui.button(this, getString(R.string.lib_add), true);
-        add.setOnClickListener(v -> openFolderPicker());
-        col.addView(add);
-        return col;
-    }
-
     // ------------------------------------------------------------ view modes
 
-    private boolean isList()
-    {
-        return EssentiaSettings.VIEW_LIST.equals(mView);
-    }
-
-    private int columnWidth()
-    {
-        return EssentiaSettings.VIEW_BIG.equals(mView) ? mBaseColumn * 8 / 5 : mBaseColumn;
-    }
+    private boolean isShelf() { return EssentiaSettings.VIEW_SHELF.equals(mView); }
+    private boolean isList() { return EssentiaSettings.VIEW_LIST.equals(mView); }
 
     private void applyViewMode()
     {
+        boolean empty = mGames.isEmpty();
+        mHero.setVisibility(isShelf() && !empty ? View.VISIBLE : View.GONE);
+        mShelfScroll.setVisibility(isShelf() && !empty ? View.VISIBLE : View.GONE);
+        mGrid.setVisibility(!isShelf() && !empty ? View.VISIBLE : View.GONE);
+        mEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+
         int gap = Ui.dp(this, isList() ? 8 : 14);
         mGrid.setHorizontalSpacing(gap);
         mGrid.setVerticalSpacing(gap);
@@ -287,41 +455,44 @@ public class LibraryActivity extends ControllerActivity
             mGrid.setNumColumns(1);
         } else {
             mGrid.setNumColumns(GridView.AUTO_FIT);
-            mGrid.setColumnWidth(columnWidth());
+            mGrid.setColumnWidth(mBaseColumn);
         }
-        int label = isList() ? R.string.lib_view_list
-            : EssentiaSettings.VIEW_BIG.equals(mView) ? R.string.lib_view_big : R.string.lib_view_grid;
-        mViewButton.setText(getString(R.string.lib_view, getString(label)));
-        mSortButton.setText(getString(R.string.lib_sort,
-            getString(EssentiaSettings.SORT_AZ.equals(mSort) ? R.string.lib_sort_az : R.string.lib_sort_recent)));
+        mViewIcon.setImageResource(isShelf() ? R.drawable.ic_e_shelf
+            : isList() ? R.drawable.ic_e_list : R.drawable.ic_e_grid);
+        mSortLabel.setText(EssentiaSettings.SORT_AZ.equals(mSort) ? R.string.lib_sort_az : R.string.lib_sort_recent);
         zoom(null);
         mAdapter.notifyDataSetChanged();
+        rebuildShelf();
     }
 
     private void cycleView()
     {
-        mView = EssentiaSettings.VIEW_GRID.equals(mView) ? EssentiaSettings.VIEW_BIG
-            : EssentiaSettings.VIEW_BIG.equals(mView) ? EssentiaSettings.VIEW_LIST : EssentiaSettings.VIEW_GRID;
+        mView = isShelf() ? EssentiaSettings.VIEW_GRID
+            : EssentiaSettings.VIEW_GRID.equals(mView) ? EssentiaSettings.VIEW_LIST : EssentiaSettings.VIEW_SHELF;
         EssentiaSettings.setViewMode(this, mView);
         applyViewMode();
+        focusSelected();
+        String name = getString(isShelf() ? R.string.lib_view_shelf
+            : isList() ? R.string.lib_view_list : R.string.lib_view_grid);
+        Toast.makeText(this, getString(R.string.lib_view, name), Toast.LENGTH_SHORT).show();
     }
 
     private void toggleSort()
     {
         mSort = EssentiaSettings.SORT_AZ.equals(mSort) ? EssentiaSettings.SORT_RECENT : EssentiaSettings.SORT_AZ;
         EssentiaSettings.setSortMode(this, mSort);
-        applyViewMode();
+        mSelected = 0;
         reload();
     }
 
     private void zoom(View v)
     {
         if (mZoomed != null && mZoomed != v) {
-            mZoomed.animate().scaleX(1f).scaleY(1f).setDuration(120).start();
+            mZoomed.animate().scaleX(1f).scaleY(1f).translationZ(0).setDuration(120).start();
         }
         mZoomed = null;
-        if (v != null && !isList() && mGrid.hasFocus()) {
-            v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(140).start();
+        if (v != null && !isList()) {
+            v.animate().scaleX(1.07f).scaleY(1.07f).translationZ(Ui.dp(this, 8)).setDuration(150).start();
             mZoomed = v;
         }
     }
@@ -336,6 +507,92 @@ public class LibraryActivity extends ControllerActivity
         return e.widescreen ? when + "  ·  16:9" : when;
     }
 
+    private static final class Holder
+    {
+        ImageView cover;
+        TextView title;
+        TextView detail;
+        TextView badge;
+    }
+
+    /** A cover card: art, a soft shade and the name on top. */
+    private View newCard()
+    {
+        FrameLayout card = new FrameLayout(this);
+        card.setBackground(Ui.rounded(this, Ui.SURFACE, 16));
+        card.setClipToOutline(true);
+
+        Holder h = new Holder();
+        h.cover = new ImageView(this);
+        h.cover.setBackgroundColor(Ui.SURFACE_HI);
+        card.addView(h.cover, match());
+
+        View shade = new View(this);
+        shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{ 0x00000000, 0x00000000, 0xCC000000 }));
+        card.addView(shade, match());
+
+        h.title = Ui.text(this, "", 14, Ui.TEXT, true);
+        h.title.setMaxLines(2);
+        h.title.setEllipsize(TextUtils.TruncateAt.END);
+        h.title.setShadowLayer(6, 0, 1, 0xFF000000);
+        int p = Ui.dp(this, 10);
+        h.title.setPadding(p, p, p, p);
+        card.addView(h.title, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
+
+        h.badge = Ui.text(this, "16:9", 11, Ui.BG, true);
+        h.badge.setBackground(Ui.rounded(this, Ui.GOLD, 8));
+        h.badge.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
+        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END);
+        blp.setMargins(0, Ui.dp(this, 8), Ui.dp(this, 8), 0);
+        card.addView(h.badge, blp);
+
+        card.setTag(h);
+        return card;
+    }
+
+    private void bindCard(View card, Library.Entry e)
+    {
+        Holder h = (Holder) card.getTag();
+        h.title.setText(e.displayTitle());
+        h.badge.setVisibility(e.widescreen ? View.VISIBLE : View.GONE);
+        mCovers.load(e.path, e.cover, h.cover, R.drawable.ic_launcher_foreground);
+    }
+
+    private View newRow()
+    {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setBackground(Ui.rounded(this, 0x991E2240, 14));
+        int p = Ui.dp(this, 8);
+        row.setPadding(p, p, p, p);
+
+        Holder h = new Holder();
+        h.cover = new ImageView(this);
+        h.cover.setBackground(Ui.rounded(this, Ui.SURFACE_HI, 10));
+        h.cover.setClipToOutline(true);
+        row.addView(h.cover, new LinearLayout.LayoutParams(Ui.dp(this, 112), Ui.dp(this, 84)));
+
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 8), 0);
+        h.title = Ui.text(this, "", 17, Ui.TEXT, true);
+        h.title.setMaxLines(1);
+        h.title.setEllipsize(TextUtils.TruncateAt.END);
+        texts.addView(h.title);
+        h.detail = Ui.text(this, "", 13, Ui.TEXT_DIM, false);
+        h.detail.setMaxLines(2);
+        h.detail.setEllipsize(TextUtils.TruncateAt.END);
+        texts.addView(h.detail);
+        row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        row.setTag(h);
+        return row;
+    }
+
     private final class GamesAdapter extends BaseAdapter
     {
         @Override public int getCount() { return mGames.size(); }
@@ -348,110 +605,68 @@ public class LibraryActivity extends ControllerActivity
         public View getView(int pos, View convert, ViewGroup parent)
         {
             Library.Entry e = mGames.get(pos);
-            return isList() ? row(e, convert) : card(e, convert);
+            if (isList()) {
+                if (convert == null) convert = newRow();
+                Holder h = (Holder) convert.getTag();
+                h.title.setText(e.displayTitle());
+                h.detail.setText(detailOf(e) + "\n" + new File(e.path).getParent());
+                mCovers.load(e.path, e.cover, h.cover, R.drawable.ic_launcher_foreground);
+                return convert;
+            }
+            if (convert == null) convert = newCard();
+            int w = mGrid.getColumnWidth() > 0 ? mGrid.getColumnWidth() : mBaseColumn;
+            convert.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, w * 3 / 4));
+            convert.setScaleX(1f);
+            convert.setScaleY(1f);
+            bindCard(convert, e);
+            return convert;
         }
     }
 
-    private static final class Holder
+    /** Builds the shelf cards (shelf view only). */
+    private void rebuildShelf()
     {
-        ImageView cover;
-        TextView title;
-        TextView detail;
-        TextView badge;
+        mShelf.removeAllViews();
+        if (!isShelf()) return;
+
+        int h = Ui.dp(this, isPortrait() ? 120 : 132);
+        int w = h * 4 / 3;
+        for (int i = 0; i < mGames.size(); i++) {
+            final int pos = i;
+            View card = newCard();
+            bindCard(card, mGames.get(i));
+            card.setFocusable(true);
+            card.setClickable(true);
+            card.setForeground(selectorDrawable());
+            card.setOnClickListener(v -> play(pos));
+            card.setOnLongClickListener(v -> { showOptions(pos); return true; });
+            card.setOnFocusChangeListener((v, has) -> {
+                if (has) {
+                    select(pos);
+                    zoom(v);
+                    v.post(() -> {
+                        int center = v.getLeft() + v.getWidth() / 2 - mShelfScroll.getWidth() / 2;
+                        mShelfScroll.smoothScrollTo(Math.max(0, center), 0);
+                    });
+                }
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(w, h);
+            lp.rightMargin = Ui.dp(this, 14);
+            mShelf.addView(card, lp);
+        }
     }
 
-    private View card(Library.Entry e, View convert)
+    private void focusSelected()
     {
-        Holder h;
-        if (convert == null) {
-            FrameLayout card = new FrameLayout(this);
-            card.setBackground(Ui.rounded(this, Ui.SURFACE, 16));
-            card.setClipToOutline(true);
-
-            h = new Holder();
-            h.cover = new ImageView(this);
-            h.cover.setBackgroundColor(Ui.SURFACE_HI);
-            card.addView(h.cover, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-            View shade = new View(this);
-            shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{ 0x00000000, 0x99000000, 0xE6000000 }));
-            FrameLayout.LayoutParams slp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT);
-            card.addView(shade, slp);
-
-            h.title = Ui.text(this, "", 15, Ui.TEXT, true);
-            h.title.setMaxLines(2);
-            h.title.setEllipsize(TextUtils.TruncateAt.END);
-            h.title.setShadowLayer(6, 0, 1, 0xFF000000);
-            int p = Ui.dp(this, 10);
-            h.title.setPadding(p, p, p, p);
-            card.addView(h.title, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
-
-            h.badge = Ui.text(this, "16:9", 11, Ui.BG, true);
-            h.badge.setBackground(Ui.rounded(this, Ui.GOLD, 8));
-            h.badge.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
-            FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END);
-            blp.setMargins(0, Ui.dp(this, 8), Ui.dp(this, 8), 0);
-            card.addView(h.badge, blp);
-
-            card.setTag(h);
-            convert = card;
+        if (mGames.isEmpty()) return;
+        int pos = Math.min(mSelected, mGames.size() - 1);
+        if (isShelf()) {
+            View v = mShelf.getChildAt(pos);
+            if (v != null) v.post(v::requestFocus);
         } else {
-            h = (Holder) convert.getTag();
+            mGrid.setSelection(pos);
+            mGrid.requestFocus();
         }
-        int w = mGrid.getColumnWidth() > 0 ? mGrid.getColumnWidth() : columnWidth();
-        convert.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, w * 3 / 4));
-        convert.setScaleX(1f);
-        convert.setScaleY(1f);
-        h.title.setText(e.displayTitle());
-        h.badge.setVisibility(e.widescreen ? View.VISIBLE : View.GONE);
-        mCovers.load(e.path, e.cover, h.cover, R.drawable.ic_launcher_foreground);
-        return convert;
-    }
-
-    private View row(Library.Entry e, View convert)
-    {
-        Holder h;
-        if (convert == null) {
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setBackground(Ui.rounded(this, Ui.SURFACE, 14));
-            int p = Ui.dp(this, 8);
-            row.setPadding(p, p, p, p);
-
-            h = new Holder();
-            h.cover = new ImageView(this);
-            h.cover.setBackground(Ui.rounded(this, Ui.SURFACE_HI, 10));
-            h.cover.setClipToOutline(true);
-            row.addView(h.cover, new LinearLayout.LayoutParams(Ui.dp(this, 112), Ui.dp(this, 84)));
-
-            LinearLayout texts = new LinearLayout(this);
-            texts.setOrientation(LinearLayout.VERTICAL);
-            texts.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 8), 0);
-            h.title = Ui.text(this, "", 17, Ui.TEXT, true);
-            h.title.setMaxLines(1);
-            h.title.setEllipsize(TextUtils.TruncateAt.END);
-            texts.addView(h.title);
-            h.detail = Ui.text(this, "", 13, Ui.TEXT_DIM, false);
-            h.detail.setMaxLines(2);
-            h.detail.setEllipsize(TextUtils.TruncateAt.END);
-            texts.addView(h.detail);
-            row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-            row.setTag(h);
-            convert = row;
-        } else {
-            h = (Holder) convert.getTag();
-        }
-        h.title.setText(e.displayTitle());
-        h.detail.setText(detailOf(e) + "\n" + new File(e.path).getParent());
-        mCovers.load(e.path, e.cover, h.cover, R.drawable.ic_launcher_foreground);
-        return convert;
     }
 
     private void reload()
@@ -461,13 +676,29 @@ public class LibraryActivity extends ControllerActivity
         if (EssentiaSettings.SORT_AZ.equals(mSort)) {
             Collections.sort(mGames, (a, b) -> a.displayTitle().compareToIgnoreCase(b.displayTitle()));
         }
-        mAdapter.notifyDataSetChanged();
         mCount.setText(getResources().getQuantityString(R.plurals.lib_count, mGames.size(), mGames.size()));
         if (mSelected >= mGames.size()) mSelected = Math.max(0, mGames.size() - 1);
-        if (!mGames.isEmpty()) {
-            mGrid.setSelection(mSelected);
-            mGrid.requestFocus();
+        applyViewMode();
+        select(mSelected);
+        focusSelected();
+    }
+
+    /** A game was selected: update the featured area, the backdrop and the second screen. */
+    private void select(int pos)
+    {
+        if (mGames.isEmpty()) {
+            mBackdrop.setImageDrawable(null);
+            updateSecondScreen();
+            return;
         }
+        mSelected = Math.max(0, Math.min(pos, mGames.size() - 1));
+        Library.Entry e = mGames.get(mSelected);
+        mHeroTitle.setText(e.displayTitle());
+        mHeroDetail.setText(detailOf(e));
+        mCovers.load(e.path, e.cover, mHeroCover, R.drawable.ic_launcher_foreground);
+        mCovers.load(e.path, e.cover, mBackdrop, 0);
+        mBackdrop.setAlpha(0f);
+        mBackdrop.animate().alpha(0.45f).setDuration(250).start();
         updateSecondScreen();
     }
 
@@ -490,7 +721,11 @@ public class LibraryActivity extends ControllerActivity
             return;
         }
         Library.Entry e = mGames.get(Math.min(mSelected, mGames.size() - 1));
-        mSecond.showGame(e.displayTitle(), detailOf(e), mCovers.cached(e.path, e.cover));
+        File saves = Saves.dirFor(this, new File(e.path), e.displayTitle());
+        String detail = detailOf(e) + "\n" + getString(R.string.second_saves, saves.getAbsolutePath());
+        mSecond.showGame(e.displayTitle(), detail, null);
+        mCovers.load(e.path, e.cover, mSecond.coverView(), R.drawable.ic_launcher_foreground);
+        mCovers.load(e.path, e.cover, mSecond.backdropView(), 0);
     }
 
     // ------------------------------------------------------------ actions
@@ -812,11 +1047,9 @@ public class LibraryActivity extends ControllerActivity
     protected boolean onControllerButton(int keyCode)
     {
         switch (keyCode) {
-            case KeyEvent.KEYCODE_BUTTON_Y: {
-                int pos = mGrid.getSelectedItemPosition();
-                if (!mGames.isEmpty()) showOptions(pos >= 0 ? pos : mSelected);
+            case KeyEvent.KEYCODE_BUTTON_Y:
+                if (!mGames.isEmpty()) showOptions(mSelected);
                 return true;
-            }
             case KeyEvent.KEYCODE_BUTTON_X:
                 openFolderPicker();
                 return true;

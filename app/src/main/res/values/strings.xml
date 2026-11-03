@@ -27,7 +27,7 @@
     <string name="lib_empty_title">No games yet</string>
     <string name="lib_empty_text">Add a game folder (the one with Game.exe or Game.ini), or a folder with several games: Essentia finds them all.</string>
     <string name="lib_hints">A play  ·  Y options  ·  X add games  ·  Start settings  ·  in game: Back or Select+Start to exit</string>
-    <string name="lib_second_hint">Press A to play</string>
+    <string name="lib_second_hint">A play  ·  Y options</string>
     <string name="lib_play">Play</string>
     <string name="lib_remove">Remove from library</string>
     <string name="lib_missing">This game\'s folder was not found. It may have been moved or deleted, or the SD card is not inserted.</string>
@@ -45,7 +45,7 @@
     <string name="set_buttons_map">Buttons: A confirm (Enter) · B cancel/menu (Esc) · Start menu · X Shift · L/R page · F1 controls screen of the game.</string>
     <string name="set_screen_title">Screen</string>
     <string name="set_smooth">Smooth picture (instead of sharp pixels)</string>
-    <string name="set_dual">Use the second screen (show the selected game\'s cover)</string>
+    <string name="set_dual">In the library: show the selected game on the second screen</string>
     <string name="set_dual_found">A second screen was detected.</string>
     <string name="set_dual_none">No second screen detected on this device.</string>
     <string name="set_updates_title">Updates</string>
@@ -151,4 +151,24 @@
     <string name="set_perf_sustained">High-performance mode (keeps the processor steady while playing)</string>
     <string name="set_perf_60hz">Run the screen at 60 Hz while playing (even motion on 120 Hz screens)</string>
     <string name="set_debug_input">Diagnostics: show the keys Essentia sends to the game</string>
+    <string name="lib_view_label">View</string>
+    <string name="lib_add_short">Add</string>
+    <string name="lib_featured">Selected game</string>
+    <string name="lib_options">Options</string>
+    <string name="lib_view_shelf">Shelf</string>
+    <string name="second_saves">Saves: %1$s</string>
+    <string name="second_label">Ready to play</string>
+    <string name="panel_keys">Keys</string>
+    <string name="panel_menu">Menu</string>
+    <string name="panel_enter">Enter</string>
+    <string name="panel_shift">Shift</string>
+    <string name="panel_f1">F1 · keys</string>
+    <string name="panel_ctrl">Ctrl</string>
+    <string name="panel_fps">F2 · FPS</string>
+    <string name="panel_actions">Essentia</string>
+    <string name="panel_essentia_menu">Menu / Exit</string>
+    <string name="set_game2_title">While playing, the second screen shows:</string>
+    <string name="set_game2_panel">Touch panel (keys the controller lacks, controls, exit)</string>
+    <string name="set_game2_black">A black screen (no distractions)</string>
+    <string name="set_game2_off">Nothing (don\'t use it)</string>
 </resources>

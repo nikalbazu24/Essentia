@@ -901,32 +901,41 @@ bool evalScript(VALUE string, const char *filename)
 #define SCRIPT_SECTION_FMT (rgssVer >= 3 ? "{%04ld}" : "Section%03ld")
 
 #ifdef MKXPZ_BUILD_ANDROID
-static VALUE essentiaFixSyntaxCb(VALUE str)
+static VALUE essentiaFixSyntaxCb(VALUE args)
 {
     VALUE mod = rb_const_get(rb_cObject, rb_intern("Essentia"));
-    return rb_funcall(mod, rb_intern("fix_legacy_syntax"), 1, str);
+    return rb_funcall(mod, rb_intern("fix_legacy_syntax"), 2,
+                      rb_ary_entry(args, 0), rb_ary_entry(args, 1));
 }
 
 /* Essentia: if a game script failed with a SyntaxError, rewrite old Ruby 1.8
- * syntax (see essentia_compat.rb) and evaluate it again. */
+ * syntax (see essentia_compat.rb) and evaluate it again. Each new SyntaxError
+ * message points at more lines to fix, so try a few rounds. */
 static void essentiaRetryLegacy(VALUE string, VALUE fname, int &state)
 {
-    VALUE err = rb_errinfo();
-    if (NIL_P(err) || !rb_obj_is_kind_of(err, rb_eSyntaxError))
-        return;
-    if (!rb_const_defined(rb_cObject, rb_intern("Essentia")))
-        return;
+    VALUE current = string;
+    for (int round = 0; round < 6; ++round) {
+        VALUE err = rb_errinfo();
+        if (NIL_P(err) || !rb_obj_is_kind_of(err, rb_eSyntaxError))
+            return;
+        if (!rb_const_defined(rb_cObject, rb_intern("Essentia")))
+            return;
 
-    int st = 0;
-    VALUE fixed = rb_protect(essentiaFixSyntaxCb, string, &st);
-    if (st || NIL_P(fixed) || rb_str_equal(fixed, string) == Qtrue) {
-        rb_set_errinfo(err); /* keep the original error */
-        return;
+        VALUE msg = rb_funcall(err, rb_intern("message"), 0);
+        int st = 0;
+        VALUE fixed = rb_protect(essentiaFixSyntaxCb, rb_ary_new_from_args(2, current, msg), &st);
+        if (st || NIL_P(fixed) || rb_str_equal(fixed, current) == Qtrue) {
+            rb_set_errinfo(err); /* nothing more to fix: keep the error */
+            return;
+        }
+
+        Debug() << "Essentia: retrying" << RSTRING_PTR(fname) << "with old Ruby syntax fixes, round" << round + 1;
+        rb_set_errinfo(Qnil);
+        current = fixed;
+        evalString(current, fname, &state);
+        if (!state)
+            return;
     }
-
-    Debug() << "Essentia: retrying" << RSTRING_PTR(fname) << "with Ruby 1.8 syntax fixes";
-    rb_set_errinfo(Qnil);
-    evalString(fixed, fname, &state);
 }
 #endif
 

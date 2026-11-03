@@ -3,11 +3,17 @@ package com.hatkid.mkxpz.ui;
 import android.app.Presentation;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.RenderEffect;
+import android.graphics.Shader;
+import android.graphics.drawable.GradientDrawable;
 import android.hardware.display.DisplayManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -16,14 +22,16 @@ import android.widget.TextView;
 import com.hatkid.mkxpz.R;
 
 /**
- * Dual-screen mode: on devices with a second screen (e.g. AYN Thor), shows the
- * selected game's cover and name there while the library stays on the other screen.
+ * Dual-screen mode in the library: on devices with a second screen (e.g. AYN Thor),
+ * shows the selected game's details there: cover, name, last played and where its
+ * saves are. It never takes the controller away from the main screen.
  */
 public final class SecondScreen extends Presentation
 {
+    private ImageView mBackdrop;
     private ImageView mCover;
     private TextView mTitle;
-    private TextView mHint;
+    private TextView mDetail;
 
     private SecondScreen(Context outer, Display display)
     {
@@ -54,62 +62,99 @@ public final class SecondScreen extends Presentation
         }
     }
 
+    /** Keeps controller input on the main screen. */
+    public static void notFocusable(android.app.Dialog d)
+    {
+        if (d.getWindow() != null) {
+            d.getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        notFocusable(this);
         Context c = getContext();
 
         FrameLayout root = new FrameLayout(c);
         root.setBackgroundColor(Ui.BG);
 
-        LinearLayout col = new LinearLayout(c);
-        col.setOrientation(LinearLayout.VERTICAL);
-        col.setGravity(Gravity.CENTER);
-        int pad = Ui.dp(c, 24);
-        col.setPadding(pad, pad, pad, pad);
+        mBackdrop = new ImageView(c);
+        mBackdrop.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        mBackdrop.setAlpha(0.4f);
+        if (Build.VERSION.SDK_INT >= 31) {
+            mBackdrop.setRenderEffect(RenderEffect.createBlurEffect(50f, 50f, Shader.TileMode.CLAMP));
+        }
+        root.addView(mBackdrop, match());
+        android.view.View shade = new android.view.View(c);
+        shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{ 0x4014162B, 0xE614162B }));
+        root.addView(shade, match());
 
+        LinearLayout row = new LinearLayout(c);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        int pad = Ui.dp(c, 22);
+        row.setPadding(pad, pad, pad, pad);
+
+        FrameLayout coverFrame = new FrameLayout(c);
+        coverFrame.setBackground(Ui.rounded(c, Ui.SURFACE, 16));
+        coverFrame.setClipToOutline(true);
+        coverFrame.setElevation(Ui.dp(c, 10));
         mCover = new ImageView(c);
-        mCover.setAdjustViewBounds(true);
-        mCover.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        mCover.setImageResource(R.drawable.ic_launcher_foreground);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        col.addView(mCover, lp);
+        mCover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        coverFrame.addView(mCover, match());
+        row.addView(coverFrame, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
 
-        mTitle = Ui.text(c, "Essentia", 26, Ui.TEXT, true);
-        mTitle.setGravity(Gravity.CENTER);
-        mTitle.setPadding(0, Ui.dp(c, 16), 0, Ui.dp(c, 4));
-        col.addView(mTitle, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout info = new LinearLayout(c);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.setGravity(Gravity.CENTER_VERTICAL);
+        info.setPadding(Ui.dp(c, 20), 0, 0, 0);
 
-        mHint = Ui.text(c, c.getString(R.string.lib_second_hint), 15, Ui.TEXT_DIM, false);
-        mHint.setGravity(Gravity.CENTER);
-        col.addView(mHint, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView label = Ui.text(c, c.getString(R.string.second_label), 12, Ui.ACCENT_LIGHT, true);
+        label.setAllCaps(true);
+        label.setLetterSpacing(0.12f);
+        info.addView(label);
 
-        root.addView(col, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT));
+        mTitle = Ui.text(c, c.getString(R.string.app_name), 24, Ui.TEXT, true);
+        mTitle.setMaxLines(3);
+        mTitle.setEllipsize(TextUtils.TruncateAt.END);
+        mTitle.setPadding(0, Ui.dp(c, 4), 0, Ui.dp(c, 8));
+        info.addView(mTitle);
+
+        mDetail = Ui.text(c, "", 13, Ui.TEXT_DIM, false);
+        info.addView(mDetail);
+
+        TextView hint = Ui.text(c, c.getString(R.string.lib_second_hint), 14, Ui.GOLD, true);
+        hint.setPadding(0, Ui.dp(c, 14), 0, 0);
+        info.addView(hint);
+
+        row.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f));
+        root.addView(row, match());
         setContentView(root);
     }
+
+    private static FrameLayout.LayoutParams match()
+    {
+        return new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+    }
+
+    public ImageView coverView() { return mCover; }
+    public ImageView backdropView() { return mBackdrop; }
 
     public void showGame(String title, Bitmap cover)
     {
         showGame(title, null, cover);
     }
 
-    /** Title, a detail line (last played, 16:9...) and the cover. */
+    /** Title, detail lines and (optionally) the cover. */
     public void showGame(String title, String detail, Bitmap cover)
     {
         if (mTitle == null) return;
         mTitle.setText(title);
-        mHint.setText(detail != null && !detail.isEmpty()
-            ? detail + "   ·   " + getContext().getString(R.string.lib_second_hint)
-            : getContext().getString(R.string.lib_second_hint));
-        if (cover != null) {
-            mCover.setImageBitmap(cover);
-        } else {
-            mCover.setImageResource(R.drawable.ic_launcher_foreground);
-        }
+        mDetail.setText(detail == null ? "" : detail);
+        if (cover != null) mCover.setImageBitmap(cover);
+        else mCover.setImageResource(R.drawable.ic_launcher_foreground);
     }
 }

@@ -24,7 +24,7 @@
     <string name="lib_empty_title">Aún no tienes juegos</string>
     <string name="lib_empty_text">Agrega la carpeta de un juego (la que tiene Game.exe o Game.ini), o una carpeta con varios juegos: Essentia los encuentra todos.</string>
     <string name="lib_hints">A jugar  ·  Y opciones  ·  X agregar  ·  Start ajustes  ·  en el juego: Atrás o Select+Start para salir</string>
-    <string name="lib_second_hint">Presiona A para jugar</string>
+    <string name="lib_second_hint">A jugar  ·  Y opciones</string>
     <string name="lib_play">Jugar</string>
     <string name="lib_remove">Quitar de la biblioteca</string>
     <string name="lib_missing">No se encontró la carpeta de este juego. Puede que se haya movido o borrado, o que la tarjeta SD no esté puesta.</string>
@@ -42,7 +42,7 @@
     <string name="set_buttons_map">Botones: A confirmar (Enter) · B cancelar/menú (Esc) · Start menú · X Shift · L/R pasar página · F1 pantalla de controles del juego.</string>
     <string name="set_screen_title">Pantalla</string>
     <string name="set_smooth">Imagen suavizada (en vez de píxeles nítidos)</string>
-    <string name="set_dual">Usar la segunda pantalla (muestra la portada del juego elegido)</string>
+    <string name="set_dual">En la biblioteca: mostrar el juego elegido en la segunda pantalla</string>
     <string name="set_dual_found">Se detectó una segunda pantalla.</string>
     <string name="set_dual_none">Este equipo no tiene segunda pantalla.</string>
     <string name="set_updates_title">Actualizaciones</string>
@@ -148,4 +148,24 @@
     <string name="set_perf_sustained">Modo de alto rendimiento (mantiene estable el procesador al jugar)</string>
     <string name="set_perf_60hz">Pantalla a 60 Hz al jugar (movimiento parejo en pantallas de 120 Hz)</string>
     <string name="set_debug_input">Diagnóstico: mostrar las teclas que Essentia envía al juego</string>
+    <string name="lib_view_label">Vista</string>
+    <string name="lib_add_short">Agregar</string>
+    <string name="lib_featured">Juego elegido</string>
+    <string name="lib_options">Opciones</string>
+    <string name="lib_view_shelf">Estante</string>
+    <string name="second_saves">Partidas: %1$s</string>
+    <string name="second_label">Listo para jugar</string>
+    <string name="panel_keys">Teclas</string>
+    <string name="panel_menu">Menú</string>
+    <string name="panel_enter">Enter</string>
+    <string name="panel_shift">Shift</string>
+    <string name="panel_f1">F1 · teclas</string>
+    <string name="panel_ctrl">Ctrl</string>
+    <string name="panel_fps">F2 · FPS</string>
+    <string name="panel_actions">Essentia</string>
+    <string name="panel_essentia_menu">Menú / Salir</string>
+    <string name="set_game2_title">Al jugar, la segunda pantalla muestra:</string>
+    <string name="set_game2_panel">Panel táctil (teclas que el mando no tiene, controles, salir)</string>
+    <string name="set_game2_black">Pantalla negra (sin distracciones)</string>
+    <string name="set_game2_off">Nada (no usarla)</string>
 </resources>

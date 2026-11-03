@@ -104,6 +104,20 @@ public class SettingsActivity extends ControllerActivity
             on ? EssentiaSettings.DUAL_AUTO : EssentiaSettings.DUAL_OFF));
         card(dual);
 
+        TextView gameLabel = Ui.text(this, getString(R.string.set_game2_title), 15, Ui.TEXT, true);
+        gameLabel.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), 0, Ui.dp(this, 4));
+        mList.addView(gameLabel);
+        RadioGroup game2 = new RadioGroup(this);
+        String g2 = EssentiaSettings.gameSecondScreen(this);
+        game2.addView(radio(R.string.set_game2_panel, EssentiaSettings.GAME2_PANEL, g2));
+        game2.addView(radio(R.string.set_game2_black, EssentiaSettings.GAME2_BLACK, g2));
+        game2.addView(radio(R.string.set_game2_off, EssentiaSettings.GAME2_OFF, g2));
+        game2.setOnCheckedChangeListener((g, id) -> {
+            RadioButton r = g.findViewById(id);
+            if (r != null) EssentiaSettings.setGameSecondScreen(this, (String) r.getTag());
+        });
+        card(game2);
+
         TextView note = Ui.text(this, getString(hasSecond ? R.string.set_dual_found : R.string.set_dual_none),
             13, Ui.TEXT_DIM, false);
         note.setPadding(Ui.dp(this, 4), Ui.dp(this, 6), 0, 0);

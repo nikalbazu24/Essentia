@@ -20,6 +20,15 @@ public final class EssentiaSettings
     public static final String DUAL_AUTO = "auto";
     public static final String DUAL_OFF = "off";
 
+    /** Second screen while playing: touch panel, black, or not used. */
+    public static final String GAME2_PANEL = "panel";
+    public static final String GAME2_BLACK = "black";
+    public static final String GAME2_OFF = "off";
+    private static final String KEY_GAME2 = "game_second_screen";
+
+    public static String gameSecondScreen(Context c) { return prefs(c).getString(KEY_GAME2, GAME2_PANEL); }
+    public static void setGameSecondScreen(Context c, String v) { prefs(c).edit().putString(KEY_GAME2, v).commit(); }
+
     private static final String KEY_OSC_MODE = "osc_mode";
     private static final String KEY_OSC_OPACITY = "osc_opacity";
     private static final String KEY_OSC_SCALE = "osc_scale";
@@ -29,6 +38,7 @@ public final class EssentiaSettings
     private static final String KEY_SORT = "library_sort";
     private static final String KEY_SAVES = "save_location";
 
+    public static final String VIEW_SHELF = "shelf";
     public static final String VIEW_GRID = "grid";
     public static final String VIEW_BIG = "big";
     public static final String VIEW_LIST = "list";
@@ -66,7 +76,7 @@ public final class EssentiaSettings
     public static boolean smoothScaling(Context c) { return prefs(c).getBoolean(KEY_SMOOTH, false); }
     public static void setSmoothScaling(Context c, boolean v) { prefs(c).edit().putBoolean(KEY_SMOOTH, v).commit(); }
 
-    public static String viewMode(Context c) { return prefs(c).getString(KEY_VIEW, VIEW_GRID); }
+    public static String viewMode(Context c) { return prefs(c).getString(KEY_VIEW, VIEW_SHELF); }
     public static void setViewMode(Context c, String v) { prefs(c).edit().putString(KEY_VIEW, v).commit(); }
 
     public static String sortMode(Context c) { return prefs(c).getString(KEY_SORT, SORT_RECENT); }

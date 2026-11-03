@@ -361,6 +361,43 @@ public class MainActivity extends SDLActivity
         });
     }
 
+    // Essentia: second screen while playing (touch panel, black screen, or not used)
+    private com.hatkid.mkxpz.ui.GamePanel mPanel;
+
+    private void showGamePanel()
+    {
+        String mode = EssentiaSettings.gameSecondScreen(this);
+        if (mPanel != null || EssentiaSettings.GAME2_OFF.equals(mode)) return;
+        String title = getIntent() != null ? getIntent().getStringExtra(EXTRA_TITLE) : null;
+        mPanel = com.hatkid.mkxpz.ui.GamePanel.show(this, getWindowManager().getDefaultDisplay(),
+            EssentiaSettings.GAME2_BLACK.equals(mode), title != null ? title : "",
+            new com.hatkid.mkxpz.ui.GamePanel.Keys() {
+                @Override public void down(int k) { SDLActivity.onNativeKeyDown(k); debugKey(k, true); }
+                @Override public void up(int k) { SDLActivity.onNativeKeyUp(k); debugKey(k, false); }
+            },
+            new com.hatkid.mkxpz.ui.GamePanel.Actions() {
+                @Override public void controls() { com.hatkid.mkxpz.ui.ControlsGuide.showDialog(MainActivity.this); }
+                @Override public void menu() { showExitDialog(); }
+            });
+    }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+        showGamePanel();
+    }
+
+    @Override
+    protected void onStop()
+    {
+        super.onStop();
+        if (mPanel != null) {
+            mPanel.dismiss();
+            mPanel = null;
+        }
+    }
+
     // Essentia: loading screen
     private static com.hatkid.mkxpz.ui.LoadingScreen mLoading;
 
