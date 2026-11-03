@@ -940,6 +940,7 @@ public class LibraryActivity extends ControllerActivity
         String mode = screenLabel(e.screenMode);
         if (mode != null) chip(mode, false);
         if (usesClassic(e)) chip("Ruby 1.8", false);
+        if (e.translate) chip(getString(R.string.chip_translated), false);
 
         if (st.saves > 0) {
             String when = st.lastSave > 0 ? DateUtils.getRelativeTimeSpanString(st.lastSave,
@@ -1007,6 +1008,10 @@ public class LibraryActivity extends ControllerActivity
                 Toast.makeText(this, ok ? R.string.opt_pin_done : R.string.opt_pin_failed, Toast.LENGTH_LONG).show();
             });
         }
+        labels.add(getString(e.translate ? R.string.opt_translate_off : R.string.opt_translate_on));
+        actions.add(() -> toggleTranslate(e));
+        labels.add(getString(R.string.opt_cloud)); actions.add(() -> cloudBackup(e));
+        labels.add(getString(R.string.opt_report)); actions.add(() -> ReportActivity.open(this, e.path, null));
         labels.add(getString(R.string.opt_send_scripts)); actions.add(() -> sendScripts(e));
         labels.add(getString(R.string.lib_remove)); actions.add(() -> { Library.remove(this, e.path); reload(); });
 
@@ -1042,10 +1047,98 @@ public class LibraryActivity extends ControllerActivity
         switch (mode) {
             case EssentiaSettings.SCREEN_ORIGINAL: return "4:3";
             case EssentiaSettings.SCREEN_STRETCH: return getString(R.string.scr_badge_stretch);
-            case EssentiaSettings.SCREEN_WIDE: return "16:9";
+            case EssentiaSettings.SCREEN_WIDE: return "16:9+";
+            case EssentiaSettings.SCREEN_WIDE_SAFE: return "16:9";
             case EssentiaSettings.SCREEN_AMBIENT: return getString(R.string.scr_badge_ambient);
             default: return null;
         }
+    }
+
+    // ------------------------------------------------------------ translation and backups
+
+    private void toggleTranslate(Library.Entry e)
+    {
+        e.translate = !e.translate;
+        Library.update(this, e);
+        int msg = !e.translate ? R.string.tr_off
+            : Cloud.configured(this) ? R.string.tr_on : R.string.tr_on_no_cloud;
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(e.displayTitle())
+            .setMessage(getString(msg, Translator.folder(e.displayTitle()).getAbsolutePath()))
+            .setPositiveButton(android.R.string.ok, null)
+            .show();
+        reload();
+    }
+
+    private void cloudBackup(Library.Entry e)
+    {
+        if (!Cloud.backupsReady(this)) {
+            new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(R.string.opt_cloud)
+                .setMessage(R.string.cloud_not_ready)
+                .setPositiveButton(R.string.lib_settings, (d, w) -> startActivity(new Intent(this, SettingsActivity.class)))
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+            return;
+        }
+        long last = CloudBackup.lastBackup(this, e.path);
+        String when = last == 0 ? getString(R.string.cloud_never)
+            : DateUtils.getRelativeTimeSpanString(last, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString();
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(e.displayTitle())
+            .setMessage(getString(R.string.cloud_last, when))
+            .setPositiveButton(R.string.cloud_now, (d, w) -> runCloud(() -> {
+                boolean sent = CloudBackup.backup(this, e.path, true);
+                return getString(sent ? R.string.cloud_done : R.string.cloud_nothing);
+            }))
+            .setNeutralButton(R.string.cloud_restore, (d, w) -> chooseBackup(e))
+            .setNegativeButton(R.string.cancel, null)
+            .show();
+    }
+
+    private interface CloudJob { String run() throws Exception; }
+
+    private void runCloud(CloudJob job)
+    {
+        Toast.makeText(this, R.string.cloud_working, Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            String msg;
+            try { msg = job.run(); } catch (Exception ex) { msg = getString(R.string.cloud_failed, ex.getMessage()); }
+            final String text = msg;
+            runOnUiThread(() -> { if (!isFinishing()) Toast.makeText(this, text, Toast.LENGTH_LONG).show(); });
+        }, "EssentiaCloud").start();
+    }
+
+    private void chooseBackup(Library.Entry e)
+    {
+        Toast.makeText(this, R.string.cloud_working, Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            List<String[]> list;
+            try { list = CloudBackup.list(this, e.path); } catch (Exception ex) { list = null; }
+            final List<String[]> found = list;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (found == null || found.isEmpty()) {
+                    Toast.makeText(this, found == null ? R.string.cloud_list_failed : R.string.cloud_none, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                String[] names = new String[found.size()];
+                for (int i = 0; i < found.size(); i++) names[i] = CloudBackup.readable(found.get(i)[0]) + "\n" + found.get(i)[1];
+                new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle(R.string.cloud_restore)
+                    .setItems(names, (d, which) -> new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                        .setTitle(R.string.cloud_restore)
+                        .setMessage(getString(R.string.cloud_restore_confirm, CloudBackup.readable(found.get(which)[0])))
+                        .setPositiveButton(R.string.cloud_restore, (d2, w2) -> runCloud(() -> {
+                            int n = CloudBackup.restore(this, e.path, found.get(which)[0]);
+                            return getResources().getQuantityString(R.plurals.cloud_restored, n, n);
+                        }))
+                        .setNegativeButton(R.string.cancel, null)
+                        .show())
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
+            });
+        }, "EssentiaCloudList").start();
     }
 
     // ------------------------------------------------------------ scripts for review
@@ -1114,10 +1207,11 @@ public class LibraryActivity extends ControllerActivity
 
     private void chooseScreen(Library.Entry e)
     {
-        final String[] values = { "", EssentiaSettings.SCREEN_WIDE, EssentiaSettings.SCREEN_AMBIENT,
-            EssentiaSettings.SCREEN_ORIGINAL, EssentiaSettings.SCREEN_STRETCH };
-        final String[] labels = { getString(R.string.scr_general), getString(R.string.scr_wide),
-            getString(R.string.scr_ambient), getString(R.string.scr_original), getString(R.string.scr_stretch) };
+        final String[] values = { "", EssentiaSettings.SCREEN_WIDE_SAFE, EssentiaSettings.SCREEN_WIDE,
+            EssentiaSettings.SCREEN_AMBIENT, EssentiaSettings.SCREEN_ORIGINAL, EssentiaSettings.SCREEN_STRETCH };
+        final String[] labels = { getString(R.string.scr_general), getString(R.string.scr_wide_safe),
+            getString(R.string.scr_wide), getString(R.string.scr_ambient), getString(R.string.scr_original),
+            getString(R.string.scr_stretch) };
         int checked = 0;
         for (int i = 0; i < values.length; i++) if (values[i].equals(e.screenMode)) checked = i;
         new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)

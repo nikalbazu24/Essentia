@@ -353,8 +353,19 @@ try { exp } catch (...) {}
         // (a vertical screen keeps the game's own shape: it's as wide as the screen)
         const char *orient = getenv("ESSENTIA_ORIENTATION");
         bool portrait = orient && !strcmp(orient, "portrait");
-        if (mode && !strcmp(mode, "wide") && !portrait)
+        bool wide = mode && (!strcmp(mode, "wide") || !strcmp(mode, "wide_safe"));
+        if (wide && !portrait)
             preloadScripts.push_back("essentia_preload/widescreen.rb");
+    }
+
+    // Essentia: quality details (fast text, skip intros, picture filter)
+    preloadScripts.push_back("essentia_preload/essentia_quality.rb");
+
+    // Essentia: automatic translation (only for games the user marked)
+    {
+        const char *tr = getenv("ESSENTIA_TR_FILE");
+        if (tr && *tr)
+            preloadScripts.push_back("essentia_preload/essentia_translate.rb");
     }
 #endif
     fillStringVec(opts["RTP"], rtps);

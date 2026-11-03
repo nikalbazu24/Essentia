@@ -97,7 +97,11 @@ public final class GameStats
             String v = GameUpdater.localVersion(dir);
             s.version = v == null ? "" : v;
         } catch (Exception ignored) { }
-        s.kind = kindOf(dir);
+        try {
+            s.kind = GameProfile.of(c, dir).label();
+        } catch (Exception e) {
+            s.kind = kindOf(dir);
+        }
         s.size = cachedSize(c, dir);
         return s;
     }

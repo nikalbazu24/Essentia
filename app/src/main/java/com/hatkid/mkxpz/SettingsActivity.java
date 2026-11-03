@@ -120,6 +120,7 @@ public class SettingsActivity extends ControllerActivity
         mList.addView(fmtLabel);
         RadioGroup fmt = new RadioGroup(this);
         String sm = EssentiaSettings.screenMode(this);
+        fmt.addView(radio(R.string.scr_wide_safe_long, EssentiaSettings.SCREEN_WIDE_SAFE, sm));
         fmt.addView(radio(R.string.scr_wide_long, EssentiaSettings.SCREEN_WIDE, sm));
         fmt.addView(radio(R.string.scr_ambient_long, EssentiaSettings.SCREEN_AMBIENT, sm));
         fmt.addView(radio(R.string.scr_original_long, EssentiaSettings.SCREEN_ORIGINAL, sm));
@@ -150,9 +151,19 @@ public class SettingsActivity extends ControllerActivity
         orNote.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 10));
         mList.addView(orNote);
 
-        CheckBox smooth = check(R.string.set_smooth, EssentiaSettings.smoothScaling(this));
-        smooth.setOnCheckedChangeListener((b, on) -> EssentiaSettings.setSmoothScaling(this, on));
-        card(smooth);
+        TextView filterLabel = Ui.text(this, getString(R.string.set_filter_title), 15, Ui.TEXT, true);
+        filterLabel.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 4));
+        mList.addView(filterLabel);
+        RadioGroup filter = new RadioGroup(this);
+        String fm = EssentiaSettings.filter(this);
+        filter.addView(radio(R.string.set_filter_sharp, EssentiaSettings.FILTER_SHARP, fm));
+        filter.addView(radio(R.string.set_filter_smooth, EssentiaSettings.FILTER_SMOOTH, fm));
+        filter.addView(radio(R.string.set_filter_crt, EssentiaSettings.FILTER_CRT, fm));
+        filter.setOnCheckedChangeListener((g, id) -> {
+            RadioButton r = g.findViewById(id);
+            if (r != null) EssentiaSettings.setFilter(this, (String) r.getTag());
+        });
+        card(filter);
 
         boolean hasSecond = SecondScreen.findOtherDisplay(this, getWindowManager().getDefaultDisplay()) != null;
         CheckBox dual = check(R.string.set_dual,
@@ -241,6 +252,9 @@ public class SettingsActivity extends ControllerActivity
         section(R.string.set_comfort_title, 0);
         flagRow(R.string.set_resume_last, EssentiaSettings.RESUME_LAST, false);
         flagRow(R.string.set_rescan, EssentiaSettings.RESCAN, true);
+        flagRow(R.string.set_fast_text, EssentiaSettings.FAST_TEXT, false);
+        flagRow(R.string.set_skip_intro, EssentiaSettings.SKIP_INTRO, false);
+        buildCloud();
     }
 
     private void buildSaves()
@@ -337,6 +351,69 @@ public class SettingsActivity extends ControllerActivity
         LinearLayout.LayoutParams nlp = wrap();
         nlp.topMargin = Ui.dp(this, 8);
         mList.addView(news, nlp);
+    }
+
+    // ------------------------------------------------------------ database
+
+    private void buildCloud()
+    {
+        section(R.string.set_cloud_title, R.string.set_cloud_desc);
+
+        TextView urlLabel = Ui.text(this, getString(R.string.set_cloud_url), 15, Ui.TEXT, true);
+        urlLabel.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 4));
+        mList.addView(urlLabel);
+        android.widget.EditText url = new android.widget.EditText(this);
+        url.setSingleLine(true);
+        url.setTextColor(Ui.TEXT);
+        url.setHint("https://script.google.com/macros/s/…/exec");
+        url.setText(getSharedPreferences(EssentiaSettings.PREFS, MODE_PRIVATE).getString("cloud_url", ""));
+        url.addTextChangedListener(saver(t -> Cloud.setUrl(this, t)));
+        card(url);
+
+        TextView keyLabel = Ui.text(this, getString(R.string.set_cloud_key), 15, Ui.TEXT, true);
+        keyLabel.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 4));
+        mList.addView(keyLabel);
+        android.widget.EditText key = new android.widget.EditText(this);
+        key.setSingleLine(true);
+        key.setTextColor(Ui.TEXT);
+        key.setText(Cloud.backupKey(this));
+        key.addTextChangedListener(saver(t -> Cloud.setBackupKey(this, t)));
+        card(key);
+
+        flagRow(R.string.set_cloud_backup, EssentiaSettings.CLOUD_BACKUP, false);
+
+        Button test = Ui.button(this, getString(R.string.set_cloud_test), false);
+        test.setOnClickListener(v -> {
+            Cloud.setUrl(this, url.getText().toString());
+            Cloud.setBackupKey(this, key.getText().toString());
+            new Thread(() -> {
+                boolean ok;
+                try {
+                    org.json.JSONObject b = new org.json.JSONObject();
+                    b.put("action", "ping");
+                    Cloud.post(getApplicationContext(), b, 20000);
+                    ok = true;
+                } catch (Exception e) {
+                    ok = false;
+                }
+                final boolean done = ok;
+                runOnUiThread(() -> android.widget.Toast.makeText(this,
+                    done ? R.string.set_cloud_ok : R.string.set_cloud_fail, android.widget.Toast.LENGTH_LONG).show());
+            }).start();
+        });
+        mList.addView(test, wrap());
+    }
+
+
+    private interface TextSetter { void set(String v); }
+
+    private android.text.TextWatcher saver(TextSetter setter)
+    {
+        return new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void afterTextChanged(android.text.Editable e) { setter.set(e.toString()); }
+        };
     }
 
     // ------------------------------------------------------------ widgets

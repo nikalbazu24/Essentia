@@ -85,8 +85,13 @@ public final class Games
         Library.markPlayed(a, path);
         Library.Entry entry = Library.find(a, path);
         String title = entry != null ? entry.displayTitle() : readTitle(gameDir);
-        String screen = entry != null && !entry.screenMode.isEmpty()
-            ? entry.screenMode : EssentiaSettings.screenMode(a);
+        // screen format: the game's own choice, else the general one, adjusted by
+        // the game's profile (e.g. old Essentials keeps menus in their shape)
+        String global = EssentiaSettings.screenMode(a);
+        boolean ownScreen = entry != null && !entry.screenMode.isEmpty();
+        String screen = ownScreen ? entry.screenMode : global;
+        GameProfile profile = GameProfile.of(a, gameDir);
+        if (!ownScreen && EssentiaSettings.isWide(global) && !profile.screen.isEmpty()) screen = profile.screen;
 
         Intent intent = new Intent(a, MainActivity.class);
         intent.putExtra(MainActivity.EXTRA_GAME_PATH, path);
@@ -95,11 +100,13 @@ public final class Games
         String chosen = entry != null && entry.engine != null ? entry.engine : EssentiaSettings.ENGINE_AUTO;
         boolean auto = !EssentiaSettings.ENGINE_MODERN.equals(chosen) && !EssentiaSettings.ENGINE_CLASSIC.equals(chosen);
         boolean classic = classicEngineAvailable(a) && (EssentiaSettings.ENGINE_CLASSIC.equals(chosen)
-            || (auto && EssentiaSettings.learnedClassic(a, path)));
+            || (auto && (EssentiaSettings.learnedClassic(a, path)
+                || EssentiaSettings.ENGINE_CLASSIC.equals(profile.engine))));
         intent.putExtra(MainActivity.EXTRA_ENGINE, classic ? EssentiaSettings.ENGINE_CLASSIC : EssentiaSettings.ENGINE_MODERN);
         // automatic engine, first try with the modern one: may switch to classic
         intent.putExtra(MainActivity.EXTRA_AUTO_ENGINE, auto && !classic && classicEngineAvailable(a));
         intent.putExtra(MainActivity.EXTRA_FROM_FRONTEND, newTask);
+        intent.putExtra(MainActivity.EXTRA_TRANSLATE, entry != null && entry.translate);
         intent.putExtra(MainActivity.EXTRA_DATA_DIR, Saves.dirFor(a, gameDir, title).getAbsolutePath());
         if (newTask) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

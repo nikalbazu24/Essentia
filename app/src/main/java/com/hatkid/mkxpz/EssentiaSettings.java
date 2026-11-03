@@ -90,9 +90,41 @@ public final class EssentiaSettings
     public static final String SCREEN_AMBIENT = "ambient";
     public static final String SCREEN_STRETCH = "stretch";
     public static final String SCREEN_WIDE = "wide";
+    /** Safe widescreen (default): wide map, menus and battles in their own shape with soft sides. */
+    public static final String SCREEN_WIDE_SAFE = "wide_safe";
     private static final String KEY_SCREEN = "screen_mode";
 
-    public static String screenMode(Context c) { return prefs(c).getString(KEY_SCREEN, SCREEN_WIDE); }
+    public static String screenMode(Context c)
+    {
+        SharedPreferences p = prefs(c);
+        // the full widescreen was the default before: move to the safe one once
+        if (!p.getBoolean("screen_mode_v2", false)) {
+            SharedPreferences.Editor e = p.edit().putBoolean("screen_mode_v2", true);
+            if (SCREEN_WIDE.equals(p.getString(KEY_SCREEN, SCREEN_WIDE))) e.putString(KEY_SCREEN, SCREEN_WIDE_SAFE);
+            e.commit();
+        }
+        return p.getString(KEY_SCREEN, SCREEN_WIDE_SAFE);
+    }
+
+    public static boolean isWide(String mode) { return SCREEN_WIDE.equals(mode) || SCREEN_WIDE_SAFE.equals(mode); }
+
+    /** Picture filter: sharp pixels, smooth, or old TV lines. */
+    public static final String FILTER_SHARP = "sharp";
+    public static final String FILTER_SMOOTH = "smooth";
+    public static final String FILTER_CRT = "crt";
+    private static final String KEY_FILTER = "picture_filter";
+    public static String filter(Context c) { return prefs(c).getString(KEY_FILTER, smoothScaling(c) ? FILTER_SMOOTH : FILTER_SHARP); }
+    public static void setFilter(Context c, String v)
+    {
+        prefs(c).edit().putString(KEY_FILTER, v).commit();
+        setSmoothScaling(c, FILTER_SMOOTH.equals(v));
+    }
+    /** Messages appear at once (Pokémon Essentials text speed at its fastest). */
+    public static final String FAST_TEXT = "fast_text";
+    /** Skip the splash screens before the title. */
+    public static final String SKIP_INTRO = "skip_intro";
+    /** Back up saves to the database after playing. */
+    public static final String CLOUD_BACKUP = "cloud_backup";
     public static void setScreenMode(Context c, String v) { prefs(c).edit().putString(KEY_SCREEN, v).commit(); }
 
     /** Game screen orientation: horizontal (default), vertical (game on top, controls below) or both. */

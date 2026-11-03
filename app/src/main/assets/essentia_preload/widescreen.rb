@@ -27,7 +27,15 @@ module EssentiaWide
   @viewports = []    # viewports adjusted for 4:3 screens (weak list)
   @building = 0      # making the map's pieces
 
+  # Safe widescreen (default): only the map is wide; title, menus and battles
+  # keep their own shape in the middle, with soft blurred sides.
+  SAFE = ENV['ESSENTIA_SCREEN_MODE'] == 'wide_safe'
+
   class << self
+    def safe?
+      SAFE
+    end
+
     def aspect
       a = (ENV['ESSENTIA_ASPECT'] || '1.7778').to_f
       a = 16.0 / 9.0 if a < 1.4
@@ -151,7 +159,21 @@ module EssentiaWide
       m = off
       w = bw + 2 * m   # pictures a bit wider than the screen (scrolling) too
       ext = Bitmap.new(w, h)
-      if tall
+      if tall && SAFE
+        # Safe mode: the whole picture, stretched, blurred and darkened, fills
+        # the sides; the picture itself stays sharp in the middle.
+        ext.stretch_blt(Rect.new(0, 0, w, h), src, Rect.new(0, 0, bw, h))
+        begin
+          ext.blur
+          ext.blur
+        rescue StandardError
+        end
+        shade = Bitmap.new(8, 8)
+        shade.fill_rect(0, 0, 8, 8, Color.new(0, 0, 0, 255))
+        ext.stretch_blt(Rect.new(0, 0, w, h), shade, Rect.new(0, 0, 8, 8), 110)
+        shade.dispose
+        ext.blt(m, 0, src, Rect.new(0, 0, bw, h))
+      elsif tall
         # Backgrounds: the outer strip of the picture is widened a little to
         # reach the edge (no fold, no seam); the middle stays exactly as drawn.
         k = [m * 2, bw / 3].min
@@ -203,7 +225,7 @@ module EssentiaWide
       r = v.essentia_rect
       bw = base[0]
       return if @making_backdrop
-      if r.x == 0 && (r.width == bw || r.width == wide_w) && !in_battle?
+      if r.x == 0 && (r.width == bw || r.width == wide_w) && (SAFE || !in_battle?)
         # Title, menus, bag...: the screen stays exactly as designed, in the
         # middle (nothing hidden off-screen shows up); only its background
         # pictures reach the edges, on a layer just behind (see backdrop_for).
@@ -608,7 +630,7 @@ class Sprite
     else
       self.essentia_raw_bitmap = gb unless essentia_raw_bitmap.equal?(gb)
       extra = 0
-      if @essentia_battle && gb
+      if @essentia_battle && gb && !EssentiaWide.safe?
         r = src_rect
         cx = gx - ox + r.width * zoom_x / 2.0
         cy = y - oy + r.height * zoom_y / 2.0
@@ -827,7 +849,7 @@ module EssentiaWideWindow
         self.essentia_P_raw_x = @essentia_gx
         return
       end
-      if @essentia_gx == 0 && @essentia_gw == EssentiaWide.base[0]
+      if @essentia_gx == 0 && @essentia_gw == EssentiaWide.base[0] && !EssentiaWide.safe?
         self.essentia_P_raw_width = EssentiaWide.wide_w
         self.essentia_P_raw_x = full_x
       else

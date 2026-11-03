@@ -53,6 +53,7 @@ public class MainActivity extends SDLActivity
     /** Automatic engine: switch to the classic one if the game needs it. */
     public static final String EXTRA_AUTO_ENGINE = "essentia.AUTO_ENGINE";
     public static final String EXTRA_FROM_FRONTEND = "essentia.FROM_FRONTEND";
+    public static final String EXTRA_TRANSLATE = "essentia.TRANSLATE";
     private boolean mClassicEngine = false;
     private static final String GAME_PATH_DEFAULT = Environment.getExternalStorageDirectory() + "/mkxp-z";
     private static String GAME_PATH = GAME_PATH_DEFAULT;
@@ -163,6 +164,30 @@ public class MainActivity extends SDLActivity
 
             // Orientation (the engine tells SDL which ones are allowed)
             android.system.Os.setenv("ESSENTIA_ORIENTATION", EssentiaSettings.orientation(this), true);
+
+            // Errors, for the "send report" button
+            java.io.File errorFile = new java.io.File(getCacheDir(), "game_error.txt");
+            //noinspection ResultOfMethodCallIgnored
+            errorFile.delete();
+            android.system.Os.setenv("ESSENTIA_ERROR_FILE", errorFile.getAbsolutePath(), true);
+
+            // Quality details
+            android.system.Os.setenv("ESSENTIA_FAST_TEXT",
+                EssentiaSettings.flag(this, EssentiaSettings.FAST_TEXT, false) ? "1" : "0", true);
+            android.system.Os.setenv("ESSENTIA_SKIP_INTRO",
+                EssentiaSettings.flag(this, EssentiaSettings.SKIP_INTRO, false) ? "1" : "0", true);
+            android.system.Os.setenv("ESSENTIA_FILTER", EssentiaSettings.filter(this), true);
+
+            // Automatic translation (per game)
+            String trFile = "", trReq = "";
+            if (in != null && in.getBooleanExtra(EXTRA_TRANSLATE, false)) {
+                String t = in.getStringExtra(EXTRA_TITLE);
+                mTranslator = Translator.start(this, t != null ? t : "Juego");
+                trFile = mTranslator.translationsFile().getAbsolutePath();
+                trReq = mTranslator.requestFile().getAbsolutePath();
+            }
+            android.system.Os.setenv("ESSENTIA_TR_FILE", trFile, true);
+            android.system.Os.setenv("ESSENTIA_TR_REQ", trReq, true);
 
             // Automatic engine: the engine writes here when the game needs Ruby 1.8
             java.io.File fallback = new java.io.File(getCacheDir(), "engine_fallback.txt");
@@ -348,7 +373,9 @@ public class MainActivity extends SDLActivity
     protected void onDestroy()
     {
         stopPlayClock();
-        retryWithClassicEngine();
+        if (mTranslator != null) mTranslator.stop();
+        if (!retryWithClassicEngine()) offerReport();
+        CloudBackup.afterSession(this, gamePath());
         super.onDestroy();
 
         // HACK: Exiting the JVM (process) since Ruby does not likes when we
@@ -818,23 +845,50 @@ public class MainActivity extends SDLActivity
 
     // Essentia: automatic engine. The game stopped with an error typical of Ruby 1.8
     // games: open it again with the classic engine (the launcher remembers it).
-    private void retryWithClassicEngine()
+    private Translator mTranslator;
+
+    /** The game stopped with an error: offer to send a report. */
+    private void offerReport()
     {
         try {
-            java.io.File f = new java.io.File(getCacheDir(), "engine_fallback.txt");
+            java.io.File f = new java.io.File(getCacheDir(), "game_error.txt");
             if (!f.isFile() || f.length() == 0) return;
+            byte[] b = new byte[(int) Math.min(f.length(), 64 * 1024)];
+            try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
+                int n = in.read(b);
+                if (n <= 0) return;
+                b = java.util.Arrays.copyOf(b, n);
+            }
             //noinspection ResultOfMethodCallIgnored
             f.delete();
             String path = gamePath();
-            if (path == null) return;
+            if (path != null) ReportActivity.open(this, path, new String(b, "UTF-8"));
+        } catch (Exception e) {
+            Log.w(TAG, "Report: " + e);
+        }
+    }
+
+    private boolean retryWithClassicEngine()
+    {
+        try {
+            java.io.File f = new java.io.File(getCacheDir(), "engine_fallback.txt");
+            if (!f.isFile() || f.length() == 0) return false;
+            //noinspection ResultOfMethodCallIgnored
+            f.delete();
+            //noinspection ResultOfMethodCallIgnored
+            new java.io.File(getCacheDir(), "game_error.txt").delete();
+            String path = gamePath();
+            if (path == null) return false;
             Intent i = new Intent(this, LauncherActivity.class);
             i.putExtra("path", path);
             i.putExtra(LauncherActivity.EXTRA_RETRY_CLASSIC, true);
             i.putExtra(EXTRA_FROM_FRONTEND, getIntent().getBooleanExtra(EXTRA_FROM_FRONTEND, false));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(i);
+            return true;
         } catch (Exception e) {
             Log.w(TAG, "Classic engine retry: " + e);
+            return false;
         }
     }
 

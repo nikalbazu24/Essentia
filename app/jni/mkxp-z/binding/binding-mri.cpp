@@ -1172,6 +1172,24 @@ static void showExc(VALUE exc, const BacktraceData &btData) {
     snprintf(&ms[0], ms.size(), "Script '%s' line %s: %s occured.\n\n%s",
              file.c_str(), line, RSTRING_PTR(name), RSTRING_PTR(msg));
     
+#if defined(MKXPZ_BUILD_ANDROID)
+    /* Essentia: the error, for the "send report" button */
+    {
+        const char *errFile = getenv("ESSENTIA_ERROR_FILE");
+        if (errFile && *errFile)
+        {
+            FILE *f = fopen(errFile, "wb");
+            if (f)
+            {
+                const char *summary = ms.c_str();
+                fwrite(summary, 1, strlen(summary), f);
+                fputs("\n\n", f);
+                fwrite(RSTRING_PTR(ds), 1, RSTRING_LEN(ds), f);
+                fclose(f);
+            }
+        }
+    }
+#endif
 #if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
     /* Essentia: automatic engine. An error typical of a game written for
      * Ruby 1.8, early on: Essentia reopens the game with the classic engine. */

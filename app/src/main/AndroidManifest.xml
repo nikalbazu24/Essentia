@@ -129,6 +129,18 @@
             <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />
         </activity>
 
+        <!-- Error reports (after a game stops with an error) -->
+        <activity
+            android:name=".ReportActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Save backups to the database -->
+        <service
+            android:name=".CloudBackup$Worker"
+            android:exported="false" />
+
         <!-- Files Essentia shares (e.g. a game's scripts for review) -->
         <provider
             android:name=".ShareProvider"
