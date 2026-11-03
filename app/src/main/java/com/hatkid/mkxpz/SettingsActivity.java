@@ -56,6 +56,7 @@ public class SettingsActivity extends ControllerActivity
         buildTurbo();
         buildSaves();
         buildRtp();
+        buildGameUpdates();
         buildFrontends();
         buildUpdates();
         buildAbout();
@@ -198,6 +199,12 @@ public class SettingsActivity extends ControllerActivity
                 android.widget.Toast.LENGTH_LONG).show();
         });
         card(make);
+    }
+
+    private void buildGameUpdates()
+    {
+        section(R.string.set_auto_update_title, R.string.set_auto_update_desc);
+        flagRow(R.string.set_auto_update, EssentiaSettings.AUTO_UPDATE, true);
     }
 
     private void buildSaves()

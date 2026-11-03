@@ -749,7 +749,9 @@ public class LibraryActivity extends ControllerActivity
             return;
         }
         if (!EssentiaSettings.SORT_AZ.equals(mSort)) mSelected = 0; // becomes the most recent
-        Games.startGame(this, dir, false);
+        // A new official version of the game? Offer it before playing.
+        com.hatkid.mkxpz.ui.UpdateFlow.beforeLaunch(this, dir, e.displayTitle(),
+            () -> Games.startGame(this, dir, false));
     }
 
     private void showOptions(int pos)
@@ -813,134 +815,7 @@ public class LibraryActivity extends ControllerActivity
 
     private void updateGame(Library.Entry e)
     {
-        File dir = new File(e.path);
-        AlertDialog checking = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(e.displayTitle())
-            .setMessage(R.string.upd_checking)
-            .setCancelable(false)
-            .show();
-        new Thread(() -> {
-            try {
-                GameUpdater.Info info = GameUpdater.check(dir);
-                runOnUiThread(() -> {
-                    checking.dismiss();
-                    if (!info.newer()) {
-                        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                            .setTitle(e.displayTitle())
-                            .setMessage(getString(R.string.upd_latest, info.current))
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show();
-                        return;
-                    }
-                    if (info.links.isEmpty()) {
-                        updateError(e, getString(R.string.upd_no_host));
-                        return;
-                    }
-                    String[] hosts = info.links.keySet().toArray(new String[0]);
-                    final int[] chosen = { 0 };
-                    AlertDialog.Builder b = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                        .setTitle(getString(R.string.upd_found, info.latest))
-                        .setPositiveButton(R.string.upd_do, (d, w) -> runUpdate(e, info.links.get(hosts[chosen[0]]), info.latest))
-                        .setNegativeButton(R.string.cancel, null);
-                    if (hosts.length > 1) {
-                        b.setSingleChoiceItems(hosts, 0, (d, w) -> chosen[0] = w);
-                    } else {
-                        b.setMessage(getString(R.string.upd_found_msg, info.current, info.latest, hosts[0]));
-                    }
-                    b.show();
-                });
-            } catch (Exception ex) {
-                runOnUiThread(() -> {
-                    checking.dismiss();
-                    updateError(e, getString(R.string.upd_check_failed));
-                });
-            }
-        }, "EssentiaUpdateCheck").start();
-    }
-
-    private void runUpdate(Library.Entry e, String link, String version)
-    {
-        File dir = new File(e.path);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int p = Ui.dp(this, 20);
-        box.setPadding(p, p, p, p);
-        TextView status = Ui.text(this, getString(R.string.upd_downloading), 16, Ui.TEXT, true);
-        box.addView(status);
-        android.widget.ProgressBar bar = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        bar.setMax(1000);
-        bar.setIndeterminate(true);
-        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 16));
-        blp.topMargin = Ui.dp(this, 12);
-        box.addView(bar, blp);
-        TextView detail = Ui.text(this, "", 14, Ui.TEXT_DIM, false);
-        detail.setPadding(0, Ui.dp(this, 8), 0, 0);
-        box.addView(detail);
-        TextView note = Ui.text(this, getString(R.string.upd_note), 13, Ui.TEXT_DIM, false);
-        note.setPadding(0, Ui.dp(this, 10), 0, 0);
-        box.addView(note);
-
-        final boolean[] cancel = { false };
-        AlertDialog dlg = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(e.displayTitle() + "  \u2192  " + version)
-            .setView(box)
-            .setCancelable(false)
-            .setNegativeButton(R.string.cancel, (d, w) -> cancel[0] = true)
-            .show();
-        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-        final int[] steps = { R.string.upd_downloading, R.string.upd_extracting, R.string.upd_copying };
-        GameUpdater.Progress progress = new GameUpdater.Progress() {
-            @Override public void update(int step, float fraction, String text) {
-                runOnUiThread(() -> {
-                    status.setText(steps[step]);
-                    bar.setIndeterminate(fraction < 0);
-                    if (fraction >= 0) bar.setProgress((int) (fraction * 1000));
-                    detail.setText(text);
-                    if (step == 2) dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
-                });
-            }
-            @Override public boolean cancelled() { return cancel[0]; }
-        };
-
-        new Thread(() -> {
-            String message;
-            try {
-                File backup = GameUpdater.install(dir, link, new File(android.os.Environment.getExternalStorageDirectory(),
-                    "Essentia/Respaldos"), progress);
-                if (cancel[0]) message = null;
-                else message = getString(R.string.upd_done, version)
-                    + (backup != null ? "\n\n" + getString(R.string.upd_backup, backup.getAbsolutePath()) : "");
-            } catch (GameUpdater.UnsupportedFormat ex) {
-                message = getString(R.string.upd_format, ex.getMessage());
-            } catch (GameUpdater.NoSpace ex) {
-                message = getString(R.string.upd_space, GameUpdater.mb(ex.needed));
-            } catch (Exception ex) {
-                message = getString(R.string.upd_failed) + "\n(" + ex.getMessage() + ")";
-            }
-            final String msg = message;
-            runOnUiThread(() -> {
-                getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                if (dlg.isShowing()) dlg.dismiss();
-                reload();
-                if (msg != null) {
-                    new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                        .setTitle(e.displayTitle())
-                        .setMessage(msg)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show();
-                }
-            });
-        }, "EssentiaUpdate").start();
-    }
-
-    private void updateError(Library.Entry e, String msg)
-    {
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(e.displayTitle())
-            .setMessage(msg)
-            .setPositiveButton(android.R.string.ok, null)
-            .show();
+        com.hatkid.mkxpz.ui.UpdateFlow.manual(this, new File(e.path), e.displayTitle(), this::reload);
     }
 
     private void chooseEngine(Library.Entry e)

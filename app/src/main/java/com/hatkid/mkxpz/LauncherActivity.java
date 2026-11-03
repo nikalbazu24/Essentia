@@ -74,8 +74,11 @@ public class LauncherActivity extends Activity
             return;
         }
 
-        Games.startGame(this, dir, true);
-        finish();
+        // A new official version of the game? Offer it before playing.
+        com.hatkid.mkxpz.ui.UpdateFlow.beforeLaunch(this, dir, Games.readTitle(dir), () -> {
+            Games.startGame(this, dir, true);
+            finish();
+        });
     }
 
     @Override

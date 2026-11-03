@@ -589,7 +589,12 @@ public class MainActivity extends SDLActivity
             case "heal": msg = getString(result.equals("ok") ? R.string.act_heal_ok : R.string.act_unsupported); break;
             case "money": msg = getString(result.equals("ok") ? R.string.act_money_ok : R.string.act_unsupported); break;
             case "speed": break;
-            case "updater": msg = getString(R.string.act_updater); break;
+            case "updater":
+                msg = getString(R.string.act_updater);
+                // look again next time the game is opened
+                getSharedPreferences("essentia_game_updates", MODE_PRIVATE).edit()
+                    .remove(new java.io.File(GAME_PATH).getAbsolutePath() + ":time").commit();
+                break;
             default:
                 if (result.equals("locked")) msg = getString(R.string.act_dex_locked);
                 else if (result.equals("unsupported")) msg = getString(R.string.act_unsupported);

@@ -105,6 +105,8 @@ public final class EssentiaSettings
     public static final String PERF_SUSTAINED = "perf_sustained";
     public static final String PERF_60HZ = "perf_60hz";
     public static final String DEBUG_INPUT = "debug_input";
+    /** Offer new official versions of games (PokéUpdater) before opening them. */
+    public static final String AUTO_UPDATE = "auto_game_updates";
     /** Move diagonally when two directions are held (off by default). */
     public static final String DIAGONAL = "diagonal_movement";
     /** Short vibration when touching the on-screen controls. */

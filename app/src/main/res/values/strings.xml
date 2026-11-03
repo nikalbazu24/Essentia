@@ -266,5 +266,12 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="upd_format">The update comes as %1$s, a format Essentia can\'t open yet (only .zip). Download it on a PC or with a file manager.</string>
     <string name="upd_space">Not enough free space: about %1$s are needed.</string>
     <string name="upd_failed">The update failed. The game was not changed (or only partly: it can be launched again).</string>
-    <string name="act_updater">This game wants to update itself: do it from the library → Options → Update the game</string>
+    <string name="act_updater">This game wants to update itself: close it and open it again, Essentia will offer the new version (or Options → Update the game)</string>
+    <string name="upd_skip">Play now</string>
+    <string name="upd_offer">There\'s a new official version of %1$s (you have %2$s, the new one is %3$s). Update before playing? Your saves are kept, and a copy is made first.</string>
+    <string name="upd_play_now">Not now</string>
+    <string name="upd_not_this">Skip this version</string>
+    <string name="set_auto_update_title">Game updates</string>
+    <string name="set_auto_update_desc">For games with an official updater (like Pokémon Añil), Essentia checks for new versions before opening them and offers to update without losing your saves.</string>
+    <string name="set_auto_update">Look for new versions before playing</string>
 </resources>
