@@ -68,6 +68,31 @@ for e in ext/*/; do
     esac
 done
 rm -rf ext/digest/rmd160 ext/digest/sha1 ext/digest/sha2 ext/digest/bubblebabble
+# Android 5-7 (API < 26) has no mblen(); Ruby only uses it to step through
+# file names, so a UTF-8 version is enough.
+if ! grep -q "essentia: mblen" util.c; then
+    cat >> util.c <<'EOF2'
+
+#if defined(__ANDROID__) && __ANDROID_API__ < 26
+/* essentia: mblen for old Android versions (UTF-8) */
+int
+mblen(const char *s, size_t n)
+{
+    unsigned char c;
+    if (!s) return 0;
+    if (!n) return -1;
+    c = (unsigned char)*s;
+    if (!c) return 0;
+    if (c < 0x80) return 1;
+    if (c >= 0xF0) return n >= 4 ? 4 : -1;
+    if (c >= 0xE0) return n >= 3 ? 3 : -1;
+    if (c >= 0xC0) return n >= 2 ? 2 : -1;
+    return -1;
+}
+#endif
+EOF2
+fi
+
 # Missing prototype (used before its declaration; -Werror catches these)
 grep -q "essentia: prototype" eval.c || \
     sed -i '0,/^#include "ruby.h"/s//#include "ruby.h"\nint rb_thread_join _((VALUE, double)); \/* essentia: prototype *\//' eval.c
