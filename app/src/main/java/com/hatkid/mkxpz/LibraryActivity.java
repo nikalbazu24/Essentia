@@ -138,7 +138,7 @@ public class LibraryActivity extends ControllerActivity
             Games.askAllFilesAccess(this, REQ_ALL_FILES, this::finish);
         } else if (savedInstanceState == null) {
             Updater.check(this, () -> { }, false);
-            mRoot.postDelayed(() -> { if (!isFinishing()) com.hatkid.mkxpz.ui.WhatsNew.showIfNew(this); }, 1800);
+            mRoot.postDelayed(() -> { if (!isFinishing() && getPreferences(MODE_PRIVATE).getBoolean("guide_v2", false)) com.hatkid.mkxpz.ui.WhatsNew.showIfNew(this); }, 1800);
             rescanFolders();
             if (EssentiaSettings.flag(this, EssentiaSettings.RESUME_LAST, false)) {
                 List<Library.Entry> all = Library.load(this);
@@ -982,6 +982,12 @@ public class LibraryActivity extends ControllerActivity
     private void updateSecondScreen()
     {
         if (mSecond == null) return;
+        List<Catalog.Game> news = Catalog.cached(this);
+        String newsText = news.isEmpty() ? "Descubre fangames en la tienda" : "De la tienda · "
+            + news.get(0).title + (news.size()>1 ? " · " + news.get(1).title : "");
+        mSecond.navigation(() -> select(mGames.isEmpty()?0:(mSelected+mGames.size()-1)%mGames.size()),
+            () -> play(mSelected), () -> select(mGames.isEmpty()?0:(mSelected+1)%mGames.size()),
+            () -> startActivity(new Intent(this,StoreActivity.class)), newsText);
         String footer = getResources().getQuantityString(R.plurals.lib_count, mGames.size(), mGames.size())
             + (mTotalPlay > 0 ? "  ·  " + getString(R.string.stat_total, GameStats.duration(this, mTotalPlay)) : "")
             + "  ·  " + getString(R.string.lib_second_hint);

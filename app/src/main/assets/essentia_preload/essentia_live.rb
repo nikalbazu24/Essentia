@@ -72,7 +72,7 @@ module Essentia
       raw = (trainer.seen rescue nil)
       seen = raw.select { |v| v == true }.length if raw.is_a?(Array)
     end
-    [team, badges, owned, seen]
+    [team, badges, owned, seen].map { |v| v.nil? ? '' : v }
   rescue Exception
     ['', '', '', '']
   end

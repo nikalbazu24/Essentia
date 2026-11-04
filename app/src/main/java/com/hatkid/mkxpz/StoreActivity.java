@@ -97,6 +97,7 @@ public class StoreActivity extends ControllerActivity
         showList();
         mPool.execute(() -> {
             List<Catalog.Game> fresh = Catalog.refresh(this, false);
+            Community.refresh(this);
             mMain.post(() -> {
                 if (isFinishing() || isDestroyed()) return;
                 mGames = fresh;
@@ -612,6 +613,11 @@ public class StoreActivity extends ControllerActivity
             info.addView(logo, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 80)));
             loadImage(g.logo, logo);
         }
+        TextView community = Ui.text(this, Community.summary(this,g.id), 14, Ui.TEXT_DIM, false);
+        info.addView(community);
+        android.widget.Button contribute = Ui.button(this, "Aportar mi prueba de compatibilidad", false);
+        contribute.setOnClickListener(v -> Community.contribute(this,g));
+        info.addView(contribute);
         TextView title = Ui.text(this, g.title, 26, Ui.TEXT, true);
         info.addView(title);
         if (!g.author.isEmpty()) info.addView(Ui.text(this, getString(R.string.store_by, g.author), 14, Ui.TEXT_DIM, false));

@@ -112,7 +112,7 @@ public final class GameArchives {
                 if(written!=size)throw new IOException("Archivo incompleto: "+name);
                 out.closeEntry();progress.update(1,-1,"Preparando "+name);
             });
-        }catch(LinkageError e){throw new IOException("RAR y 7z necesitan Android 8 o posterior. Extrae la descarga con un gestor de archivos.",e);}
+        }catch(LinkageError e){throw new IOException("El lector no está disponible en este dispositivo. Extrae la descarga con un gestor de archivos.",e);}
         return dest;
     }
 }

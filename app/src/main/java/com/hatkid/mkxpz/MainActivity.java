@@ -735,6 +735,18 @@ public class MainActivity extends SDLActivity
             },
             new com.hatkid.mkxpz.ui.GamePanel.Actions() {
                 @Override public void controls() { com.hatkid.mkxpz.ui.ControlsGuide.showDialog(MainActivity.this); }
+                @Override public void progress() {
+                    new AlertDialog.Builder(MainActivity.this).setTitle("Equipo y logros")
+                        .setMessage(GameProgress.summary(MainActivity.this,gamePath())).setPositiveButton("Cerrar",null).show();
+                }
+                @Override public void notes() {
+                    android.widget.EditText input=new android.widget.EditText(MainActivity.this);
+                    input.setMinLines(4);
+                    input.setText(getSharedPreferences("essentia_notes",MODE_PRIVATE).getString(gamePath(),""));
+                    new AlertDialog.Builder(MainActivity.this).setTitle("Mis notas del juego").setView(input)
+                        .setNegativeButton("Cancelar",null).setPositiveButton("Guardar",(d,w)->
+                            getSharedPreferences("essentia_notes",MODE_PRIVATE).edit().putString(gamePath(),input.getText().toString()).commit()).show();
+                }
                 @Override public void menu() { showExitDialog(); }
                 @Override public void game(String command) { gameAction(command); }
                 @Override public void turbo() { toggleTurbo(); }

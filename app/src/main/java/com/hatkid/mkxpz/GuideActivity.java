@@ -42,6 +42,7 @@ public class GuideActivity extends ControllerActivity {
         button("Abrir tienda y compatibilidad", () -> startActivity(new Intent(this, StoreActivity.class)));
         button("Controles y prueba del mando", () -> startActivity(scoped(ControlsActivity.class)));
         button("Recursos RPG Maker (RTP)", () -> startActivity(new Intent(this, RtpActivity.class)));
+        button("Traducción IA opcional (desactivada)", () -> startActivity(new Intent(this, AiTranslationActivity.class)));
         button("Avisos diarios de actualizaciones", () -> DailyUpdates.configure(this));
         button("Comunidad beta y sugerencias", () -> open("https://github.com/nikalbazu24/Essentia/issues"));
         if (path != null && game != null) {

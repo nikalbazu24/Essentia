@@ -123,7 +123,7 @@ public final class Translator
             else remote.add(t);
         }
         if (!done.isEmpty()) append(done);
-        if (remote.isEmpty() || !Cloud.configured(mContext)) return;
+        if (remote.isEmpty() || (!Cloud.configured(mContext) && !AiTranslation.enabled(mContext))) return;
 
         for (int i = 0; i < remote.size(); i += 40) {
             List<String> part = remote.subList(i, Math.min(remote.size(), i + 40));
@@ -143,7 +143,8 @@ public final class Translator
                 body.put("game", mGame);
                 body.put("lang", "es");
                 body.put("texts", arr);
-                JSONObject res = Cloud.post(mContext, body, 45000).getJSONObject("translations");
+                JSONObject res = AiTranslation.enabled(mContext) ? AiTranslation.translate(mContext, arr)
+                    : Cloud.post(mContext, body, 45000).getJSONObject("translations");
                 Map<String, String> got = new HashMap<>();
                 Iterator<String> keys = res.keys();
                 while (keys.hasNext()) {

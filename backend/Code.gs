@@ -71,14 +71,17 @@ function json_(o) {
 }
 
 function doGet(e) {
-  return json_({ ok: true, app: 'Essentia', version: 1 });
+  if (e && e.parameter && e.parameter.action === 'compatibility') return json_(compatibilityFeed_());
+  return json_({ ok: true, app: 'Essentia', version: 2 });
 }
 
 function doPost(e) {
   try {
     var req = JSON.parse(e.postData.contents);
     switch (req.action) {
-      case 'report': return json_(report_(req));
+      case 'report': return json_(req.kind === 'Sugerencia para la tienda' ? suggestion_(req) : report_(req));
+      case 'suggest': return json_(suggestion_(req));
+      case 'compatibility_submit': return json_(compatibilitySubmit_(req));
       case 'translate': return json_(translate_(req));
       case 'tr_dump': return json_(trDump_(req));
       case 'backup_put': return json_(backupPut_(req));
@@ -237,4 +240,61 @@ function backupGet_(r) {
     files.push({ name: f.getName(), data: Utilities.base64Encode(f.getBlob().getBytes()) });
   }
   return { ok: true, files: files };
+}
+
+// Separate private sheets; only explicitly approved game-only rows form the public feed.
+function extraSheet_(name, headers) {
+  var book = sheet_().getParent(), sh = book.getSheetByName(name);
+  if (!sh) { sh = book.insertSheet(name); sh.appendRow(headers); sh.setFrozenRows(1); }
+  return sh;
+}
+function cell_(value) {
+  var text = String(value == null ? '' : value);
+  return /^[=+@-]/.test(text) ? "'" + text : text;
+}
+function suggestion_(r) {
+  var id = Utilities.getUuid().slice(0, 8);
+  var sh = extraSheet_('Sugerencias', ['Fecha','Essentia','Juego','Enlace','Estado','Id']);
+  sh.appendRow([new Date(),clip_(r.essentia,30),clip_(r.game,100),clip_(r.detail,1000),'Pendiente',id].map(cell_));
+  return {ok:true,id:id};
+}
+function migrateSuggestions() {
+  var source = sheet_().getDataRange().getValues();
+  var target = extraSheet_('Sugerencias', ['Fecha','Essentia','Juego','Enlace','Estado','Id']);
+  var existing = {}, rows = target.getDataRange().getValues();
+  for(var j=1;j<rows.length;j++)existing[String(rows[j][5])] = true;
+  var count=0;
+  for(var i=1;i<source.length;i++) {
+    var row=source[i], id=String(row[12]);
+    if(row[6] !== 'Sugerencia para la tienda' || existing[id])continue;
+    target.appendRow([row[0],row[1],row[4],row[10],'Migrada',id].map(cell_));existing[id]=true;count++;
+  }
+  return count; // Originals remain in Reportes; re-running does not duplicate suggestions.
+}
+var COMPAT_HEADERS_=['Fecha','JuegoId','VersionJuego','Motor','Estado','HorasRegistradas','NotaPublica','Aprobado','Id'];
+function compatibilitySubmit_(r) {
+  if(!/^[a-z0-9_-]{1,80}$/i.test(String(r.game||'')))throw new Error('juego no válido');
+  if(['perfecto','jugable','con_fallas','no_abre'].indexOf(r.state)<0)throw new Error('estado no válido');
+  var hours=Number(r.hours);if(!isFinite(hours)||hours<0||hours>10000)throw new Error('horas no válidas');
+  var sh=extraSheet_('Compatibilidad',COMPAT_HEADERS_),id=Utilities.getUuid().slice(0,8);
+  sh.appendRow([new Date(),cell_(r.game),cell_(clip_(r.version,40)),cell_(clip_(r.engine,30)),r.state,Math.round(hours*100)/100,cell_(clip_(r.note,500)),false,id]);
+  var row=sh.getLastRow();
+  sh.getRange(row,8).insertCheckboxes();
+  return {ok:true,id:id};
+}
+function compatibilityFeed_() {
+  var sh=sheet_().getParent().getSheetByName('Compatibilidad');
+  var rows=sh?sh.getDataRange().getValues():[], groups={};
+  for(var i=Math.max(1,rows.length-5000);i<rows.length;i++) {
+    var r=rows[i];if(r[7]!==true)continue;
+    var id=String(r[1]),state=String(r[4]);
+    if(!/^[a-z0-9_-]{1,80}$/i.test(id)||['perfecto','jugable','con_fallas','no_abre'].indexOf(state)<0)continue;
+    var version=clip_(r[2],40),engine=clip_(r[3],30),key=JSON.stringify([id,version,engine]);
+    if(!groups[key])groups[key]={game:id,version:version,engine:engine,votes:{perfecto:0,jugable:0,con_fallas:0,no_abre:0},hours:0,reports:0,note:''};
+    var group=groups[key];group.votes[state]++;group.reports++;
+    var hours=Number(r[5]);if(isFinite(hours)&&hours>=0&&hours<=10000)group.hours+=hours;
+    group.hours=Math.round(group.hours*100)/100;
+    if(r[6])group.note=clip_(r[6],500);
+  }
+  return {ok:true,version:2,compatibility:Object.keys(groups).slice(-500).map(function(k){return groups[k];})};
 }

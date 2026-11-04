@@ -48,6 +48,8 @@ public final class GamePanel extends Presentation
     public interface Actions
     {
         void controls();
+        void notes();
+        void progress();
         void menu();
         /** A quick action for the game (see essentia_actions.rb). */
         void game(String command);
@@ -87,6 +89,10 @@ public final class GamePanel extends Presentation
     private final Runnable mPoll = new Runnable() {
         @Override public void run() {
             readLive();
+            if (mNotes != null) {
+                String notes=getContext().getSharedPreferences("essentia_notes",Context.MODE_PRIVATE).getString(mGameDir.getAbsolutePath(),"");
+                mNotes.setText(notes.isEmpty()?"Toca aquí para escribir notas":"Notas · "+notes);
+            }
             mHandler.postDelayed(this, 500);
         }
     };
@@ -148,10 +154,12 @@ public final class GamePanel extends Presentation
         col.addView(buildHeader(c));
         mProgress = Ui.text(c, "Equipo y logros · esperando al juego", 12, Ui.ACCENT_LIGHT, false);
         mProgress.setMaxLines(3);
+        mProgress.setOnClickListener(v -> mActions.progress());
         col.addView(mProgress);
         String notes = c.getSharedPreferences("essentia_notes", Context.MODE_PRIVATE).getString(mGameDir.getAbsolutePath(), "");
         mNotes = Ui.text(c, notes.isEmpty() ? "Añade notas desde las herramientas del juego" : "Notas · " + notes, 12, Ui.TEXT_DIM, false);
         mNotes.setMaxLines(2);
+        mNotes.setOnClickListener(v -> mActions.notes());
         col.addView(mNotes);
 
         LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.25f);
