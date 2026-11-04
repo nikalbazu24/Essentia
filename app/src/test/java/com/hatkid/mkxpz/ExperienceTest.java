@@ -92,7 +92,7 @@ public class ExperienceTest {
         shot("phone-report",report.findViewById(android.R.id.content),390,844);report.finish();
         Activity settings=Robolectric.buildActivity(SettingsActivity.class).setup().get();root=settings.findViewById(android.R.id.content);
         int[] categories={R.string.cat_screen,R.string.cat_controls,R.string.cat_games,R.string.cat_cloud,R.string.cat_advanced,R.string.cat_about};
-        for(int category:categories){label(root,settings.getString(category)).performClick();shot("settings-"+category,root,390,844);}settings.finish();
+        for(int category:categories){View categoryText=label(root,settings.getString(category));View tab=(View)categoryText.getParent();tab.performClick();assertTrue(tab.isSelected());shot("settings-"+category,root,390,844);}settings.finish();
     }
     private static final GamePanel.Keys KEYS=new GamePanel.Keys(){public void down(int k){}public void up(int k){}};
     private static final GamePanel.Actions ACTIONS=new GamePanel.Actions(){
