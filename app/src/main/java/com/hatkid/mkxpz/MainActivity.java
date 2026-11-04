@@ -50,6 +50,7 @@ public class MainActivity extends SDLActivity
     public static final String EXTRA_SCREEN_MODE = "essentia.SCREEN_MODE";
     /** Ruby engine: modern (Ruby 3.1) or classic (Ruby 1.8). */
     public static final String EXTRA_ENGINE = "essentia.ENGINE";
+    public static final String EXTRA_ENGINE_REASON = "essentia.ENGINE_REASON";
     /** Automatic engine: switch to the classic one if the game needs it. */
     public static final String EXTRA_AUTO_ENGINE = "essentia.AUTO_ENGINE";
     public static final String EXTRA_FROM_FRONTEND = "essentia.FROM_FRONTEND";
@@ -142,6 +143,9 @@ public class MainActivity extends SDLActivity
             GAME_PATH = requestedPath;
         }
 
+        com.hatkid.mkxpz.ui.Ui.applyTheme(this);
+        if(requestedPath!=null)Diagnostics.start(this,requestedPath,mClassicEngine?"classic":"modern",
+            getIntent().getStringExtra(EXTRA_ENGINE_REASON),getIntent().getStringExtra(EXTRA_SCREEN_MODE));
         // Essentia: settings read by the native engine through the environment
         try {
             Intent in = getIntent();
@@ -208,7 +212,7 @@ public class MainActivity extends SDLActivity
             // Live map for the second screen (written by essentia_live.rb)
             //noinspection ResultOfMethodCallIgnored
             new java.io.File(getCacheDir(), "essentia_live.txt").delete();
-            boolean livePanel = EssentiaSettings.GAME2_PANEL.equals(EssentiaSettings.gameSecondScreen(this));
+            boolean livePanel = true; // same companion is available on single-screen phones
             java.io.File helpRoot = new java.io.File(android.os.Environment.getExternalStorageDirectory(),
                 "Essentia/Respaldos/" + Saves.safeName(getIntent().getStringExtra(EXTRA_TITLE)));
             helpRoot.mkdirs();
@@ -390,7 +394,9 @@ public class MainActivity extends SDLActivity
     protected void onDestroy()
     {
         stopPlayClock();
+        if(mPhoneDialog!=null)mPhoneDialog.dismiss();
         if (mTranslator != null) mTranslator.stop();
+        Diagnostics.event(this,gamePath(),"activity_destroyed");
         if (!retryWithClassicEngine()) offerReport();
         CloudBackup.afterSession(this, gamePath());
         super.onDestroy();
@@ -412,21 +418,14 @@ public class MainActivity extends SDLActivity
         if (mExitDialog != null && mExitDialog.isShowing())
             return;
 
-        String[] items = {
-            getString(R.string.menu_resume),
-            getString(R.string.menu_controls),
-            getString(R.string.menu_exit)
-        };
-        mExitDialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(R.string.menu_title)
-            .setItems(items, (d, which) -> {
-                if (which == 1) {
-                    com.hatkid.mkxpz.ui.ControlsGuide.showDialog(this);
-                } else if (which == 2) {
-                    confirmExit();
-                }
-            })
-            .create();
+        String[] items = {"Continuar jugando","Acompañante · mapa, notas y progreso","Controles del juego","Diagnóstico local","Salir del juego"};
+        mExitDialog=new AlertDialog.Builder(this).setTitle("Tu partida")
+            .setItems(items,(d,which)->{
+                if(which==1)showPhoneCompanion();
+                else if(which==2)com.hatkid.mkxpz.ui.ControlsGuide.showDialog(this);
+                else if(which==3)Diagnostics.show(this,gamePath());
+                else if(which==4)confirmExit();
+            }).create();
         mExitDialog.show();
     }
 
@@ -435,7 +434,7 @@ public class MainActivity extends SDLActivity
         new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(R.string.exit_title)
             .setMessage(R.string.exit_message)
-            .setPositiveButton(R.string.exit_confirm, (d, w) -> finish())
+            .setPositiveButton(R.string.exit_confirm, (d, w) -> {Diagnostics.event(this,gamePath(),"user_exit");finish();})
             .setNegativeButton(R.string.exit_cancel, (d, w) -> d.dismiss())
             .show();
     }
@@ -503,6 +502,7 @@ public class MainActivity extends SDLActivity
         GameLink.send(this, "speed " + (mTurbo ? speed : 1));
         updateBadge();
         if (mPanel != null) mPanel.setTurbo(mTurbo, speed);
+        if(mPhoneCompanion!=null)mPhoneCompanion.setTurbo(mTurbo,speed);
     }
 
     public void toggleAutoFire()
@@ -511,6 +511,7 @@ public class MainActivity extends SDLActivity
         if (!mAutoFire) stopAutoFire();
         updateBadge();
         if (mPanel != null) mPanel.setAutoFire(mAutoFire);
+        if(mPhoneCompanion!=null)mPhoneCompanion.setAutoFire(mAutoFire);
         android.widget.Toast.makeText(this, mAutoFire ? R.string.act_autofire_on : R.string.act_autofire_off,
             android.widget.Toast.LENGTH_SHORT).show();
     }
@@ -757,7 +758,17 @@ public class MainActivity extends SDLActivity
                 @Override public void down(int k) { sendKey(k, true); }
                 @Override public void up(int k) { sendKey(k, false); }
             },
-            new com.hatkid.mkxpz.ui.GamePanel.Actions() {
+            companionActions());
+        if (mPanel != null) {
+            mPanel.setTurbo(mTurbo, EssentiaSettings.turboSpeed(this));
+            mPanel.setAutoFire(mAutoFire);
+        }
+    }
+
+    private android.app.Dialog mPhoneDialog;
+    private com.hatkid.mkxpz.ui.CompanionView mPhoneCompanion;
+    private com.hatkid.mkxpz.ui.GamePanel.Actions companionActions() {
+        return new com.hatkid.mkxpz.ui.GamePanel.Actions() {
                 @Override public void controls() { com.hatkid.mkxpz.ui.ControlsGuide.showDialog(MainActivity.this); }
                 @Override public void progress() {
                     new AlertDialog.Builder(MainActivity.this).setTitle("Equipo y logros")
@@ -776,11 +787,17 @@ public class MainActivity extends SDLActivity
                 @Override public void turbo() { toggleTurbo(); }
                 @Override public void autoFire() { toggleAutoFire(); }
                 @Override public void keyboard() { toggleKeyboard(); }
-            });
-        if (mPanel != null) {
-            mPanel.setTurbo(mTurbo, EssentiaSettings.turboSpeed(this));
-            mPanel.setAutoFire(mAutoFire);
-        }
+            };
+    }
+
+    private void showPhoneCompanion() {
+        if(mPhoneDialog!=null&&mPhoneDialog.isShowing())return;
+        String title=getIntent().getStringExtra(EXTRA_TITLE);
+        mPhoneDialog=com.hatkid.mkxpz.ui.GamePanel.phone(this,title==null?"Juego":title,GAME_PATH,
+            new File(getCacheDir(),"essentia_live.txt"),new com.hatkid.mkxpz.ui.GamePanel.Keys(){
+                public void down(int k){sendKey(k,true);}public void up(int k){sendKey(k,false);}
+            },companionActions(),mTurbo,EssentiaSettings.turboSpeed(this),mAutoFire);
+        mPhoneCompanion=mPhoneDialog.findViewById(android.R.id.content).findViewWithTag("phone-companion");
     }
 
     // Essentia: always full screen (no status or navigation bar over the game)
@@ -930,7 +947,7 @@ public class MainActivity extends SDLActivity
             //noinspection ResultOfMethodCallIgnored
             f.delete();
             String path = gamePath();
-            if (path != null) ReportActivity.open(this, path, new String(b, "UTF-8"));
+            if (path != null) {Diagnostics.error(this,path,new String(b,"UTF-8"));ReportActivity.open(this, path, new String(b, "UTF-8"));}
         } catch (Exception e) {
             Log.w(TAG, "Report: " + e);
         }
@@ -941,9 +958,11 @@ public class MainActivity extends SDLActivity
         try {
             java.io.File f = new java.io.File(getCacheDir(), "engine_fallback.txt");
             if (!f.isFile() || f.length() == 0) return false;
-            //noinspection ResultOfMethodCallIgnored
+            Diagnostics.event(this,gamePath(),"fallback_requested");
+            try(java.io.FileInputStream input=new java.io.FileInputStream(f)) {
+                Diagnostics.error(this,gamePath(),"Solicitud de motor clásico: "+new String(SaveTransaction.read(input,8192),"UTF-8"));
+            }
             f.delete();
-            //noinspection ResultOfMethodCallIgnored
             new java.io.File(getCacheDir(), "game_error.txt").delete();
             String path = gamePath();
             if (path == null) return false;
@@ -1027,6 +1046,7 @@ public class MainActivity extends SDLActivity
     @SuppressWarnings("unused")
     private static void onLoadPhase(String phase)
     {
+        if(mSingleton instanceof MainActivity)Diagnostics.event(mSingleton,((MainActivity)mSingleton).gamePath(),"phase:"+phase);
         if (mMainHandler != null) {
             mMainHandler.post(() -> {
                 if (mLoading != null) mLoading.setPhase(phase);
@@ -1041,6 +1061,7 @@ public class MainActivity extends SDLActivity
     @SuppressWarnings("unused")
     private static void onGameReady()
     {
+        if(mSingleton instanceof MainActivity)Diagnostics.event(mSingleton,((MainActivity)mSingleton).gamePath(),"first_frame");
         if (mMainHandler != null) {
             mMainHandler.post(() -> {
                 if (mLoading != null) mLoading.finish();

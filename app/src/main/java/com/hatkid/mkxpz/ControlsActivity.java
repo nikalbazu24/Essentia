@@ -83,7 +83,7 @@ public class ControlsActivity extends ControllerActivity
         header.addView(back);
         TextView title = Ui.text(this, getString(R.string.ctl_title), 24, Ui.TEXT, true);
         title.setPadding(Ui.dp(this, 14), 0, 0, 0);
-        header.addView(title);
+        header.addView(title,new LinearLayout.LayoutParams(0,-2,1f));
         list.addView(header);
 
         String gamePath = getIntent().getStringExtra(MainActivity.EXTRA_GAME_PATH);
@@ -106,6 +106,9 @@ public class ControlsActivity extends ControllerActivity
         mSticks = Ui.text(this, getString(R.string.ctl_test_sticks, "—"), 14, Ui.TEXT_DIM, false);
         mSticks.setPadding(0, Ui.dp(this, 6), 0, 0);
         box.addView(mSticks);
+        box.setVisibility(android.view.View.GONE);
+        testTitle.setText("Probar el mando · mostrar / ocultar");testTitle.setMinHeight(Ui.dp(this,48));testTitle.setFocusable(true);
+        testTitle.setBackground(Ui.focusable(this,Ui.SURFACE,12));testTitle.setOnClickListener(v->box.setVisibility(box.getVisibility()==android.view.View.VISIBLE?android.view.View.GONE:android.view.View.VISIBLE));
         list.addView(box, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT));
 

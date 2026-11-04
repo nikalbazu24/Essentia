@@ -76,7 +76,7 @@ public final class EssentiaSettings
     public static boolean smoothScaling(Context c) { return prefs(c).getBoolean(KEY_SMOOTH, false); }
     public static void setSmoothScaling(Context c, boolean v) { prefs(c).edit().putBoolean(KEY_SMOOTH, v).commit(); }
 
-    public static String viewMode(Context c) { return prefs(c).getString(KEY_VIEW, VIEW_SHELF); }
+    public static String viewMode(Context c) { return prefs(c).getString(KEY_VIEW, VIEW_GRID); }
     public static void setViewMode(Context c, String v) { prefs(c).edit().putString(KEY_VIEW, v).commit(); }
 
     public static String sortMode(Context c) { return prefs(c).getString(KEY_SORT, SORT_RECENT); }

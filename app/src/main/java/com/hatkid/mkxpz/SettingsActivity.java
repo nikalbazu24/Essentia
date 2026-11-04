@@ -73,10 +73,10 @@ public class SettingsActivity extends ControllerActivity
             final int cat = i;
             View tab = tab(CATEGORY_ICONS[i], getString(CATEGORIES[i]));
             tab.setOnClickListener(v -> showCategory(cat));
-            tab.setOnFocusChangeListener((v, has) -> { if (has) showCategory(cat); });
+
             LinearLayout.LayoutParams lp = portrait
-                ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 46))
-                : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 46));
+                ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 52))
+                : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 52));
             lp.setMargins(0, 0, portrait ? Ui.dp(this, 6) : 0, portrait ? 0 : Ui.dp(this, 4));
             mTabs.addView(tab, lp);
         }
@@ -92,7 +92,7 @@ public class SettingsActivity extends ControllerActivity
         }
         root.addView(side, portrait
             ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            : new LinearLayout.LayoutParams(Ui.dp(this, 250), ViewGroup.LayoutParams.MATCH_PARENT));
+            : new LinearLayout.LayoutParams(Ui.dp(this, 204), ViewGroup.LayoutParams.MATCH_PARENT));
 
         // Right (or below): the chosen category
         mScroll = new ScrollView(this);
@@ -151,6 +151,9 @@ public class SettingsActivity extends ControllerActivity
         mCategory = cat;
         for (int i = 0; i < mTabs.getChildCount(); i++) mTabs.getChildAt(i).setSelected(i == cat);
         mList.removeAllViews();
+        TextView heading=Ui.text(this,getString(CATEGORIES[cat]),26,Ui.TEXT,true);mList.addView(heading);
+        String[] hints={"Hazlo tuyo. Los cambios de aspecto conservan tus juegos.","Pantalla principal y acompañante de juego.","Mando, pantalla táctil y accesos durante la partida.","Juegos, partidas y recursos en un solo lugar.","Conexiones opcionales entre tus dispositivos Android.","Cambia una opción a la vez y compara en el mismo juego.","Actualizaciones, ayuda y créditos de Essentia."};
+        TextView hint=Ui.text(this,hints[cat],14,Ui.TEXT_DIM,false);hint.setPadding(0,0,0,Ui.dp(this,16));mList.addView(hint);
         switch (cat) {
             case 0: buildTheme(); buildMusic(); break;
             case 1: buildScreen(); break;
@@ -169,7 +172,7 @@ public class SettingsActivity extends ControllerActivity
     {
         section(R.string.set_theme_title, R.string.set_theme_desc);
         android.widget.GridLayout grid = new android.widget.GridLayout(this);
-        grid.setColumnCount(4);
+        grid.setColumnCount(getResources().getConfiguration().screenWidthDp < 600 ? 2 : 3);
         String current = Ui.theme(this);
         int[] names = { R.string.theme_esencia, R.string.theme_oceano, R.string.theme_bosque, R.string.theme_fuego,
             R.string.theme_electrico, R.string.theme_rosa, R.string.theme_noche };
@@ -207,7 +210,9 @@ public class SettingsActivity extends ControllerActivity
                 recreate();
             });
             android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
-            lp.width = Ui.dp(this, 108);
+            lp.width = 0;
+            lp.columnSpec=android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f);
+            lp.height=Ui.dp(this,100);
             lp.setMargins(0, 0, Ui.dp(this, 8), Ui.dp(this, 8));
             grid.addView(swatch, lp);
         }

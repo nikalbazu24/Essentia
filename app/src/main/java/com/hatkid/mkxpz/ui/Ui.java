@@ -16,24 +16,24 @@ import android.widget.TextView;
 public final class Ui
 {
     // The palette in use (set by applyTheme; the defaults are the "Esencia" theme)
-    public static int BG = Color.parseColor("#14162B");
-    public static int SURFACE = Color.parseColor("#1E2240");
-    public static int SURFACE_HI = Color.parseColor("#2A2F55");
-    public static int ACCENT = Color.parseColor("#8A5CF6");
-    public static int ACCENT_LIGHT = Color.parseColor("#B48CFF");
+    public static int BG = Color.parseColor("#0B1B21");
+    public static int SURFACE = Color.parseColor("#142B32");
+    public static int SURFACE_HI = Color.parseColor("#23424A");
+    public static int ACCENT = Color.parseColor("#117E78");
+    public static int ACCENT_LIGHT = Color.parseColor("#8BE0CC");
     public static final int GOLD = Color.parseColor("#FFE066");
-    public static final int TEXT = Color.parseColor("#F3EEFE");
-    public static final int TEXT_DIM = Color.parseColor("#A9A6C9");
+    public static final int TEXT = Color.parseColor("#F1F7F6");
+    public static final int TEXT_DIM = Color.parseColor("#B1C5C8");
 
     /** Themes: id, background, surface, raised surface, accent, light accent. */
     public static final String[][] THEMES = {
-        { "esencia",   "#14162B", "#1E2240", "#2A2F55", "#8A5CF6", "#B48CFF" },
+        { "esencia",   "#0B1B21", "#142B32", "#23424A", "#117E78", "#8BE0CC" },
         { "oceano",    "#0D1A2B", "#14273E", "#1E3757", "#2F8CFF", "#86BFFF" },
         { "bosque",    "#0E1C16", "#162A20", "#213D2E", "#2EBD6B", "#86E3AE" },
         { "fuego",     "#1D1111", "#2A1919", "#3E2323", "#F0533A", "#FF9C88" },
         { "electrico", "#1A1808", "#26230F", "#383316", "#E8B500", "#FFE066" },
         { "rosa",      "#1E1220", "#2C1A2F", "#402544", "#E5489A", "#FF94C8" },
-        { "noche",     "#000000", "#101014", "#1C1C24", "#8A5CF6", "#B48CFF" },
+        { "noche",     "#000000", "#101014", "#1C1C24", "#117E78", "#8BE0CC" },
     };
 
     private static int sStamp = 0;
@@ -120,10 +120,11 @@ public final class Ui
         b.setTextColor(TEXT);
         b.setBackground(focusable(c, primary ? ACCENT : SURFACE, 12));
         b.setStateListAnimator(null);
+        b.setContentDescription(text);
         int h = dp(c, 16), v = dp(c, 10);
         b.setPadding(h, v, h, v);
-        b.setMinHeight(dp(c, 44));
-        b.setMinimumHeight(dp(c, 44));
+        b.setMinHeight(dp(c, 48));
+        b.setMinimumHeight(dp(c, 48));
         b.setFocusable(true);
         return b;
     }
@@ -136,6 +137,8 @@ public final class Ui
         t.setTextColor(color);
         if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
         t.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        t.setFontFeatureSettings("kern");
+        t.setLineSpacing(dp(c, 2), 1f);
         return t;
     }
 

@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 
 /**
@@ -27,6 +28,14 @@ public abstract class ControllerActivity extends Activity
             w.getAttributes().layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
+    }
+
+    @Override public void setContentView(View content) {
+        super.setContentView(AppShell.wrap(this, content));
+    }
+
+    @Override public void setContentView(View content, ViewGroup.LayoutParams params) {
+        setContentView(content);
     }
 
     @Override

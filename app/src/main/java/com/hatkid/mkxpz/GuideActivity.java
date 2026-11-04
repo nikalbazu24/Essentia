@@ -17,6 +17,7 @@ public class GuideActivity extends ControllerActivity {
     private String path, title;
     private EditText notes;
     private boolean working;
+    private int toolTab;
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         path = getIntent().getStringExtra(MainActivity.EXTRA_GAME_PATH);
@@ -27,29 +28,54 @@ public class GuideActivity extends ControllerActivity {
         int pad = Ui.dp(this, 20); list.setPadding(pad,pad,pad,pad); list.setBackgroundColor(Ui.BG);
         scroll.addView(list); setContentView(scroll);
         button("‹ Volver", this::finish);
-        text("Essentia by Díptico", 27);
-        text("2.0 beta · Tu biblioteca de fangames en Android", 17);
-        if (path != null && game != null) {
+        text("Essentia by Díptico",27);
+        if(path!=null&&game!=null) {
             text(title,23);
-            button("Controles de este juego", () -> startActivity(scoped(ControlsActivity.class)));
-            button("Tienda y actualizaciones", () -> startActivity(new Intent(this,StoreActivity.class)
-                .putExtra(StoreActivity.EXTRA_TAB,1).putExtra(StoreActivity.EXTRA_GAME,path)));
-            text(GameProgress.summary(this,path),16);
-            Catalog.Game catalog = Catalog.match(Catalog.cached(this),title,new File(path));
-            if (catalog != null && !Catalog.webUrl(catalog.page).isEmpty())
-                button("Página del creador y contenido del juego", () -> open(catalog.page));
-            button("Restaurar respaldo local", this::chooseBackup);
-            button("Revisar y corregir traducciones", () -> startActivity(scoped(TranslationReviewActivity.class)));
-            button("Diagnóstico y compartir informe", () -> Diagnostics.show(this,path));
-            text("Mis notas · Se guardan solo en este dispositivo",18);
-            notes = new EditText(this); notes.setTextColor(Ui.TEXT); notes.setMinLines(4);
-            notes.setHint("Objetivos, lugares y recordatorios…"); notes.setHintTextColor(Ui.TEXT_DIM);
-            notes.setText(getSharedPreferences("essentia_notes",MODE_PRIVATE).getString(path,""));
-            list.addView(notes);
-            button("Ver la guía de Essentia", () -> startActivity(new Intent(this,GuideActivity.class)));
-            return;
+            text("Tu espacio de juego · partidas, notas y herramientas",16);
+            LinearLayout tabs=new LinearLayout(this);
+            android.widget.HorizontalScrollView tabScroll=new android.widget.HorizontalScrollView(this);tabScroll.setHorizontalScrollBarEnabled(false);tabScroll.addView(tabs);list.addView(tabScroll);
+            LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);list.addView(content);
+            String[] labels={"Partida","Notas","Respaldo","Herramientas"};
+            int selected=state==null?0:state.getInt("tools_tab",0);
+            for(int n=0;n<labels.length;n++){
+                final int tab=n;Button button=Ui.button(this,labels[n],false);
+                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-2);lp.rightMargin=Ui.dp(this,8);tabs.addView(button,lp);
+                button.setOnClickListener(v->{
+                    saveNotes();toolTab=tab;notes=null;
+                    for(int i=0;i<tabs.getChildCount();i++)tabs.getChildAt(i).setSelected(i==tab);
+                    content.removeAllViews();LinearLayout outer=list;list=content;
+                    if(tab==0){
+                        text("Última lectura del juego",21);text(GameProgress.summary(this,path),16);
+                        button("Controles de este juego",()->startActivity(scoped(ControlsActivity.class)));
+                        button("Buscar actualizaciones del juego",()->startActivity(new Intent(this,StoreActivity.class).putExtra(StoreActivity.EXTRA_TAB,1).putExtra(StoreActivity.EXTRA_GAME,path)));
+                        Catalog.Game catalog=Catalog.match(Catalog.cached(this),title,new File(path));
+                        if(catalog!=null&&!Catalog.webUrl(catalog.page).isEmpty())button("Visitar al creador",()->open(catalog.page));
+                    }else if(tab==1){
+                        text("Mis notas",21);text("Se guardan en este dispositivo para este juego.",16);
+                        notes=new EditText(this);notes.setTextColor(Ui.TEXT);notes.setHintTextColor(Ui.TEXT_DIM);notes.setMinLines(6);
+                        notes.setGravity(android.view.Gravity.TOP);notes.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                        notes.setHint("Objetivos, lugares y recordatorios…");notes.setText(getSharedPreferences("essentia_notes",MODE_PRIVATE).getString(path,""));list.addView(notes);
+                        button("Guardar notas",()->{saveNotes();android.widget.Toast.makeText(this,"Notas guardadas",0).show();});
+                    }else if(tab==2){
+                        text("Cuida tus partidas",21);text("Cierra el juego antes de restaurar. Se conservará una copia de la partida actual.",16);
+                        button("Restaurar respaldo local",this::chooseBackup);
+                        text("Las copias en la nube son opcionales. Se configuran desde Ajustes → Conexiones.",16);
+                    }else{
+                        text("Herramientas de este juego",21);
+                        button("Diagnóstico local e informe",()->Diagnostics.show(this,path));
+                        button("Revisar traducciones",()->startActivity(scoped(TranslationReviewActivity.class)));
+                        button("Revisar selección automática del motor",()->new AlertDialog.Builder(this).setTitle("Motor automático de este juego")
+                            .setMessage("Motor clásico aprendido: "+(EssentiaSettings.learnedClassic(this,path)?"sí":"no")+". Puedes olvidar solo este aprendizaje; no cambia tu elección manual ni las recomendaciones del perfil, y no toca partidas.")
+                            .setNegativeButton("Cerrar",null).setPositiveButton("Olvidar aprendizaje",(d,w)->EssentiaSettings.setLearnedClassic(this,path,false)).show());
+                        button("Reportar un problema",()->ReportActivity.open(this,path,null));
+                        button("Ver la guía de Essentia",()->startActivity(new Intent(this,GuideActivity.class)));
+                    }
+                    list=outer;
+                });
+            }
+            tabs.getChildAt(Math.max(0,Math.min(3,selected))).performClick();return;
         }
-
+        text("Tu biblioteca de aventuras en Android",17);
         text("1 · Prepara el juego", 21);
         text("Descarga la versión completa del creador. Essentia ejecuta juegos RPG Maker XP, VX y VX Ace; no ejecuta ROMs de GBA/NDS ni juegos Unity o EXE de Windows. En la tienda puedes visitar las páginas y ver la compatibilidad conocida.",16);
         text("2 · Instala y abre",21);
@@ -74,8 +100,9 @@ public class GuideActivity extends ControllerActivity {
         return i;
     }
     private void text(String value,int size) {
-        TextView t = Ui.text(this,value,size,Ui.TEXT,size>=21);
+        TextView t = Ui.text(this,value,size,size>=21?Ui.ACCENT_LIGHT:Ui.TEXT,size>=21);
         int p=Ui.dp(this,9);t.setPadding(0,p,0,p);list.addView(t);
+        if(size<21){t.setBackground(Ui.rounded(this,Ui.SURFACE,14));t.setPadding(Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,14),Ui.dp(this,12));}
     }
     private void button(String label,Runnable action) {
         Button b=Ui.button(this,label,false);b.setOnClickListener(v->action.run());
@@ -144,8 +171,7 @@ public class GuideActivity extends ControllerActivity {
         },"EssentiaRestore").start();
     }
     private void message(String s){new AlertDialog.Builder(this).setMessage(s).setPositiveButton("Aceptar",null).show();}
-    @Override protected void onPause(){
-        super.onPause();
-        if(notes!=null&&path!=null)getSharedPreferences("essentia_notes",MODE_PRIVATE).edit().putString(path,notes.getText().toString()).apply();
-    }
+    private void saveNotes(){if(notes!=null&&path!=null)getSharedPreferences("essentia_notes",MODE_PRIVATE).edit().putString(path,notes.getText().toString()).commit();}
+    @Override protected void onPause(){saveNotes();super.onPause();}
+    @Override protected void onSaveInstanceState(Bundle out){saveNotes();out.putInt("tools_tab",toolTab);super.onSaveInstanceState(out);}
 }

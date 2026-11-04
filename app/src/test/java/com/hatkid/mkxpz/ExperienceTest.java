@@ -1,0 +1,109 @@
+package com.hatkid.mkxpz;
+
+import android.app.*;
+import android.content.*;
+import android.graphics.*;
+import android.view.*;
+import android.widget.*;
+import com.hatkid.mkxpz.ui.*;
+import java.io.*;
+import java.util.*;
+import org.junit.*;
+import org.junit.runner.RunWith;
+import org.robolectric.*;
+import org.robolectric.annotation.*;
+import static org.junit.Assert.*;
+
+/** Real Android view renders, original fixtures only; never launches native game code. */
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk=28, shadows={ExperienceTest.OfflineUpdater.class, ExperienceTest.OfflineCatalog.class, ExperienceTest.OfflineCommunity.class})
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+public class ExperienceTest {
+    @Implements(Updater.class) public static class OfflineUpdater {
+        @Implementation public static void check(Activity a,Updater.Done done,boolean manual){done.run();}
+    }
+    @Implements(Catalog.class) public static class OfflineCatalog {
+        @Implementation public static List<Catalog.Game> refresh(Context c,boolean force){return Catalog.cached(c);}
+    }
+    @Implements(Community.class) public static class OfflineCommunity {
+        @Implementation public static void refresh(Context c){}
+    }
+    private Context app;
+    @Before public void setup()throws Exception {
+        app=RuntimeEnvironment.getApplication();
+        app.getSharedPreferences(EssentiaSettings.PREFS,0).edit().clear().putBoolean(EssentiaSettings.MUSIC,false)
+            .putBoolean(EssentiaSettings.RESCAN,false).putBoolean(EssentiaSettings.AUTO_UPDATE,false).commit();
+        app.getSharedPreferences("diagnostics",0).edit().clear().commit();
+        java.lang.reflect.Field intro=LibraryActivity.class.getDeclaredField("sIntroShown");intro.setAccessible(true);intro.set(null,true);
+    }
+    private static String text(View v){
+        StringBuilder s=new StringBuilder();if(v instanceof TextView)s.append(((TextView)v).getText()).append('\n');
+        if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++)s.append(text(((ViewGroup)v).getChildAt(i)));return s.toString();
+    }
+    private static View label(View v,String label){
+        if(v instanceof TextView&&label.equals(((TextView)v).getText().toString()))return v;
+        if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){View found=label(((ViewGroup)v).getChildAt(i),label);if(found!=null)return found;}
+        return null;
+    }
+    private void shot(String name,View v,int w,int h)throws Exception {
+        v.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));v.layout(0,0,w,h);
+        Bitmap bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);v.draw(new Canvas(bitmap));
+        File folder=new File("build/reports/ui");folder.mkdirs();
+        try(FileOutputStream out=new FileOutputStream(new File(folder,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}
+    }
+    @Test public void phoneNavigationAndLibrary()throws Exception {
+        RuntimeEnvironment.setQualifiers("w390dp-h844dp-port-mdpi");
+        Activity a=Robolectric.buildActivity(LibraryActivity.class).setup().get();View root=a.findViewById(android.R.id.content);
+        assertTrue(text(root).contains("Biblioteca"));assertTrue(text(root).contains("Descubrir"));assertTrue(text(root).contains("Ajustes"));
+        shot("phone-library",root,390,844);a.finish();
+    }
+    @Test public void settingsPhoneAndHandheld()throws Exception {
+        RuntimeEnvironment.setQualifiers("w360dp-h800dp-port-mdpi");
+        org.robolectric.android.controller.ActivityController<SettingsActivity> controller=Robolectric.buildActivity(SettingsActivity.class).setup();
+        SettingsActivity a=controller.get();shot("phone-settings",a.findViewById(android.R.id.content),360,800);controller.pause().stop().destroy();
+        RuntimeEnvironment.setQualifiers("w960dp-h540dp-land-mdpi");
+        controller=Robolectric.buildActivity(SettingsActivity.class).setup();a=controller.get();
+        shot("handheld-settings",a.findViewById(android.R.id.content),960,540);controller.pause().stop().destroy();
+    }
+    @Test public void discoverAndTools()throws Exception {
+        RuntimeEnvironment.setQualifiers("w390dp-h844dp-port-mdpi");
+        org.robolectric.android.controller.ActivityController<StoreActivity> store=Robolectric.buildActivity(StoreActivity.class).setup();
+        shot("phone-discover",store.get().findViewById(android.R.id.content),390,844);store.pause().stop().destroy();
+        Activity guide=Robolectric.buildActivity(GuideActivity.class).setup().get();shot("phone-guide",guide.findViewById(android.R.id.content),390,844);guide.finish();
+        Activity controls=Robolectric.buildActivity(ControlsActivity.class).setup().get();shot("phone-controls",controls.findViewById(android.R.id.content),390,844);controls.finish();
+        Activity ai=Robolectric.buildActivity(AiTranslationActivity.class).setup().get();shot("phone-optional-api",ai.findViewById(android.R.id.content),390,844);ai.finish();
+        Activity rtp=Robolectric.buildActivity(RtpActivity.class).setup().get();shot("phone-rtp",rtp.findViewById(android.R.id.content),390,844);rtp.finish();
+    }
+    private static final GamePanel.Keys KEYS=new GamePanel.Keys(){public void down(int k){}public void up(int k){}};
+    private static final GamePanel.Actions ACTIONS=new GamePanel.Actions(){
+        public void controls(){}public void notes(){}public void progress(){}public void menu(){}public void game(String c){}
+        public void turbo(){}public void autoFire(){}public void keyboard(){}
+    };
+    @Test public void companionHasSameToolsAtBothSizesAndNotesStayPerGame()throws Exception {
+        app.getSharedPreferences("essentia_notes",0).edit().putString("/fixture/one","Buscar la siguiente ruta").putString("/fixture/two","Otro objetivo").commit();
+        for(int[] size:new int[][]{{390,730},{640,480},{800,300}}){
+            RuntimeEnvironment.setQualifiers("w"+size[0]+"dp-h"+size[1]+"dp-mdpi");
+            Activity a=Robolectric.buildActivity(GuideActivity.class).setup().get();
+            CompanionView view=new CompanionView(a,false,"Aventura de prueba","/fixture/one",new File(a.getCacheDir(),"no-live"),KEYS,ACTIONS);a.setContentView(view);
+            shot("companion-"+size[0]+"-summary",view,size[0],size[1]);
+            for(String tab:new String[]{"Notas","Mapa","Acciones","Teclas","Ayudas"}){
+                View button=label(view,tab);assertNotNull(button);button.performClick();shot("companion-"+size[0]+"-"+tab,view,size[0],size[1]);
+            }
+            assertTrue(text(view).contains("Equipo y progreso"));
+            view.dispose();a.finish();
+        }
+        assertEquals("Otro objetivo",app.getSharedPreferences("essentia_notes",0).getString("/fixture/two",""));
+    }
+    @Test public void diagnosticsAreOptInAndPreserveRealEngineDecision()throws Exception {
+        String path="/fixture/diagnostics";Diagnostics.file(app,path,"session").delete();
+        Diagnostics.start(app,path,"classic","learned_fallback","wide_safe");assertFalse(Diagnostics.file(app,path,"session").exists());
+        app.getSharedPreferences("diagnostics",0).edit().putBoolean("enabled",true).commit();
+        Diagnostics.start(app,path,"classic","learned_fallback","wide_safe");Diagnostics.event(app,path,"phase:scripts");
+        String summary=Diagnostics.summary(app,path);assertTrue(summary.contains("learned_fallback"));assertTrue(summary.contains("scripts"));assertTrue(summary.contains("wide_safe"));
+        Diagnostics.error(app,path,"https://example.org/private token=private-value");assertFalse(Diagnostics.summary(app,path).contains("private-value"));
+        Diagnostics.event(app,path,"first_frame");Diagnostics.event(app,path,"user_exit");
+        Diagnostics.start(app,path,"modern","user_choice","original");
+        assertTrue(Diagnostics.summary(app,path).contains("Sesión anterior"));assertTrue(Diagnostics.sessionSummary(app,path).contains("user_choice"));
+        assertFalse(Diagnostics.file(app,path,"error").exists());
+    }
+}

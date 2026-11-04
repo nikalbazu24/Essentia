@@ -1,0 +1,30 @@
+name: Revisar interfaz Android
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ui-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  interface:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Pruebas de navegación, acompañante y capturas Android
+        run: ./gradlew --no-daemon testReleaseUnitTest -x externalNativeBuildRelease --tests com.hatkid.mkxpz.ExperienceTest --tests com.hatkid.mkxpz.AndroidToolsTest
+      - name: Guardar pantallas renderizadas y resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-ui-review
+          path: |
+            app/build/reports/ui/
+            app/build/reports/tests/
+            app/build/test-results/

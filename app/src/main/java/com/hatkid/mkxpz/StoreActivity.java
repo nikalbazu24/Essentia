@@ -76,6 +76,7 @@ public class StoreActivity extends ControllerActivity
     private List<Catalog.Game> mGames = new ArrayList<>();
     private int mTab = 0;            // 0 explore, 1 my games
     private int mFilter = 0;         // 0 all, 1 Spanish, 2 tested
+    private boolean mShowFilters;
     private int mSource = 0;         // 0 all, otherwise Catalog.SOURCES index + 1
     private Catalog.Game mDetail;    // shown game, or null for the list
     private TextView mUpdatesTab;
@@ -157,13 +158,11 @@ public class StoreActivity extends ControllerActivity
         // top bar
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        TextView back = pill("←", false);
-        back.setOnClickListener(v -> finish());
-        bar.addView(back);
+
         LinearLayout names = new LinearLayout(this);
         names.setOrientation(LinearLayout.VERTICAL);
         names.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 10), 0);
-        names.addView(Ui.text(this, getString(R.string.store_title), 22, Ui.TEXT, true));
+        names.addView(Ui.text(this, "Descubrir", 26, Ui.TEXT, true));
         names.addView(Ui.text(this, getResources().getQuantityString(R.plurals.store_count, mGames.size(), mGames.size()),
             12, Ui.TEXT_DIM, false));
         bar.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -208,6 +207,13 @@ public class StoreActivity extends ControllerActivity
 
     private void fillExplore()
     {
+        TextView intro=Ui.text(this,"Encuentra tu próxima aventura",21,Ui.TEXT,true);mContent.addView(intro);
+        mContent.addView(Ui.text(this,"Juegos de sus creadores · compatibilidad y procedencia en cada ficha",14,Ui.TEXT_DIM,false));
+        android.widget.Button toggle=Ui.button(this,mShowFilters?"Ocultar filtros":"Filtrar juegos y comunidades",false);
+        toggle.setOnClickListener(v->{mShowFilters=!mShowFilters;fillContent();});mContent.addView(toggle);
+        LinearLayout filterContent=new LinearLayout(this);filterContent.setOrientation(LinearLayout.VERTICAL);
+        filterContent.setVisibility(mShowFilters?View.VISIBLE:View.GONE);mContent.addView(filterContent);
+        LinearLayout catalogContent=mContent;mContent=filterContent;
         sectionTitle(mContent, R.string.store_filter_games);
         GridLayout filters = actionGrid(getResources().getConfiguration().screenWidthDp >= 600 ? 4 : 2);
         String[] names = { getString(R.string.store_f_all), getString(R.string.store_f_es), getString(R.string.store_f_tested), getString(R.string.store_f_popular) };
@@ -246,6 +252,7 @@ public class StoreActivity extends ControllerActivity
         }
         mContent.addView(browse);
 
+        mContent=catalogContent;
         List<Catalog.Game> shown = new ArrayList<>();
         for (Catalog.Game g : mGames) {
             if (mFilter == 1 && !g.spanish()) continue;

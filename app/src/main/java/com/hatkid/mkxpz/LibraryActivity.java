@@ -259,19 +259,7 @@ public class LibraryActivity extends ControllerActivity
         mRoot = root;
         root.setBackgroundColor(Ui.BG);
 
-        // Backdrop: the selected game's art, blurred and dimmed
-        mBackdrop = new ImageView(this);
-        mBackdrop.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        mBackdrop.setAlpha(0.45f);
-        if (Build.VERSION.SDK_INT >= 31) {
-            mBackdrop.setRenderEffect(RenderEffect.createBlurEffect(60f, 60f, Shader.TileMode.CLAMP));
-        }
-        root.addView(mBackdrop, match());
-        View fade = new View(this);
-        fade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ Ui.alpha(Ui.BG, 0x66), Ui.alpha(Ui.BG, 0xCC), Ui.alpha(Ui.BG, 0xFF) }));
-        root.addView(fade, match());
-
+        mBackdrop = new ImageView(this); // cover loader target; no animated full-screen backdrop
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         int pad = Ui.dp(this, 20);
@@ -279,10 +267,20 @@ public class LibraryActivity extends ControllerActivity
         root.addView(col, match());
 
         col.addView(buildTopBar(), wrapWidth());
+        LinearLayout tools=new LinearLayout(this);tools.setGravity(Gravity.CENTER_VERTICAL);
+        mViewIcon=iconButton(tools,R.drawable.ic_e_grid,R.string.lib_view_label,v->cycleView());
+        View sorting=pillButton(tools,R.drawable.ic_e_sort,"",false,v->toggleSort());
+        mSortLabel=sorting.findViewWithTag("label");
+        TextView help=Ui.text(this,"Guía",14,Ui.ACCENT_LIGHT,true);
+        help.setGravity(Gravity.CENTER);help.setMinHeight(Ui.dp(this,48));help.setFocusable(true);
+        help.setBackground(Ui.focusable(this,Ui.SURFACE,12));
+        help.setOnClickListener(v->startActivity(new Intent(this,GuideActivity.class)));
+        LinearLayout.LayoutParams helpLp=new LinearLayout.LayoutParams(0,-2,1f);helpLp.leftMargin=Ui.dp(this,8);tools.addView(help,helpLp);
+        col.addView(tools,wrapWidth());
 
         // Featured game (shelf view)
         mHero = buildHero();
-        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.15f);
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         hlp.topMargin = Ui.dp(this, 10);
         col.addView(mHero, hlp);
 
@@ -318,103 +316,34 @@ public class LibraryActivity extends ControllerActivity
 
     private View buildTopBar()
     {
-        LinearLayout bar = new LinearLayout(this);
-        bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setGravity(Gravity.CENTER_VERTICAL);
-
-        ImageView flask = new ImageView(this);
-        flask.setImageResource(R.drawable.ic_launcher_foreground);
-        flask.setBackground(Ui.rounded(this, Ui.SURFACE, 12));
-        bar.addView(flask, new LinearLayout.LayoutParams(Ui.dp(this, 42), Ui.dp(this, 42)));
-
-        LinearLayout names = new LinearLayout(this);
-        names.setOrientation(LinearLayout.VERTICAL);
-        names.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 8), 0);
-        TextView title = Ui.text(this, getString(R.string.app_name), 22, Ui.TEXT, true);
-        title.setLetterSpacing(0.02f);
-        names.addView(title);
-        mCount = Ui.text(this, "", 12, Ui.TEXT_DIM, false);
-        names.addView(mCount);
-        bar.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        mViewIcon = iconButton(bar, R.drawable.ic_e_shelf, R.string.lib_view_label, v -> cycleView());
-        View sort = pillButton(bar, R.drawable.ic_e_sort, "", false, v -> toggleSort());
-        mSortLabel = sort.findViewWithTag("label");
-        if (isPortrait()) {
-            mStoreLabel = null;
-            iconButton(bar, R.drawable.ic_e_store, R.string.store_title, v -> startActivity(new Intent(this, StoreActivity.class)));
-        } else {
-            View store = pillButton(bar, R.drawable.ic_e_store, getString(R.string.store_short), false,
-                v -> startActivity(new Intent(this, StoreActivity.class)));
-            mStoreLabel = store.findViewWithTag("label");
-        }
-        iconButton(bar, R.drawable.ic_e_gamepad, R.string.lib_controls, v -> startActivity(new Intent(this, ControlsActivity.class)));
-        iconButton(bar, R.drawable.ic_e_settings, R.string.lib_settings, v -> startActivity(new Intent(this, SettingsActivity.class)));
-        pillButton(bar, R.drawable.ic_e_add, getString(R.string.lib_add_short), true, v -> openFolderPicker());
+        LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout names=new LinearLayout(this);names.setOrientation(LinearLayout.VERTICAL);
+        names.addView(Ui.text(this,"Tu biblioteca",26,Ui.TEXT,true));
+        mCount=Ui.text(this,"",13,Ui.TEXT_DIM,false);names.addView(mCount);
+        bar.addView(names,new LinearLayout.LayoutParams(0,-2,1f));
+        pillButton(bar,R.drawable.ic_e_add,"Añadir",true,v->openFolderPicker());
+        mStoreLabel=null;
         return bar;
     }
 
     private View buildHero()
     {
-        LinearLayout hero = new LinearLayout(this);
-        hero.setOrientation(isPortrait() ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
-        hero.setGravity(Gravity.CENTER_VERTICAL);
-
-        // Text + actions
-        LinearLayout info = new LinearLayout(this);
-        info.setOrientation(LinearLayout.VERTICAL);
-        info.setGravity(Gravity.CENTER_VERTICAL);
-        info.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 20), 0);
-
-        mHeroLabel = Ui.text(this, getString(R.string.lib_featured), 12, Ui.ACCENT_LIGHT, true);
-        mHeroLabel.setLetterSpacing(0.14f);
-        mHeroLabel.setAllCaps(true);
-        info.addView(mHeroLabel);
-
-        mHeroTitle = Ui.text(this, "", 30, Ui.TEXT, true);
-        mHeroTitle.setMaxLines(2);
-        mHeroTitle.setEllipsize(TextUtils.TruncateAt.END);
-        mHeroTitle.setShadowLayer(12, 0, 2, 0x99000000);
-        mHeroTitle.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
-        info.addView(mHeroTitle);
-
-        // little chips: play time, last played, kind of game, version, format...
-        mHeroChips = new LinearLayout(this);
-        mHeroChips.setOrientation(LinearLayout.HORIZONTAL);
-        android.widget.HorizontalScrollView chipsScroll = new android.widget.HorizontalScrollView(this);
-        chipsScroll.setHorizontalScrollBarEnabled(false);
-        chipsScroll.setFocusable(false);
-        chipsScroll.addView(mHeroChips);
-        info.addView(chipsScroll, wrapWidth());
-
-        mHeroDetail = Ui.text(this, "", 13, Ui.TEXT_DIM, false);
-        mHeroDetail.setPadding(0, Ui.dp(this, 6), 0, 0);
-        mHeroDetail.setMaxLines(1);
-        mHeroDetail.setEllipsize(TextUtils.TruncateAt.END);
-        info.addView(mHeroDetail);
-
-        LinearLayout actions = new LinearLayout(this);
-        actions.setPadding(0, Ui.dp(this, 16), 0, 0);
-        mHeroPlay = pillButton(actions, R.drawable.ic_e_play, getString(R.string.lib_play), true, v -> play(mSelected));
-        pillButton(actions, R.drawable.ic_e_more, getString(R.string.lib_options), false, v -> showOptions(mSelected));
-        info.addView(actions);
-
-        // Cover
-        FrameLayout coverFrame = new FrameLayout(this);
-        coverFrame.setBackground(Ui.rounded(this, Ui.SURFACE, 18));
-        coverFrame.setElevation(Ui.dp(this, 12));
-        coverFrame.setClipToOutline(true);
-        mHeroCover = new ImageView(this);
-        coverFrame.addView(mHeroCover, match());
-
-        if (isPortrait()) {
-            hero.addView(coverFrame, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-            hero.addView(info, wrapWidth());
-        } else {
-            hero.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
-            hero.addView(coverFrame, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.05f));
-        }
-        return hero;
+        LinearLayout hero=new LinearLayout(this);hero.setGravity(Gravity.CENTER_VERTICAL);
+        hero.setBackground(Ui.rounded(this,Ui.SURFACE,18));int p=Ui.dp(this,12);hero.setPadding(p,p,p,p);
+        mHeroCover=new ImageView(this);mHeroCover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        mHeroCover.setBackground(Ui.rounded(this,Ui.SURFACE_HI,10));mHeroCover.setClipToOutline(true);
+        hero.addView(mHeroCover,new LinearLayout.LayoutParams(Ui.dp(this,72),Ui.dp(this,72)));
+        LinearLayout info=new LinearLayout(this);info.setOrientation(LinearLayout.VERTICAL);info.setPadding(p,0,p,0);
+        mHeroLabel=Ui.text(this,"Seleccionado",11,Ui.ACCENT_LIGHT,true);info.addView(mHeroLabel);
+        mHeroTitle=Ui.text(this,"",19,Ui.TEXT,true);mHeroTitle.setMaxLines(2);mHeroTitle.setEllipsize(TextUtils.TruncateAt.END);info.addView(mHeroTitle);
+        mHeroDetail=Ui.text(this,"",12,Ui.TEXT_DIM,false);mHeroDetail.setMaxLines(1);info.addView(mHeroDetail);
+        mHeroChips=new LinearLayout(this); // full statistics stay in the game tools and lower screen
+        hero.addView(info,new LinearLayout.LayoutParams(0,-2,1f));
+        LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.VERTICAL);
+        mHeroPlay=pillButton(actions,R.drawable.ic_e_play,"Jugar",true,v->play(mSelected));
+        View options=pillButton(actions,R.drawable.ic_e_more,"Más",false,v->showOptions(mSelected));
+        ((LinearLayout.LayoutParams)options.getLayoutParams()).topMargin=Ui.dp(this,6);
+        hero.addView(actions);return hero;
     }
 
     private GridView buildGrid()
@@ -447,9 +376,9 @@ public class LibraryActivity extends ControllerActivity
         hint(row, "A", R.string.lib_play);
         hint(row, "Y", R.string.lib_options);
         hint(row, "X", R.string.lib_add_short);
-        hint(row, "Select", R.string.lib_view_label);
-        hint(row, "Start", R.string.lib_settings);
-        return row;
+
+        HorizontalScrollView scroll=new HorizontalScrollView(this);scroll.setHorizontalScrollBarEnabled(false);
+        scroll.addView(row);return scroll;
     }
 
     private void hint(LinearLayout row, String button, int labelRes)
@@ -520,7 +449,7 @@ public class LibraryActivity extends ControllerActivity
         b.setClickable(true);
         b.setContentDescription(getString(descRes));
         b.setOnClickListener(l);
-        int size = Ui.dp(this, 44);
+        int size = Ui.dp(this, 48);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
         lp.leftMargin = Ui.dp(this, 8);
         parent.addView(b, lp);
@@ -548,7 +477,7 @@ public class LibraryActivity extends ControllerActivity
         t.setPadding(Ui.dp(this, 8), 0, 0, 0);
         b.addView(t);
 
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 44));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 48));
         lp.leftMargin = Ui.dp(this, 8);
         parent.addView(b, lp);
         return b;
@@ -584,7 +513,7 @@ public class LibraryActivity extends ControllerActivity
         View card = newCard();
         slot.addView(card, match());
         slot.setTag(card.getTag());
-        card.setAlpha(0.78f);
+        card.setAlpha(1f);
         return slot;
     }
 
@@ -596,7 +525,7 @@ public class LibraryActivity extends ControllerActivity
     private void applyViewMode()
     {
         boolean empty = mGames.isEmpty();
-        mHero.setVisibility(isShelf() && !empty ? View.VISIBLE : View.GONE);
+        mHero.setVisibility(!empty ? View.VISIBLE : View.GONE);
         mShelfScroll.setVisibility(isShelf() && !empty ? View.VISIBLE : View.GONE);
         mGrid.setVisibility(!isShelf() && !empty ? View.VISIBLE : View.GONE);
         mEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
@@ -646,7 +575,7 @@ public class LibraryActivity extends ControllerActivity
             mZoomed.setActivated(false);
             View card = mZoomed instanceof ViewGroup && ((ViewGroup) mZoomed).getChildCount() > 0
                 ? ((ViewGroup) mZoomed).getChildAt(0) : null;
-            if (card != null) card.animate().alpha(0.78f).setDuration(120).start();
+            if (card != null) card.animate().alpha(1f).setDuration(120).start();
         }
         mZoomed = null;
         if (v != null && !isList()) {
@@ -704,13 +633,13 @@ public class LibraryActivity extends ControllerActivity
 
         View shade = new View(this);
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ 0x00000000, 0x00000000, 0xCC000000 }));
+            new int[]{ 0x00000000, 0x00000000, Ui.SURFACE }));
         card.addView(shade, match());
 
         h.title = Ui.text(this, "", 14, Ui.TEXT, true);
         h.title.setMaxLines(2);
         h.title.setEllipsize(TextUtils.TruncateAt.END);
-        h.title.setShadowLayer(6, 0, 1, 0xFF000000);
+        h.title.setBackgroundColor(Ui.SURFACE);
         int p = Ui.dp(this, 10);
         h.title.setPadding(p, p, p, p);
         card.addView(h.title, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -796,7 +725,7 @@ public class LibraryActivity extends ControllerActivity
             if (convert == null) convert = newSlot();
             boolean on = pos == mSelected && mGrid.hasFocus();
             convert.setActivated(on);
-            ((ViewGroup) convert).getChildAt(0).setAlpha(on ? 1f : 0.78f);
+            ((ViewGroup) convert).getChildAt(0).setAlpha(1f);
             if (on) mZoomed = convert;
             int w = mGrid.getColumnWidth() > 0 ? mGrid.getColumnWidth() : mBaseColumn;
             convert.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -969,7 +898,7 @@ public class LibraryActivity extends ControllerActivity
         mCovers.load(e.path, e.cover, mHeroCover, R.drawable.ic_launcher_foreground);
         mCovers.load(e.path, e.cover, mBackdrop, 0);
         mBackdrop.setAlpha(0f);
-        mBackdrop.animate().alpha(0.45f).setDuration(250).start();
+
         updateSecondScreen();
     }
 
