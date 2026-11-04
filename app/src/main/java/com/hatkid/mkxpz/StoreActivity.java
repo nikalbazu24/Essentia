@@ -40,6 +40,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -72,6 +73,7 @@ public class StoreActivity extends ControllerActivity
     private List<Catalog.Game> mGames = new ArrayList<>();
     private int mTab = 0;            // 0 explore, 1 my games
     private int mFilter = 0;         // 0 all, 1 Spanish, 2 tested
+    private int mSource = 0;         // 0 all, otherwise Catalog.SOURCES index + 1
     private Catalog.Game mDetail;    // shown game, or null for the list
     private TextView mUpdatesTab;
     private LinearLayout mContent;
@@ -205,16 +207,42 @@ public class StoreActivity extends ControllerActivity
         for (int i = 0; i < names.length; i++) {
             final int f = i;
             TextView chip = pill(names[i], mFilter == i);
+            chip.setTag("filter:" + i);
             chip.setTextSize(13);
-            chip.setOnClickListener(v -> { mFilter = f; fillContent(); });
+            chip.setOnClickListener(v -> { mFilter = f; fillContent(); focusChip("filter:" + f); });
             filters.addView(chip, gap());
         }
-        mContent.addView(filters);
+        addScrollingRow(mContent, filters);
+
+        LinearLayout sources = new LinearLayout(this);
+        for (int i = 0; i <= Catalog.SOURCES.length; i++) {
+            final int source = i;
+            TextView chip = pill(i == 0 ? getString(R.string.store_sources_all) : Catalog.SOURCES[i - 1].name,
+                mSource == i);
+            chip.setTag("source:" + i);
+            chip.setTextSize(13);
+            chip.setOnClickListener(v -> { mSource = source; fillContent(); focusChip("source:" + source); });
+            sources.addView(chip, gap());
+        }
+        addScrollingRow(mContent, sources);
+
+        TextView communities = Ui.text(this, getString(R.string.store_communities), 16, Ui.TEXT, true);
+        communities.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 4));
+        mContent.addView(communities);
+        mContent.addView(Ui.text(this, getString(R.string.store_communities_hint), 12, Ui.TEXT_DIM, false));
+        LinearLayout browse = new LinearLayout(this);
+        for (Catalog.Source source : Catalog.SOURCES) {
+            android.widget.Button button = Ui.button(this, getString(R.string.store_browse_source, source.name), false);
+            button.setOnClickListener(v -> openPage(source.url));
+            browse.addView(button, browse.getChildCount() == 0 ? wrap() : gap());
+        }
+        addScrollingRow(mContent, browse);
 
         List<Catalog.Game> shown = new ArrayList<>();
         for (Catalog.Game g : mGames) {
             if (mFilter == 1 && !g.spanish()) continue;
             if (mFilter == 2 && !g.tested()) continue;
+            if (mSource > 0 && Catalog.sourceFor(g.sourcePage) != Catalog.SOURCES[mSource - 1]) continue;
             shown.add(g);
         }
         int perRow = getResources().getConfiguration().orientation
@@ -274,11 +302,11 @@ public class StoreActivity extends ControllerActivity
             ViewGroup.LayoutParams.MATCH_PARENT);
         alp.setMargins(inset, inset, inset, inset);
         card.addView(art, alp);
-        if (g.cover.isEmpty()) art.addView(bigName(g, 22), match());
+        art.addView(bigName(g, 22), match());
         ImageView img = new ImageView(this);
-        img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        img.setScaleType(g.cover.isEmpty() ? ImageView.ScaleType.FIT_CENTER : ImageView.ScaleType.CENTER_CROP);
         art.addView(img, match());
-        loadImage(g.cover, img);
+        loadImage(g.cover.isEmpty() ? g.logo : g.cover, img);
 
         View shade = new View(this);
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
@@ -294,7 +322,8 @@ public class StoreActivity extends ControllerActivity
         title.setEllipsize(TextUtils.TruncateAt.END);
         title.setShadowLayer(6, 0, 1, 0xFF000000);
         text.addView(title);
-        String sub = joinNonEmpty("  ·  ", g.author, langLabel(g));
+        Catalog.Source source = Catalog.sourceFor(g.sourcePage);
+        String sub = joinNonEmpty("  ·  ", g.author, langLabel(g), source == null ? "" : source.name);
         TextView s = Ui.text(this, sub, 12, 0xFFDDDAF0, false);
         s.setMaxLines(1);
         s.setEllipsize(TextUtils.TruncateAt.END);
@@ -548,11 +577,11 @@ public class StoreActivity extends ControllerActivity
         art.setBackground(coverBackground(g));
         art.setClipToOutline(true);
         art.setElevation(Ui.dp(this, 8));
-        if (g.cover.isEmpty()) art.addView(bigName(g, 30), match());
+        art.addView(bigName(g, 30), match());
         ImageView img = new ImageView(this);
-        img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        img.setScaleType(g.cover.isEmpty() ? ImageView.ScaleType.FIT_CENTER : ImageView.ScaleType.CENTER_CROP);
         art.addView(img, match());
-        loadImage(g.cover, img);
+        loadImage(g.cover.isEmpty() ? g.logo : g.cover, img);
         main.addView(art, portrait
             ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 200))
             : new LinearLayout.LayoutParams(0, Ui.dp(this, 250), 1f));
@@ -564,9 +593,19 @@ public class StoreActivity extends ControllerActivity
             ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             : new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.3f));
 
+        if (!g.logo.isEmpty()) {
+            ImageView logo = new ImageView(this);
+            logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            logo.setContentDescription(getString(R.string.store_logo, g.title));
+            info.addView(logo, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 80)));
+            loadImage(g.logo, logo);
+        }
         TextView title = Ui.text(this, g.title, 26, Ui.TEXT, true);
         info.addView(title);
         if (!g.author.isEmpty()) info.addView(Ui.text(this, getString(R.string.store_by, g.author), 14, Ui.TEXT_DIM, false));
+        Catalog.Source source = Catalog.sourceFor(g.sourcePage);
+        if (source != null) info.addView(Ui.text(this, getString(R.string.store_source_credit, source.name),
+            12, Ui.TEXT_DIM, false));
 
         LinearLayout chips = new LinearLayout(this);
         chips.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 4));
@@ -615,11 +654,22 @@ public class StoreActivity extends ControllerActivity
                 actions.addView(up, gap());
             }
         }
-        if (!g.page.isEmpty()) {
+        if (!g.page.isEmpty() && !g.page.equals(g.sourcePage)) {
             android.widget.Button page = Ui.button(this, getString(R.string.store_page), mine == null);
             page.setOnClickListener(v -> openPage(g.page));
             actions.addView(page, actions.getChildCount() == 0 ? wrap() : gap());
             if (first == null) first = page;
+        }
+        if (source != null) {
+            android.widget.Button community = Ui.button(this, getString(R.string.store_source_page, source.name), false);
+            community.setOnClickListener(v -> openPage(g.sourcePage));
+            actions.addView(community, actions.getChildCount() == 0 ? wrap() : gap());
+            if (first == null) first = community;
+        }
+        if (!g.trailer.isEmpty()) {
+            android.widget.Button trailer = Ui.button(this, getString(R.string.store_video), false);
+            trailer.setOnClickListener(v -> openPage(g.trailer));
+            actions.addView(trailer, actions.getChildCount() == 0 ? wrap() : gap());
         }
         if (mine == null && !g.download.isEmpty()) {
             android.widget.Button direct = Ui.button(this, getString(R.string.store_direct), false);
@@ -639,13 +689,19 @@ public class StoreActivity extends ControllerActivity
 
         // screenshots
         if (!g.screens.isEmpty()) {
+            TextView gallery = Ui.text(this, getString(R.string.store_gallery), 18, Ui.TEXT, true);
+            gallery.setPadding(0, Ui.dp(this, 20), 0, Ui.dp(this, 8));
+            col.addView(gallery);
             LinearLayout shots = new LinearLayout(this);
-            for (String s : g.screens) {
+            for (int i = 0; i < g.screens.size(); i++) {
+                final String s = g.screens.get(i);
                 ImageView shot = new ImageView(this);
-                shot.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                shot.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 shot.setBackground(Ui.focusable(this, Ui.SURFACE, 12));
                 shot.setClipToOutline(true);
                 shot.setFocusable(true);
+                shot.setContentDescription(getString(R.string.store_screenshot, i + 1, g.title));
+                shot.setOnClickListener(v -> openPage(s));
                 int sp = Ui.dp(this, 3);
                 shot.setPadding(sp, sp, sp, sp);
                 loadImage(s, shot);
@@ -661,6 +717,11 @@ public class StoreActivity extends ControllerActivity
             hlp.topMargin = Ui.dp(this, 20);
             col.addView(hs, hlp);
         }
+        if (!g.mediaCredit.isEmpty()) {
+            TextView credit = Ui.text(this, getString(R.string.store_media_credit, g.mediaCredit), 12, Ui.TEXT_DIM, false);
+            credit.setPadding(0, Ui.dp(this, 12), 0, 0);
+            col.addView(credit);
+        }
 
         setContentView(root);
         if (first != null) first.requestFocus();
@@ -670,8 +731,13 @@ public class StoreActivity extends ControllerActivity
 
     private void openPage(String page)
     {
+        String safe = Catalog.webUrl(page);
+        if (safe.isEmpty()) {
+            Toast.makeText(this, R.string.store_invalid_link, Toast.LENGTH_LONG).show();
+            return;
+        }
         try {
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(page)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(safe)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Exception e) {
             Toast.makeText(this, getString(R.string.store_no_browser, page), Toast.LENGTH_LONG).show();
         }
@@ -870,7 +936,7 @@ public class StoreActivity extends ControllerActivity
     /** Loads a picture from the internet (kept on disk after the first time). */
     private void loadImage(String url, ImageView into)
     {
-        if (url == null || url.isEmpty()) return;
+        if (Catalog.webUrl(url).isEmpty()) return;
         into.setTag(url);
         Bitmap cached = mImages.get(url);
         if (cached != null) { into.setImageBitmap(cached); return; }
@@ -880,27 +946,48 @@ public class StoreActivity extends ControllerActivity
                 File dir = new File(getCacheDir(), "store_img");
                 //noinspection ResultOfMethodCallIgnored
                 dir.mkdirs();
-                File f = new File(dir, Integer.toHexString(url.hashCode()) + ".img");
+                byte[] digest = MessageDigest.getInstance("SHA-256").digest(url.getBytes("UTF-8"));
+                StringBuilder key = new StringBuilder();
+                for (byte part : digest) key.append(String.format(java.util.Locale.ROOT, "%02x", part & 255));
+                File f = new File(dir, key + ".img");
                 if (!f.isFile() || f.length() == 0) {
                     HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
                     c.setConnectTimeout(10000);
                     c.setReadTimeout(20000);
                     c.setRequestProperty("User-Agent", "Essentia");
                     c.setInstanceFollowRedirects(true);
-                    File tmp = new File(dir, f.getName() + ".part");
-                    try (InputStream in = c.getInputStream(); OutputStream o = new FileOutputStream(tmp)) {
-                        byte[] buf = new byte[1 << 15];
-                        int n;
-                        while ((n = in.read(buf)) > 0) o.write(buf, 0, n);
+                    File tmp = File.createTempFile("image-", ".part", dir);
+                    try {
+                        if (c.getResponseCode() != 200 || c.getContentLength() > 8 * 1024 * 1024)
+                            throw new java.io.IOException("Image unavailable or too large");
+                        try (InputStream in = c.getInputStream(); OutputStream o = new FileOutputStream(tmp)) {
+                            byte[] buf = new byte[1 << 15];
+                            int n, total = 0;
+                            while ((n = in.read(buf)) > 0) {
+                                total += n;
+                                if (total > 8 * 1024 * 1024) throw new java.io.IOException("Image too large");
+                                o.write(buf, 0, n);
+                            }
+                        }
+                        // Concurrent requests for the same cover use separate temporary files.
+                        if (!f.isFile() && !tmp.renameTo(f)) throw new java.io.IOException("Image cache unavailable");
+                    } finally {
+                        c.disconnect();
+                        //noinspection ResultOfMethodCallIgnored
+                        tmp.delete();
                     }
-                    //noinspection ResultOfMethodCallIgnored
-                    tmp.renameTo(f);
                 }
                 BitmapFactory.Options o = new BitmapFactory.Options();
                 o.inJustDecodeBounds = true;
                 BitmapFactory.decodeFile(f.getAbsolutePath(), o);
                 int sample = 1;
-                while (o.outWidth / (sample * 2) >= 900) sample *= 2;
+                if (o.outWidth <= 0 || o.outHeight <= 0) {
+                    // A transient HTML error page must not poison the cache permanently.
+                    //noinspection ResultOfMethodCallIgnored
+                    f.delete();
+                    return;
+                }
+                while (Math.max(o.outWidth, o.outHeight) / sample > 1600) sample *= 2;
                 o = new BitmapFactory.Options();
                 o.inSampleSize = sample;
                 b = BitmapFactory.decodeFile(f.getAbsolutePath(), o);
@@ -917,6 +1004,20 @@ public class StoreActivity extends ControllerActivity
                 }
             });
         });
+    }
+
+    private void addScrollingRow(LinearLayout parent, LinearLayout row)
+    {
+        HorizontalScrollView scroll = new HorizontalScrollView(this);
+        scroll.setHorizontalScrollBarEnabled(false);
+        scroll.addView(row);
+        parent.addView(scroll);
+    }
+
+    private void focusChip(String tag)
+    {
+        View chip = mContent.findViewWithTag(tag);
+        if (chip != null) chip.requestFocus();
     }
 
     /** A colored gradient for games without a picture (their own color, or one from the name). */

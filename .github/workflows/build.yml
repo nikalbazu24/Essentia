@@ -36,6 +36,9 @@ jobs:
       - name: Descargar el código
         uses: actions/checkout@v5
 
+      - name: Validar catálogo y copia sin conexión
+        run: python3 tools/check_catalog.py
+
       - name: Preparar Java
         uses: actions/setup-java@v5
         with:
@@ -149,6 +152,9 @@ jobs:
             tail -40 "$RUNNER_TEMP/gradle.log"
             exit 1
           fi
+
+      - name: Probar lectura del catálogo y enlaces de comunidades
+        run: ./gradlew --no-daemon testReleaseUnitTest
 
       - name: Dejar Ruby 1.8 listo para la próxima vez
         if: always()
