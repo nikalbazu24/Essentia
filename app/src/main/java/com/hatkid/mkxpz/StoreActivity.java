@@ -20,6 +20,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.GridLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -42,6 +43,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -163,13 +166,15 @@ public class StoreActivity extends ControllerActivity
         names.addView(Ui.text(this, getResources().getQuantityString(R.plurals.store_count, mGames.size(), mGames.size()),
             12, Ui.TEXT_DIM, false));
         bar.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        col.addView(bar);
+        GridLayout tabs = actionGrid(2);
         TextView explore = pill(getString(R.string.store_tab_explore), mTab == 0);
         explore.setOnClickListener(v -> { mTab = 0; showList(); });
-        bar.addView(explore, gap());
+        addAction(tabs, explore);
         mUpdatesTab = pill(updatesTabLabel(), mTab == 1);
         mUpdatesTab.setOnClickListener(v -> { mTab = 1; showList(); });
-        bar.addView(mUpdatesTab, gap());
-        col.addView(bar);
+        addAction(tabs, mUpdatesTab);
+        col.addView(tabs);
 
         mScroll = new ScrollView(this);
         mScroll.setFillViewport(true);
@@ -202,19 +207,21 @@ public class StoreActivity extends ControllerActivity
 
     private void fillExplore()
     {
-        LinearLayout filters = new LinearLayout(this);
-        String[] names = { getString(R.string.store_f_all), getString(R.string.store_f_es), getString(R.string.store_f_tested) };
+        sectionTitle(mContent, R.string.store_filter_games);
+        GridLayout filters = actionGrid(getResources().getConfiguration().screenWidthDp >= 600 ? 4 : 2);
+        String[] names = { getString(R.string.store_f_all), getString(R.string.store_f_es), getString(R.string.store_f_tested), getString(R.string.store_f_popular) };
         for (int i = 0; i < names.length; i++) {
             final int f = i;
             TextView chip = pill(names[i], mFilter == i);
             chip.setTag("filter:" + i);
             chip.setTextSize(13);
             chip.setOnClickListener(v -> { mFilter = f; fillContent(); focusChip("filter:" + f); });
-            filters.addView(chip, gap());
+            addAction(filters, chip);
         }
-        addScrollingRow(mContent, filters);
+        mContent.addView(filters);
 
-        LinearLayout sources = new LinearLayout(this);
+        sectionTitle(mContent, R.string.store_filter_source);
+        GridLayout sources = actionGrid(3);
         for (int i = 0; i <= Catalog.SOURCES.length; i++) {
             final int source = i;
             TextView chip = pill(i == 0 ? getString(R.string.store_sources_all) : Catalog.SOURCES[i - 1].name,
@@ -222,28 +229,33 @@ public class StoreActivity extends ControllerActivity
             chip.setTag("source:" + i);
             chip.setTextSize(13);
             chip.setOnClickListener(v -> { mSource = source; fillContent(); focusChip("source:" + source); });
-            sources.addView(chip, gap());
+            addAction(sources, chip);
         }
-        addScrollingRow(mContent, sources);
+        mContent.addView(sources);
 
         TextView communities = Ui.text(this, getString(R.string.store_communities), 16, Ui.TEXT, true);
         communities.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 4));
         mContent.addView(communities);
         mContent.addView(Ui.text(this, getString(R.string.store_communities_hint), 12, Ui.TEXT_DIM, false));
-        LinearLayout browse = new LinearLayout(this);
+        GridLayout browse = actionGrid();
         for (Catalog.Source source : Catalog.SOURCES) {
             android.widget.Button button = Ui.button(this, getString(R.string.store_browse_source, source.name), false);
             button.setOnClickListener(v -> openPage(source.url));
-            browse.addView(button, browse.getChildCount() == 0 ? wrap() : gap());
+            addAction(browse, button);
         }
-        addScrollingRow(mContent, browse);
+        mContent.addView(browse);
 
         List<Catalog.Game> shown = new ArrayList<>();
         for (Catalog.Game g : mGames) {
             if (mFilter == 1 && !g.spanish()) continue;
             if (mFilter == 2 && !g.tested()) continue;
+            if (mFilter == 3 && g.communityRank == 0) continue;
             if (mSource > 0 && Catalog.sourceFor(g.sourcePage) != Catalog.SOURCES[mSource - 1]) continue;
             shown.add(g);
+        }
+        if (mFilter == 3) {
+            Collections.sort(shown, Comparator.comparingInt(g -> g.communityRank));
+            mContent.addView(Ui.text(this, getString(R.string.store_popular_hint), 12, Ui.TEXT_DIM, false));
         }
         int perRow = getResources().getConfiguration().orientation
             == android.content.res.Configuration.ORIENTATION_PORTRAIT ? 2 : 3;
@@ -274,13 +286,13 @@ public class StoreActivity extends ControllerActivity
         TextView info = Ui.text(this, getString(R.string.store_disclaimer), 12, Ui.TEXT_DIM, false);
         info.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 8));
         mContent.addView(info);
-        LinearLayout actions = new LinearLayout(this);
+        GridLayout actions = actionGrid();
         android.widget.Button zip = Ui.button(this, getString(R.string.store_install_zip_any), false);
         zip.setOnClickListener(v -> chooseZip(null, null, null));
-        actions.addView(zip);
+        addAction(actions, zip);
         android.widget.Button suggest = Ui.button(this, getString(R.string.store_suggest), false);
         suggest.setOnClickListener(v -> suggest());
-        actions.addView(suggest, gap());
+        addAction(actions, suggest);
         mContent.addView(actions);
     }
 
@@ -631,19 +643,22 @@ public class StoreActivity extends ControllerActivity
             info.addView(n);
         }
 
+        if (g.communityRank > 0) {
+            TextView popularity = Ui.text(this, getString(R.string.store_popular_rank, g.communityRank, g.popularityChecked), 13, Ui.TEXT_DIM, false);
+            popularity.setPadding(0, Ui.dp(this, 12), 0, 0);
+            info.addView(popularity);
+        }
+
         // actions
-        LinearLayout actions = new LinearLayout(this);
+        GridLayout actions = actionGrid();
         actions.setPadding(0, Ui.dp(this, 16), 0, 0);
-        HorizontalScrollView actionScroll = new HorizontalScrollView(this);
-        actionScroll.setHorizontalScrollBarEnabled(false);
-        actionScroll.addView(actions);
-        info.addView(actionScroll);
+        info.addView(actions);
         View first = null;
         Library.Entry mine = Catalog.installed(this, g);
         if (mine != null) {
             android.widget.Button play = Ui.button(this, "▶  " + getString(R.string.lib_play), true);
             play.setOnClickListener(v -> Games.startGame(this, new File(mine.path), false));
-            actions.addView(play);
+            addAction(actions, play);
             first = play;
             Catalog.Update u = updateFor(mine);
             if (u != null && u.newer() && !UpdateService.busy(mine.path)) {
@@ -651,35 +666,45 @@ public class StoreActivity extends ControllerActivity
                 up.setOnClickListener(v -> {
                     if (!u.link.isEmpty()) startUpdate(u); else chooseZip(g, mine.path, mine.displayTitle());
                 });
-                actions.addView(up, gap());
+                addAction(actions, up);
             }
         }
         if (!g.page.isEmpty() && !g.page.equals(g.sourcePage)) {
             android.widget.Button page = Ui.button(this, getString(R.string.store_page), mine == null);
             page.setOnClickListener(v -> openPage(g.page));
-            actions.addView(page, actions.getChildCount() == 0 ? wrap() : gap());
+            addAction(actions, page);
             if (first == null) first = page;
         }
         if (source != null) {
             android.widget.Button community = Ui.button(this, getString(R.string.store_source_page, source.name), false);
             community.setOnClickListener(v -> openPage(g.sourcePage));
-            actions.addView(community, actions.getChildCount() == 0 ? wrap() : gap());
+            addAction(actions, community);
             if (first == null) first = community;
+        }
+        if (source == null && !g.mediaPage.isEmpty() && !g.mediaPage.equals(g.page)) {
+            android.widget.Button mediaSource = Ui.button(this, getString(R.string.store_media_source), false);
+            mediaSource.setOnClickListener(v -> openPage(g.mediaPage));
+            addAction(actions, mediaSource);
         }
         if (!g.trailer.isEmpty()) {
             android.widget.Button trailer = Ui.button(this, getString(R.string.store_video), false);
             trailer.setOnClickListener(v -> openPage(g.trailer));
-            actions.addView(trailer, actions.getChildCount() == 0 ? wrap() : gap());
+            addAction(actions, trailer);
         }
         if (mine == null && !g.download.isEmpty()) {
             android.widget.Button direct = Ui.button(this, getString(R.string.store_direct), false);
             direct.setOnClickListener(v -> installDirect(g));
-            actions.addView(direct, actions.getChildCount() == 0 ? wrap() : gap());
+            addAction(actions, direct);
             if (first == null) first = direct;
+        }
+        if (g.communityRank > 0) {
+            android.widget.Button ranking = Ui.button(this, getString(R.string.store_popular_source), false);
+            ranking.setOnClickListener(v -> openPage(g.popularityPage));
+            addAction(actions, ranking);
         }
         android.widget.Button zip = Ui.button(this, getString(mine == null ? R.string.store_install_zip : R.string.store_update_zip), false);
         zip.setOnClickListener(v -> chooseZip(g, mine != null ? mine.path : null, mine != null ? mine.displayTitle() : g.title));
-        actions.addView(zip, actions.getChildCount() == 0 ? wrap() : gap());
+        addAction(actions, zip);
         if (first == null) first = zip;
 
         TextView how = Ui.text(this, getString(mine == null ? R.string.store_how_install : R.string.store_how_update),
@@ -1007,12 +1032,41 @@ public class StoreActivity extends ControllerActivity
         });
     }
 
-    private void addScrollingRow(LinearLayout parent, LinearLayout row)
+    /** Wrap store actions into clear rows instead of hiding them off-screen. */
+    private GridLayout actionGrid()
     {
-        HorizontalScrollView scroll = new HorizontalScrollView(this);
-        scroll.setHorizontalScrollBarEnabled(false);
-        scroll.addView(row);
-        parent.addView(scroll);
+        return actionGrid(getResources().getConfiguration().screenWidthDp >= 600 ? 2 : 1);
+    }
+
+    private GridLayout actionGrid(int columns)
+    {
+        GridLayout grid = new GridLayout(this);
+        grid.setColumnCount(columns);
+        grid.setAlignmentMode(GridLayout.ALIGN_BOUNDS);
+        grid.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
+        grid.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 6));
+        return grid;
+    }
+
+    private void addAction(GridLayout grid, View button)
+    {
+        int column = grid.getChildCount() % grid.getColumnCount();
+        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+        lp.width = 0;
+        lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+        lp.setMargins(column == 0 ? 0 : Ui.dp(this, 6), Ui.dp(this, 6),
+            column == grid.getColumnCount() - 1 ? 0 : Ui.dp(this, 6), Ui.dp(this, 6));
+        button.setMinimumHeight(Ui.dp(this, 48));
+        grid.addView(button, lp);
+    }
+
+    private void sectionTitle(LinearLayout parent, int text)
+    {
+        TextView title = Ui.text(this, getString(text), 13, Ui.TEXT_DIM, true);
+        title.setPadding(0, Ui.dp(this, 12), 0, 0);
+        parent.addView(title);
     }
 
     private void focusChip(String tag)
@@ -1121,6 +1175,8 @@ public class StoreActivity extends ControllerActivity
         t.setGravity(Gravity.CENTER);
         t.setBackground(Ui.focusable(this, selected ? Ui.ACCENT : Ui.SURFACE, 22));
         t.setPadding(Ui.dp(this, 18), Ui.dp(this, 9), Ui.dp(this, 18), Ui.dp(this, 9));
+        t.setMinHeight(Ui.dp(this, 48));
+        t.setMaxLines(2);
         t.setFocusable(true);
         t.setClickable(true);
         return t;

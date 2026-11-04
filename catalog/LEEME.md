@@ -48,13 +48,17 @@ del estado de publicación de la comunidad.
 | `screens` | Lista de capturas (enlaces a imágenes). |
 | `source_page` | Ficha concreta en `https://whackahack.com/` o `https://eeveeexpo.com/` (también se acepta `www`). Determina el filtro de comunidad. |
 | `media_credit` | Autor/equipo de las imágenes y comunidad donde se publicaron. Obligatorio si hay imágenes o vídeos. |
+| `media_page` | Página original de la galería cuando la publica directamente el creador fuera de las dos comunidades. HTTPS; no convierte el sitio en una comunidad del filtro. |
+| `community_rank` | Posición de 1 a 5 en la selección por puntuación de reacciones del primer mensaje de Eevee Expo; independiente de compatibilidad. |
+| `popularity_page` | URL del listado ordenado que permite comprobar la posición. |
+| `popularity_checked` | Fecha ISO de la revisión de popularidad. Es una selección fechada, no un ranking sincronizado en directo. |
 | `trailer` | Vídeo o tráiler HTTPS publicado en la ficha. Se abre en el navegador o aplicación de vídeo. |
 | `size` | Tamaño aproximado (`"1,2 GB"`). |
 | `color` | Color de la portada dibujada (`"#2F6FD6"`). |
 
 Después de editar, copia el mismo contenido a `app/src/main/assets/essentia_catalog.json` cuando salga una versión nueva de la app (es la copia para el primer inicio sin internet).
 
-El catálogo con multimedia declara `"version": 2`: una copia antigua en caché o en
+El catálogo con multimedia y popularidad declara `"version": 3`: una copia antigua en caché o en
 internet no debe sustituir la incluida en la nueva app. Antes de publicar, ejecuta
 `python3 tools/check_catalog.py`. Comprueba las dos copias, enlaces HTTPS, identificadores,
 créditos y estados de compatibilidad. La compilación de GitHub ejecuta esta validación

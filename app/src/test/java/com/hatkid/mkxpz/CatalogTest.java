@@ -7,7 +7,8 @@ public class CatalogTest
 {
     @Test public void oldCachedOrOnlineCatalogCannotReplaceBundledMedia() throws Exception {
         assertNull(Catalog.parseCurrent("{\"version\":1,\"games\":[{\"title\":\"Old catalog\"}]}"));
-        assertEquals("New catalog", Catalog.parseCurrent("{\"version\":2,\"games\":[{\"title\":\"New catalog\"}]}")
+        assertNull(Catalog.parseCurrent("{\"version\":2,\"games\":[{\"title\":\"Previous media catalog\"}]}"));
+        assertEquals("New catalog", Catalog.parseCurrent("{\"version\":3,\"games\":[{\"title\":\"New catalog\"}]}")
             .get(0).title);
     }
 
@@ -56,5 +57,34 @@ public class CatalogTest
         Catalog.Game game = Catalog.parse("{\"games\":[{\"title\":\"Example\","
             + "\"source_page\":\"https://unrelated.example/\"}]}").get(0);
         assertEquals("", game.sourcePage);
+    }
+
+    @Test public void datedCommunityPopularityDoesNotChangeCompatibility() throws Exception {
+        org.json.JSONObject game = new org.json.JSONObject();
+        game.put("title", "Community favourite");
+        game.put("source_page", "https://eeveeexpo.com/infinity/");
+        game.put("community_rank", 1);
+        game.put("popularity_page", Catalog.POPULARITY_URL);
+        game.put("popularity_checked", "2026-11-04");
+        Catalog.Game parsed = Catalog.parse("{\"games\":[" + game + "]}").get(0);
+        assertEquals(1, parsed.communityRank);
+        assertEquals("2026-11-04", parsed.popularityChecked);
+        assertFalse(parsed.tested());
+        assertEquals(Catalog.UNTESTED, parsed.status);
+        game.put("popularity_page", "https://unrelated.example/ranking");
+        assertEquals(0, Catalog.parse("{\"games\":[" + game + "]}").get(0).communityRank);
+        game.put("popularity_page", Catalog.POPULARITY_URL);
+        game.put("source_page", "https://whackahack.com/juegos/example/");
+        assertEquals(0, Catalog.parse("{\"games\":[" + game + "]}").get(0).communityRank);
+    }
+
+    @Test public void creatorMediaSourcesUseWebLinksWithoutBecomingCommunities() throws Exception {
+        Catalog.Game game = Catalog.parse("{\"games\":[{\"title\":\"Creator game\","
+            + "\"media_page\":\"https://creator.example/gallery\"}]}").get(0);
+        assertEquals("https://creator.example/gallery", game.mediaPage);
+        assertEquals("", game.sourcePage);
+        assertEquals(0, game.communityRank);
+        game = Catalog.parse("{\"games\":[{\"title\":\"Unsafe\",\"media_page\":\"intent://bad\"}]}").get(0);
+        assertEquals("", game.mediaPage);
     }
 }
