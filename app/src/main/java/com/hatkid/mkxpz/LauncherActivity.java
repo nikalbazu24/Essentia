@@ -67,7 +67,7 @@ public class LauncherActivity extends Activity
         Log.i(TAG, "Path from caller: " + requested);
         File dir = Games.resolveGameFolder(requested);
         if (dir == null) {
-            new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                 .setTitle(R.string.app_name)
                 .setMessage(getString(R.string.err_not_a_game, requested))
                 .setCancelable(false)

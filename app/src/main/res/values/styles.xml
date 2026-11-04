@@ -7,9 +7,33 @@
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
-        <item name="android:colorBackground">@android:color/black</item>
+        <item name="android:colorBackground">#0B1B21</item>
+        <item name="android:windowBackground">#0B1B21</item>
+        <item name="android:colorAccent">#8BE0CC</item>
+        <item name="android:textColorPrimary">#F1F7F6</item>
+        <item name="android:textColorSecondary">#B1C5C8</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:buttonStyle">@style/EssentiaButton</item>
         <item name="android:navigationBarColor">@android:color/black</item>
     </style>
 
+    <style name="AppThemeLight" parent="android:Theme.Material.Light">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:colorBackground">#F1EFF8</item>
+        <item name="android:windowBackground">#F1EFF8</item>
+        <item name="android:colorAccent">#65547F</item>
+        <item name="android:textColorPrimary">#272332</item>
+        <item name="android:textColorSecondary">#6C657B</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:buttonStyle">@style/EssentiaButton</item>
+        <item name="android:navigationBarColor">#F1EFF8</item>
+    </style>
+
+    <style name="EssentiaButton" parent="android:Widget.Material.Button">
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
     <style name="GamepadButton" />
 </resources>

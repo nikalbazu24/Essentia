@@ -47,8 +47,8 @@ public final class Community {
         LinearLayout box=new LinearLayout(a);box.setOrientation(1);int pad=16;box.setPadding(pad,pad,pad,pad);
         String[] labels={"Perfecto","Jugable","Con fallas","No abre"},values={"perfecto","jugable","con_fallas","no_abre"};
         Spinner state=new Spinner(a);state.setAdapter(new ArrayAdapter<>(a,android.R.layout.simple_spinner_dropdown_item,labels));box.addView(state);
-        EditText version=new EditText(a);version.setHint("Versión del juego que probaste");version.setText(installed==null?game.version:Catalog.localVersion(a,new File(installed.path)));box.addView(version);
-        EditText note=new EditText(a);note.setHint("Qué funciona y qué falla (solo información del juego)");note.setMaxLines(4);note.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(500)});box.addView(note);
+        EditText version=com.hatkid.mkxpz.ui.Ui.input(a);version.setHint("Versión del juego que probaste");version.setText(installed==null?game.version:Catalog.localVersion(a,new File(installed.path)));box.addView(version);
+        EditText note=com.hatkid.mkxpz.ui.Ui.input(a);note.setHint("Qué funciona y qué falla (solo información del juego)");note.setMaxLines(4);note.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(500)});box.addView(note);
         TextView privacy=new TextView(a);privacy.setText("El aporte incluye juego, versión, motor y horas registradas por Essentia. Podrá mostrarse públicamente tras revisión. No adjunta scripts, partidas, claves ni datos del dispositivo.");box.addView(privacy);
         new AlertDialog.Builder(a).setTitle("Aportar compatibilidad · "+game.title).setView(box)
             .setNegativeButton("Cancelar",null).setPositiveButton("Enviar para revisión",(d,w)->{

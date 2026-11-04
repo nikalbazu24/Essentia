@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 
 /**
@@ -14,11 +15,14 @@ import android.view.WindowManager;
  */
 public abstract class ControllerActivity extends Activity
 {
+    private int mAppearanceStamp;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
-        super.onCreate(savedInstanceState);
         Ui.applyTheme(this);
+        setTheme(Ui.LIGHT?com.hatkid.mkxpz.R.style.AppThemeLight:com.hatkid.mkxpz.R.style.AppTheme);
+        super.onCreate(savedInstanceState);
+        mAppearanceStamp=Ui.themeStamp();
         Window w = getWindow();
         w.getDecorView().setBackgroundColor(Ui.BG);
         w.setStatusBarColor(Ui.BG);
@@ -27,6 +31,19 @@ public abstract class ControllerActivity extends Activity
             w.getAttributes().layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
+    }
+
+    @Override protected void onResume() {
+        super.onResume();Ui.applyTheme(this);
+        if(!(this instanceof com.hatkid.mkxpz.LibraryActivity)&&mAppearanceStamp!=Ui.themeStamp())recreate();
+    }
+
+    @Override public void setContentView(View content) {
+        super.setContentView(AppShell.wrap(this, content));
+    }
+
+    @Override public void setContentView(View content, ViewGroup.LayoutParams params) {
+        setContentView(content);
     }
 
     @Override

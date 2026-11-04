@@ -54,7 +54,7 @@ public final class SecondScreen extends Presentation
     public void navigation(Runnable previous, Runnable play, Runnable next, Runnable store, String news) {
         if (mNavigation == null) return;
         mNavigation.removeAllViews();
-        String[] labels = { "‹", "Jugar", "›", "Tienda" };
+        String[] labels = { "‹", "Jugar", "›", "Descubrir" };
         Runnable[] actions = { previous, play, next, store };
         for (int i=0;i<labels.length;i++) {
             android.widget.Button b=Ui.button(getContext(),labels[i],false);
@@ -111,20 +111,9 @@ public final class SecondScreen extends Presentation
         Context c = getContext();
 
         FrameLayout root = new FrameLayout(c);
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(Ui.backdrop());
 
-        mBackdrop = new ImageView(c);
-        mBackdrop.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        mBackdrop.setAlpha(0.35f);
-        if (Build.VERSION.SDK_INT >= 31) {
-            mBackdrop.setRenderEffect(RenderEffect.createBlurEffect(50f, 50f, Shader.TileMode.CLAMP));
-        }
-        root.addView(mBackdrop, match());
-        View shade = new View(c);
-        shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ Ui.alpha(Ui.BG, 0x50), Ui.alpha(Ui.BG, 0xF0) }));
-        root.addView(shade, match());
-
+        mBackdrop = new ImageView(c); // retained loader target; no decorative full-screen layer
         LinearLayout col = new LinearLayout(c);
         col.setOrientation(LinearLayout.VERTICAL);
         int pad = Ui.dp(c, 18);
@@ -152,7 +141,7 @@ public final class SecondScreen extends Presentation
 
         TextView label = Ui.text(c, c.getString(R.string.second_label), 11, Ui.ACCENT_LIGHT, true);
         label.setAllCaps(true);
-        label.setLetterSpacing(0.14f);
+        label.setLetterSpacing(0.04f);
         info.addView(label);
 
         mTitle = Ui.text(c, c.getString(R.string.app_name), 22, Ui.TEXT, true);

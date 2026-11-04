@@ -58,12 +58,13 @@ public class SettingsActivity extends ControllerActivity
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
+        if(!portrait)header.setOrientation(LinearLayout.VERTICAL);
         Button back = Ui.button(this, "\u2039  " + getString(R.string.set_back), false);
         back.setOnClickListener(v -> finish());
         header.addView(back);
         TextView title = Ui.text(this, getString(R.string.lib_settings), 22, Ui.TEXT, true);
-        title.setPadding(Ui.dp(this, 12), 0, 0, 0);
-        header.addView(title);
+        title.setPadding(portrait?Ui.dp(this,12):0,portrait?0:Ui.dp(this,12),0,0);
+        header.addView(title,new LinearLayout.LayoutParams(portrait?0:-1,-2,portrait?1f:0f));
         side.addView(header);
 
         mTabs = new LinearLayout(this);
@@ -73,10 +74,10 @@ public class SettingsActivity extends ControllerActivity
             final int cat = i;
             View tab = tab(CATEGORY_ICONS[i], getString(CATEGORIES[i]));
             tab.setOnClickListener(v -> showCategory(cat));
-            tab.setOnFocusChangeListener((v, has) -> { if (has) showCategory(cat); });
+
             LinearLayout.LayoutParams lp = portrait
-                ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 46))
-                : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 46));
+                ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 52))
+                : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 52));
             lp.setMargins(0, 0, portrait ? Ui.dp(this, 6) : 0, portrait ? 0 : Ui.dp(this, 4));
             mTabs.addView(tab, lp);
         }
@@ -92,7 +93,7 @@ public class SettingsActivity extends ControllerActivity
         }
         root.addView(side, portrait
             ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            : new LinearLayout.LayoutParams(Ui.dp(this, 250), ViewGroup.LayoutParams.MATCH_PARENT));
+            : new LinearLayout.LayoutParams(Ui.dp(this, 204), ViewGroup.LayoutParams.MATCH_PARENT));
 
         // Right (or below): the chosen category
         mScroll = new ScrollView(this);
@@ -151,6 +152,9 @@ public class SettingsActivity extends ControllerActivity
         mCategory = cat;
         for (int i = 0; i < mTabs.getChildCount(); i++) mTabs.getChildAt(i).setSelected(i == cat);
         mList.removeAllViews();
+        TextView heading=Ui.text(this,getString(CATEGORIES[cat]),26,Ui.TEXT,true);mList.addView(heading);
+        String[] hints={"Hazlo tuyo. Los cambios de aspecto conservan tus juegos.","Pantalla principal y acompañante de juego.","Mando, pantalla táctil y accesos durante la partida.","Juegos, partidas y recursos en un solo lugar.","Conexiones opcionales entre tus dispositivos Android.","Cambia una opción a la vez y compara en el mismo juego.","Actualizaciones, ayuda y créditos de Essentia."};
+        TextView hint=Ui.text(this,hints[cat],14,Ui.TEXT_DIM,false);hint.setPadding(0,0,0,Ui.dp(this,16));mList.addView(hint);
         switch (cat) {
             case 0: buildTheme(); buildMusic(); break;
             case 1: buildScreen(); break;
@@ -169,7 +173,7 @@ public class SettingsActivity extends ControllerActivity
     {
         section(R.string.set_theme_title, R.string.set_theme_desc);
         android.widget.GridLayout grid = new android.widget.GridLayout(this);
-        grid.setColumnCount(4);
+        grid.setColumnCount(getResources().getConfiguration().screenWidthDp < 600 ? 2 : 3);
         String current = Ui.theme(this);
         int[] names = { R.string.theme_esencia, R.string.theme_oceano, R.string.theme_bosque, R.string.theme_fuego,
             R.string.theme_electrico, R.string.theme_rosa, R.string.theme_noche };
@@ -198,7 +202,7 @@ public class SettingsActivity extends ControllerActivity
             d.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             dot.setBackground(d);
             swatch.addView(dot, new LinearLayout.LayoutParams(Ui.dp(this, 34), Ui.dp(this, 34)));
-            TextView name = Ui.text(this, getString(names[i]), 13, Ui.TEXT, t[0].equals(current));
+            TextView name = Ui.text(this, getString(names[i]), 13, Ui.contrast(android.graphics.Color.parseColor(t[2])), t[0].equals(current));
             name.setGravity(Gravity.CENTER);
             name.setPadding(0, Ui.dp(this, 6), 0, 0);
             swatch.addView(name);
@@ -207,7 +211,9 @@ public class SettingsActivity extends ControllerActivity
                 recreate();
             });
             android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
-            lp.width = Ui.dp(this, 108);
+            lp.width = 0;
+            lp.columnSpec=android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f);
+            lp.height=Ui.dp(this,100);
             lp.setMargins(0, 0, Ui.dp(this, 8), Ui.dp(this, 8));
             grid.addView(swatch, lp);
         }
@@ -464,7 +470,7 @@ public class SettingsActivity extends ControllerActivity
             return;
         }
         int n = Shortcuts.export(this, new java.io.File(path));
-        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new android.app.AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.set_fe_title)
             .setMessage(getResources().getQuantityString(R.plurals.fe_done, n, n, path))
             .setPositiveButton(android.R.string.ok, null)
@@ -520,7 +526,7 @@ public class SettingsActivity extends ControllerActivity
         TextView urlLabel = Ui.text(this, getString(R.string.set_cloud_url), 15, Ui.TEXT, true);
         urlLabel.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 4));
         mList.addView(urlLabel);
-        android.widget.EditText url = new android.widget.EditText(this);
+        android.widget.EditText url = com.hatkid.mkxpz.ui.Ui.input(this);
         url.setSingleLine(true);
         url.setTextColor(Ui.TEXT);
         url.setHint("https://script.google.com/macros/s/…/exec");
@@ -531,7 +537,7 @@ public class SettingsActivity extends ControllerActivity
         TextView keyLabel = Ui.text(this, getString(R.string.set_cloud_key), 15, Ui.TEXT, true);
         keyLabel.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 4));
         mList.addView(keyLabel);
-        android.widget.EditText key = new android.widget.EditText(this);
+        android.widget.EditText key = com.hatkid.mkxpz.ui.Ui.input(this);
         key.setSingleLine(true);
         key.setTextColor(Ui.TEXT);
         key.setText(Cloud.backupKey(this));

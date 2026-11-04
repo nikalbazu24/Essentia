@@ -57,7 +57,7 @@ public final class GameRemoval
         }
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(box);
-        AlertDialog first = new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        AlertDialog first = new AlertDialog.Builder(activity, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.delete_first_title)
             .setView(scroll)
             .setNegativeButton(R.string.cancel, null)
@@ -70,7 +70,7 @@ public final class GameRemoval
     private static void confirmFinal(Activity activity, Library.Entry entry, File saves, Runnable changed)
     {
         String paths = entry.path + (saves == null ? "" : "\n" + saves.getAbsolutePath());
-        AlertDialog last = new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        AlertDialog last = new AlertDialog.Builder(activity, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.delete_final_title)
             .setMessage(activity.getString(R.string.delete_final_message, entry.displayTitle(), paths))
             .setNegativeButton(R.string.cancel, null)
@@ -164,7 +164,7 @@ public final class GameRemoval
             }
             sDeleting = true;
         }
-        AlertDialog progress = new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        AlertDialog progress = new AlertDialog.Builder(activity, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(entry.displayTitle()).setMessage(R.string.delete_working).setCancelable(false).create();
         progress.show();
         new Thread(() -> {
@@ -203,7 +203,7 @@ public final class GameRemoval
                 if (progress.isShowing()) progress.dismiss();
                 changed.run();
                 if (removed) Toast.makeText(activity, R.string.delete_done, Toast.LENGTH_LONG).show();
-                else new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                else new AlertDialog.Builder(activity, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                     .setTitle(R.string.delete_failed_title).setMessage(R.string.delete_failed)
                     .setPositiveButton(android.R.string.ok, null).show();
             });

@@ -73,6 +73,8 @@ public class LibraryActivity extends ControllerActivity
     private int mBaseColumn;
     private String mView;
     private String mSort;
+    private String mQuery="";
+    private boolean mTypingSearch;
     /** Game waiting for a picked cover or save files. */
     private Library.Entry mPending;
 
@@ -113,10 +115,11 @@ public class LibraryActivity extends ControllerActivity
 
         DisplayMetrics dm = getResources().getDisplayMetrics();
         float widthDp = dm.widthPixels / dm.density;
-        mBaseColumn = Ui.dp(this, widthDp >= 900 ? 220 : (widthDp >= 600 ? 190 : 150));
+        mBaseColumn = Ui.dp(this, widthDp >= 900 ? 170 : (widthDp >= 600 ? 160 : 150));
         mCovers = new CoverLoader(Ui.dp(this, 360));
         mView = EssentiaSettings.viewMode(this);
         mSort = EssentiaSettings.sortMode(this);
+        if(savedInstanceState!=null){mSelected=savedInstanceState.getInt("selected",0);mQuery=savedInstanceState.getString("query","");}
 
         setContentView(buildUi());
         mThemeStamp = Ui.themeStamp();
@@ -257,21 +260,9 @@ public class LibraryActivity extends ControllerActivity
     {
         FrameLayout root = new FrameLayout(this);
         mRoot = root;
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(Ui.backdrop());
 
-        // Backdrop: the selected game's art, blurred and dimmed
-        mBackdrop = new ImageView(this);
-        mBackdrop.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        mBackdrop.setAlpha(0.45f);
-        if (Build.VERSION.SDK_INT >= 31) {
-            mBackdrop.setRenderEffect(RenderEffect.createBlurEffect(60f, 60f, Shader.TileMode.CLAMP));
-        }
-        root.addView(mBackdrop, match());
-        View fade = new View(this);
-        fade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ Ui.alpha(Ui.BG, 0x66), Ui.alpha(Ui.BG, 0xCC), Ui.alpha(Ui.BG, 0xFF) }));
-        root.addView(fade, match());
-
+        mBackdrop = new ImageView(this); // cover loader target; no animated full-screen backdrop
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         int pad = Ui.dp(this, 20);
@@ -279,10 +270,31 @@ public class LibraryActivity extends ControllerActivity
         root.addView(col, match());
 
         col.addView(buildTopBar(), wrapWidth());
+        LinearLayout tools=new LinearLayout(this);tools.setGravity(Gravity.CENTER_VERTICAL);
+        mViewIcon=iconButton(tools,R.drawable.ic_e_grid,R.string.lib_view_label,v->cycleView());
+        View sorting=pillButton(tools,R.drawable.ic_e_sort,"",false,v->toggleSort());
+        mSortLabel=sorting.findViewWithTag("label");
+        TextView help=Ui.text(this,"Guía",14,Ui.ACCENT_LIGHT,true);
+        help.setGravity(Gravity.CENTER);help.setMinHeight(Ui.dp(this,48));help.setFocusable(true);
+        help.setBackground(Ui.focusable(this,Ui.SURFACE,12));
+        help.setOnClickListener(v->startActivity(new Intent(this,GuideActivity.class)));
+        LinearLayout.LayoutParams helpLp=new LinearLayout.LayoutParams(isPortrait()?0:Ui.dp(this,80),-2,isPortrait()?1f:0f);helpLp.leftMargin=Ui.dp(this,8);tools.addView(help,helpLp);
+        col.addView(tools,wrapWidth());
+        EditText search=com.hatkid.mkxpz.ui.Ui.input(this);search.setSingleLine(true);search.setTextSize(15);search.setTextColor(Ui.TEXT);search.setHintTextColor(Ui.TEXT_DIM);
+        search.setHint("Buscar en tu biblioteca");search.setContentDescription("Buscar en tu biblioteca");search.setBackground(Ui.rounded(this,Ui.SURFACE,12));
+        search.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),0);search.setText(mQuery);
+        LinearLayout.LayoutParams searchLp=new LinearLayout.LayoutParams(isPortrait()?-1:0,Ui.dp(this,48),isPortrait()?0f:1f);
+        searchLp.topMargin=isPortrait()?Ui.dp(this,8):0;searchLp.leftMargin=isPortrait()?0:Ui.dp(this,8);
+        if(isPortrait())col.addView(search,searchLp);else tools.addView(search,searchLp);
+        search.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){
+                mQuery=s.toString();mSelected=0;mTypingSearch=true;reload();mTypingSearch=false;
+            }public void afterTextChanged(android.text.Editable e){}
+        });
 
         // Featured game (shelf view)
         mHero = buildHero();
-        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.15f);
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         hlp.topMargin = Ui.dp(this, 10);
         col.addView(mHero, hlp);
 
@@ -318,103 +330,34 @@ public class LibraryActivity extends ControllerActivity
 
     private View buildTopBar()
     {
-        LinearLayout bar = new LinearLayout(this);
-        bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setGravity(Gravity.CENTER_VERTICAL);
-
-        ImageView flask = new ImageView(this);
-        flask.setImageResource(R.drawable.ic_launcher_foreground);
-        flask.setBackground(Ui.rounded(this, Ui.SURFACE, 12));
-        bar.addView(flask, new LinearLayout.LayoutParams(Ui.dp(this, 42), Ui.dp(this, 42)));
-
-        LinearLayout names = new LinearLayout(this);
-        names.setOrientation(LinearLayout.VERTICAL);
-        names.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 8), 0);
-        TextView title = Ui.text(this, getString(R.string.app_name), 22, Ui.TEXT, true);
-        title.setLetterSpacing(0.02f);
-        names.addView(title);
-        mCount = Ui.text(this, "", 12, Ui.TEXT_DIM, false);
-        names.addView(mCount);
-        bar.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        mViewIcon = iconButton(bar, R.drawable.ic_e_shelf, R.string.lib_view_label, v -> cycleView());
-        View sort = pillButton(bar, R.drawable.ic_e_sort, "", false, v -> toggleSort());
-        mSortLabel = sort.findViewWithTag("label");
-        if (isPortrait()) {
-            mStoreLabel = null;
-            iconButton(bar, R.drawable.ic_e_store, R.string.store_title, v -> startActivity(new Intent(this, StoreActivity.class)));
-        } else {
-            View store = pillButton(bar, R.drawable.ic_e_store, getString(R.string.store_short), false,
-                v -> startActivity(new Intent(this, StoreActivity.class)));
-            mStoreLabel = store.findViewWithTag("label");
-        }
-        iconButton(bar, R.drawable.ic_e_gamepad, R.string.lib_controls, v -> startActivity(new Intent(this, ControlsActivity.class)));
-        iconButton(bar, R.drawable.ic_e_settings, R.string.lib_settings, v -> startActivity(new Intent(this, SettingsActivity.class)));
-        pillButton(bar, R.drawable.ic_e_add, getString(R.string.lib_add_short), true, v -> openFolderPicker());
+        LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout names=new LinearLayout(this);names.setOrientation(LinearLayout.VERTICAL);
+        names.addView(Ui.text(this,"Tu biblioteca",26,Ui.TEXT,true));
+        mCount=Ui.text(this,"",13,Ui.TEXT_DIM,false);names.addView(mCount);
+        bar.addView(names,new LinearLayout.LayoutParams(0,-2,1f));
+        pillButton(bar,R.drawable.ic_e_add,"Añadir",true,v->openFolderPicker());
+        mStoreLabel=null;
         return bar;
     }
 
     private View buildHero()
     {
-        LinearLayout hero = new LinearLayout(this);
-        hero.setOrientation(isPortrait() ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
-        hero.setGravity(Gravity.CENTER_VERTICAL);
-
-        // Text + actions
-        LinearLayout info = new LinearLayout(this);
-        info.setOrientation(LinearLayout.VERTICAL);
-        info.setGravity(Gravity.CENTER_VERTICAL);
-        info.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 20), 0);
-
-        mHeroLabel = Ui.text(this, getString(R.string.lib_featured), 12, Ui.ACCENT_LIGHT, true);
-        mHeroLabel.setLetterSpacing(0.14f);
-        mHeroLabel.setAllCaps(true);
-        info.addView(mHeroLabel);
-
-        mHeroTitle = Ui.text(this, "", 30, Ui.TEXT, true);
-        mHeroTitle.setMaxLines(2);
-        mHeroTitle.setEllipsize(TextUtils.TruncateAt.END);
-        mHeroTitle.setShadowLayer(12, 0, 2, 0x99000000);
-        mHeroTitle.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
-        info.addView(mHeroTitle);
-
-        // little chips: play time, last played, kind of game, version, format...
-        mHeroChips = new LinearLayout(this);
-        mHeroChips.setOrientation(LinearLayout.HORIZONTAL);
-        android.widget.HorizontalScrollView chipsScroll = new android.widget.HorizontalScrollView(this);
-        chipsScroll.setHorizontalScrollBarEnabled(false);
-        chipsScroll.setFocusable(false);
-        chipsScroll.addView(mHeroChips);
-        info.addView(chipsScroll, wrapWidth());
-
-        mHeroDetail = Ui.text(this, "", 13, Ui.TEXT_DIM, false);
-        mHeroDetail.setPadding(0, Ui.dp(this, 6), 0, 0);
-        mHeroDetail.setMaxLines(1);
-        mHeroDetail.setEllipsize(TextUtils.TruncateAt.END);
-        info.addView(mHeroDetail);
-
-        LinearLayout actions = new LinearLayout(this);
-        actions.setPadding(0, Ui.dp(this, 16), 0, 0);
-        mHeroPlay = pillButton(actions, R.drawable.ic_e_play, getString(R.string.lib_play), true, v -> play(mSelected));
-        pillButton(actions, R.drawable.ic_e_more, getString(R.string.lib_options), false, v -> showOptions(mSelected));
-        info.addView(actions);
-
-        // Cover
-        FrameLayout coverFrame = new FrameLayout(this);
-        coverFrame.setBackground(Ui.rounded(this, Ui.SURFACE, 18));
-        coverFrame.setElevation(Ui.dp(this, 12));
-        coverFrame.setClipToOutline(true);
-        mHeroCover = new ImageView(this);
-        coverFrame.addView(mHeroCover, match());
-
-        if (isPortrait()) {
-            hero.addView(coverFrame, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-            hero.addView(info, wrapWidth());
-        } else {
-            hero.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
-            hero.addView(coverFrame, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.05f));
-        }
-        return hero;
+        LinearLayout hero=new LinearLayout(this);hero.setGravity(Gravity.CENTER_VERTICAL);
+        hero.setBackground(Ui.rounded(this,Ui.pastel(0),22));int p=Ui.dp(this,12);hero.setPadding(p,p,p,p);
+        mHeroCover=new ImageView(this);mHeroCover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        mHeroCover.setBackground(Ui.rounded(this,Ui.SURFACE_HI,10));mHeroCover.setClipToOutline(true);
+        hero.addView(mHeroCover,new LinearLayout.LayoutParams(Ui.dp(this,72),Ui.dp(this,72)));
+        LinearLayout info=new LinearLayout(this);info.setOrientation(LinearLayout.VERTICAL);info.setPadding(p,0,p,0);
+        mHeroLabel=Ui.text(this,"Seleccionado",11,Ui.ACCENT_LIGHT,true);info.addView(mHeroLabel);
+        mHeroTitle=Ui.text(this,"",19,Ui.TEXT,true);mHeroTitle.setMaxLines(2);mHeroTitle.setEllipsize(TextUtils.TruncateAt.END);info.addView(mHeroTitle);
+        mHeroDetail=Ui.text(this,"",12,Ui.TEXT_DIM,false);mHeroDetail.setMaxLines(1);info.addView(mHeroDetail);
+        mHeroChips=new LinearLayout(this); // full statistics stay in the game tools and lower screen
+        hero.addView(info,new LinearLayout.LayoutParams(0,-2,1f));
+        LinearLayout actions=new LinearLayout(this);actions.setOrientation(isPortrait()?LinearLayout.VERTICAL:LinearLayout.HORIZONTAL);
+        mHeroPlay=pillButton(actions,R.drawable.ic_e_play,"Jugar",true,v->play(mSelected));
+        View options=pillButton(actions,R.drawable.ic_e_more,"Más",false,v->showOptions(mSelected));
+        ((LinearLayout.LayoutParams)options.getLayoutParams()).topMargin=isPortrait()?Ui.dp(this,6):0;
+        hero.addView(actions);return hero;
     }
 
     private GridView buildGrid()
@@ -447,14 +390,14 @@ public class LibraryActivity extends ControllerActivity
         hint(row, "A", R.string.lib_play);
         hint(row, "Y", R.string.lib_options);
         hint(row, "X", R.string.lib_add_short);
-        hint(row, "Select", R.string.lib_view_label);
-        hint(row, "Start", R.string.lib_settings);
-        return row;
+
+        HorizontalScrollView scroll=new HorizontalScrollView(this);scroll.setHorizontalScrollBarEnabled(false);
+        scroll.addView(row);return scroll;
     }
 
     private void hint(LinearLayout row, String button, int labelRes)
     {
-        TextView key = Ui.text(this, button, 11, Ui.BG, true);
+        TextView key = Ui.text(this, button, 11, Ui.contrast(Ui.TEXT_DIM), true);
         key.setGravity(Gravity.CENTER);
         key.setBackground(Ui.rounded(this, Ui.TEXT_DIM, 10));
         key.setPadding(Ui.dp(this, 7), Ui.dp(this, 1), Ui.dp(this, 7), Ui.dp(this, 1));
@@ -478,10 +421,12 @@ public class LibraryActivity extends ControllerActivity
         col.addView(flask, new LinearLayout.LayoutParams(s, s));
 
         TextView title = Ui.text(this, getString(R.string.lib_empty_title), 20, Ui.TEXT, true);
+        title.setTag("empty-title");
         title.setGravity(Gravity.CENTER);
         col.addView(title);
 
         TextView body = Ui.text(this, getString(R.string.lib_empty_text), 15, Ui.TEXT_DIM, false);
+        body.setTag("empty-body");
         body.setGravity(Gravity.CENTER);
         body.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 16));
         body.setMaxWidth(Ui.dp(this, 460));
@@ -515,12 +460,12 @@ public class LibraryActivity extends ControllerActivity
         b.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         int p = Ui.dp(this, 10);
         b.setPadding(p, p, p, p);
-        b.setBackground(Ui.focusable(this, 0x33FFFFFF, 22));
+        b.setBackground(Ui.focusable(this, Ui.SURFACE, 22));
         b.setFocusable(true);
         b.setClickable(true);
         b.setContentDescription(getString(descRes));
         b.setOnClickListener(l);
-        int size = Ui.dp(this, 44);
+        int size = Ui.dp(this, 48);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
         lp.leftMargin = Ui.dp(this, 8);
         parent.addView(b, lp);
@@ -532,7 +477,7 @@ public class LibraryActivity extends ControllerActivity
     {
         LinearLayout b = new LinearLayout(this);
         b.setGravity(Gravity.CENTER_VERTICAL);
-        b.setBackground(Ui.focusable(this, primary ? Ui.ACCENT : 0x33FFFFFF, 22));
+        b.setBackground(Ui.focusable(this, primary ? Ui.ACCENT : Ui.SURFACE, 22));
         b.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 18), 0);
         b.setFocusable(true);
         b.setClickable(true);
@@ -540,15 +485,15 @@ public class LibraryActivity extends ControllerActivity
 
         ImageView i = new ImageView(this);
         i.setImageResource(icon);
-        i.setImageTintList(Ui.tint(Ui.TEXT));
+        i.setImageTintList(Ui.tint(primary?Ui.ON_ACCENT:Ui.TEXT));
         b.addView(i, new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20)));
 
-        TextView t = Ui.text(this, text, 15, Ui.TEXT, true);
+        TextView t = Ui.text(this, text, 15, primary?Ui.ON_ACCENT:Ui.TEXT, true);
         t.setTag("label");
         t.setPadding(Ui.dp(this, 8), 0, 0, 0);
         b.addView(t);
 
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 44));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(this, 48));
         lp.leftMargin = Ui.dp(this, 8);
         parent.addView(b, lp);
         return b;
@@ -584,7 +529,7 @@ public class LibraryActivity extends ControllerActivity
         View card = newCard();
         slot.addView(card, match());
         slot.setTag(card.getTag());
-        card.setAlpha(0.78f);
+        card.setAlpha(1f);
         return slot;
     }
 
@@ -596,10 +541,13 @@ public class LibraryActivity extends ControllerActivity
     private void applyViewMode()
     {
         boolean empty = mGames.isEmpty();
-        mHero.setVisibility(isShelf() && !empty ? View.VISIBLE : View.GONE);
+        mHero.setVisibility(!empty ? View.VISIBLE : View.GONE);
         mShelfScroll.setVisibility(isShelf() && !empty ? View.VISIBLE : View.GONE);
         mGrid.setVisibility(!isShelf() && !empty ? View.VISIBLE : View.GONE);
         mEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+        TextView emptyTitle=mEmpty.findViewWithTag("empty-title");TextView emptyBody=mEmpty.findViewWithTag("empty-body");
+        emptyTitle.setText(mQuery.isEmpty()?getString(R.string.lib_empty_title):"No hay coincidencias");
+        emptyBody.setText(mQuery.isEmpty()?getString(R.string.lib_empty_text):"Prueba con otro nombre o borra la búsqueda para ver tus juegos.");
 
         int gap = Ui.dp(this, isList() ? 8 : 14);
         mGrid.setHorizontalSpacing(gap);
@@ -646,7 +594,7 @@ public class LibraryActivity extends ControllerActivity
             mZoomed.setActivated(false);
             View card = mZoomed instanceof ViewGroup && ((ViewGroup) mZoomed).getChildCount() > 0
                 ? ((ViewGroup) mZoomed).getChildAt(0) : null;
-            if (card != null) card.animate().alpha(0.78f).setDuration(120).start();
+            if (card != null) card.animate().alpha(1f).setDuration(120).start();
         }
         mZoomed = null;
         if (v != null && !isList()) {
@@ -704,19 +652,19 @@ public class LibraryActivity extends ControllerActivity
 
         View shade = new View(this);
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ 0x00000000, 0x00000000, 0xCC000000 }));
+            new int[]{ 0x00000000, 0x00000000, Ui.SURFACE }));
         card.addView(shade, match());
 
         h.title = Ui.text(this, "", 14, Ui.TEXT, true);
         h.title.setMaxLines(2);
         h.title.setEllipsize(TextUtils.TruncateAt.END);
-        h.title.setShadowLayer(6, 0, 1, 0xFF000000);
+        h.title.setBackgroundColor(Ui.SURFACE);
         int p = Ui.dp(this, 10);
         h.title.setPadding(p, p, p, p);
         card.addView(h.title, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
 
-        h.badge = Ui.text(this, "16:9", 11, Ui.BG, true);
+        h.badge = Ui.text(this, "16:9", 11, Ui.INK, true);
         h.badge.setBackground(Ui.rounded(this, Ui.GOLD, 8));
         h.badge.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -796,7 +744,7 @@ public class LibraryActivity extends ControllerActivity
             if (convert == null) convert = newSlot();
             boolean on = pos == mSelected && mGrid.hasFocus();
             convert.setActivated(on);
-            ((ViewGroup) convert).getChildAt(0).setAlpha(on ? 1f : 0.78f);
+            ((ViewGroup) convert).getChildAt(0).setAlpha(1f);
             if (on) mZoomed = convert;
             int w = mGrid.getColumnWidth() > 0 ? mGrid.getColumnWidth() : mBaseColumn;
             convert.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -937,7 +885,7 @@ public class LibraryActivity extends ControllerActivity
     private void reload()
     {
         mGames.clear();
-        mGames.addAll(Library.load(this));
+        for(Library.Entry game:Library.load(this))if(mQuery.isEmpty()||game.displayTitle().toLowerCase(java.util.Locale.ROOT).contains(mQuery.toLowerCase(java.util.Locale.ROOT)))mGames.add(game);
         mStats.clear(); // play time and saves may have changed
         mTotalPlay = GameStats.totalPlay(this, mGames);
         if (EssentiaSettings.SORT_AZ.equals(mSort)) {
@@ -948,8 +896,10 @@ public class LibraryActivity extends ControllerActivity
         applyViewMode();
 
         select(mSelected);
-        focusSelected();
+        if(!mTypingSearch&&mQuery.isEmpty())focusSelected();
     }
+
+    @Override protected void onSaveInstanceState(Bundle out){out.putInt("selected",mSelected);out.putString("query",mQuery);super.onSaveInstanceState(out);}
 
     /** A game was selected: update the featured area, the backdrop and the second screen. */
     private void select(int pos)
@@ -969,7 +919,7 @@ public class LibraryActivity extends ControllerActivity
         mCovers.load(e.path, e.cover, mHeroCover, R.drawable.ic_launcher_foreground);
         mCovers.load(e.path, e.cover, mBackdrop, 0);
         mBackdrop.setAlpha(0f);
-        mBackdrop.animate().alpha(0.45f).setDuration(250).start();
+
         updateSecondScreen();
     }
 
@@ -1093,7 +1043,7 @@ public class LibraryActivity extends ControllerActivity
 
     private void chip(String text, boolean highlight)
     {
-        TextView t = Ui.text(this, text, 13, highlight ? Ui.BG : Ui.TEXT, true);
+        TextView t = Ui.text(this, text, 13, highlight ? Ui.INK : Ui.TEXT, true);
         t.setBackground(Ui.rounded(this, highlight ? Ui.GOLD : 0x33FFFFFF, 12));
         t.setPadding(Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4));
         t.setSingleLine(true);
@@ -1111,7 +1061,7 @@ public class LibraryActivity extends ControllerActivity
         Library.Entry e = mGames.get(pos);
         File dir = new File(e.path);
         if (!dir.isDirectory() || !Games.isGameFolder(dir)) {
-            new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                 .setTitle(e.displayTitle())
                 .setMessage(R.string.lib_missing)
                 .setPositiveButton(R.string.lib_remove, (d, w) -> { Library.remove(this, e.path); reload(); })
@@ -1162,19 +1112,23 @@ public class LibraryActivity extends ControllerActivity
         labels.add(getString(R.string.lib_remove)); actions.add(() -> { Library.remove(this, e.path); reload(); });
         labels.add(getString(R.string.delete_game_files)); actions.add(() -> GameRemoval.show(this, e, this::reload));
 
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(e.displayTitle())
-            .setItems(labels.toArray(new String[0]), (d, which) -> actions.get(which).run())
-            .show();
+        int[] groups=new int[labels.size()];
+        for(int i=0;i<labels.size();i++) {
+            String label=labels.get(i);groups[i]=1;
+            if(i<3)groups[i]=0;
+            else if(label.equals(getString(R.string.opt_import))||label.equals(getString(R.string.upd_game))||label.equals(getString(R.string.opt_cloud)))groups[i]=2;
+            else if(label.equals(getString(R.string.opt_report))||label.equals(getString(R.string.opt_send_scripts))||label.equals(getString(R.string.lib_remove))||label.equals(getString(R.string.delete_game_files)))groups[i]=3;
+        }
+        Ui.gameOptions(this,e.displayTitle(),labels,actions,groups);
     }
 
     private void rename(Library.Entry e)
     {
-        EditText input = new EditText(this);
+        EditText input = com.hatkid.mkxpz.ui.Ui.input(this);
         input.setText(e.displayTitle());
         input.setSelectAllOnFocus(true);
         input.setSingleLine(true);
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.opt_rename)
             .setView(input)
             .setPositiveButton(android.R.string.ok, (d, w) -> {
@@ -1209,7 +1163,7 @@ public class LibraryActivity extends ControllerActivity
         Library.update(this, e);
         int msg = !e.translate ? R.string.tr_off
             : Cloud.configured(this) ? R.string.tr_on : R.string.tr_on_no_cloud;
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(e.displayTitle())
             .setMessage(getString(msg, Translator.folder(e.displayTitle()).getAbsolutePath()))
             .setPositiveButton(android.R.string.ok, null)
@@ -1220,7 +1174,7 @@ public class LibraryActivity extends ControllerActivity
     private void cloudBackup(Library.Entry e)
     {
         if (!Cloud.backupsReady(this)) {
-            new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                 .setTitle(R.string.opt_cloud)
                 .setMessage(R.string.cloud_not_ready)
                 .setPositiveButton(R.string.lib_settings, (d, w) -> startActivity(new Intent(this, SettingsActivity.class)))
@@ -1231,7 +1185,7 @@ public class LibraryActivity extends ControllerActivity
         long last = CloudBackup.lastBackup(this, e.path);
         String when = last == 0 ? getString(R.string.cloud_never)
             : DateUtils.getRelativeTimeSpanString(last, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString();
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(e.displayTitle())
             .setMessage(getString(R.string.cloud_last, when))
             .setPositiveButton(R.string.cloud_now, (d, w) -> runCloud(() -> {
@@ -1271,9 +1225,9 @@ public class LibraryActivity extends ControllerActivity
                 }
                 String[] names = new String[found.size()];
                 for (int i = 0; i < found.size(); i++) names[i] = CloudBackup.readable(found.get(i)[0]) + "\n" + found.get(i)[1];
-                new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                     .setTitle(R.string.cloud_restore)
-                    .setItems(names, (d, which) -> new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setItems(names, (d, which) -> new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                         .setTitle(R.string.cloud_restore)
                         .setMessage(getString(R.string.cloud_restore_confirm, CloudBackup.readable(found.get(which)[0])))
                         .setPositiveButton(R.string.cloud_restore, (d2, w2) -> runCloud(() -> {
@@ -1334,7 +1288,7 @@ public class LibraryActivity extends ControllerActivity
         final String[] labels = { auto, getString(R.string.eng_modern), getString(R.string.eng_classic) };
         int checked = EssentiaSettings.ENGINE_CLASSIC.equals(e.engine) ? 2
             : EssentiaSettings.ENGINE_MODERN.equals(e.engine) ? 1 : 0;
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.opt_engine)
             .setSingleChoiceItems(labels, checked, (d, which) -> {
                 if (which == 2 && !available) {
@@ -1361,7 +1315,7 @@ public class LibraryActivity extends ControllerActivity
             getString(R.string.scr_stretch) };
         int checked = 0;
         for (int i = 0; i < values.length; i++) if (values[i].equals(e.screenMode)) checked = i;
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.opt_screen)
             .setSingleChoiceItems(labels, checked, (d, which) -> {
                 e.screenMode = values[which];
@@ -1457,7 +1411,7 @@ public class LibraryActivity extends ControllerActivity
         int p = Ui.dp(this, 20);
         info.setPadding(p, Ui.dp(this, 8), p, 0);
 
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(getString(R.string.imp_title, e.displayTitle()))
             .setItems(labels.toArray(new String[0]), (d, which) -> actions.get(which).run())
             .setNegativeButton(R.string.cancel, null)
@@ -1479,7 +1433,7 @@ public class LibraryActivity extends ControllerActivity
             names[i] = files.get(i).getName() + "   (" + fmt.format(new Date(files.get(i).lastModified())) + ")";
             checked[i] = true;
         }
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.imp_choose)
             .setMultiChoiceItems(names, checked, (d, which, on) -> checked[which] = on)
             .setPositiveButton(R.string.imp_do, (d, w) -> {
@@ -1632,7 +1586,7 @@ public class LibraryActivity extends ControllerActivity
             final int count = added, total = found.size();
             runOnUiThread(() -> {
                 if (total == 0) {
-                    new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                         .setTitle(R.string.app_name)
                         .setMessage(getString(R.string.lib_none_found, root.getAbsolutePath()))
                         .setPositiveButton(R.string.choose_folder, (d, w) -> openFolderPicker())

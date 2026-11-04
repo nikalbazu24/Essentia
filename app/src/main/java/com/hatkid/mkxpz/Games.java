@@ -46,7 +46,7 @@ public final class Games
 
     public static void askAllFilesAccess(Activity a, int requestCode, Runnable onCancel)
     {
-        new AlertDialog.Builder(a, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(a, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.perm_title)
             .setMessage(R.string.perm_message)
             .setCancelable(false)
@@ -127,6 +127,9 @@ public final class Games
         boolean classic = classicEngineAvailable(a) && (EssentiaSettings.ENGINE_CLASSIC.equals(chosen)
             || (auto && (EssentiaSettings.learnedClassic(a, path)
                 || EssentiaSettings.ENGINE_CLASSIC.equals(profile.engine))));
+        String reason=auto?(classic?(EssentiaSettings.learnedClassic(a,path)?"learned_fallback":"profile_recommendation"):"automatic_modern"):"user_choice";
+        if(!classic&&EssentiaSettings.ENGINE_CLASSIC.equals(chosen))reason="classic_unavailable";
+        intent.putExtra(MainActivity.EXTRA_ENGINE_REASON,reason);
         intent.putExtra(MainActivity.EXTRA_ENGINE, classic ? EssentiaSettings.ENGINE_CLASSIC : EssentiaSettings.ENGINE_MODERN);
         // automatic engine, first try with the modern one: may switch to classic
         intent.putExtra(MainActivity.EXTRA_AUTO_ENGINE, auto && !classic && classicEngineAvailable(a));

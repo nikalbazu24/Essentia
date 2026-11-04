@@ -23,10 +23,12 @@ public class RtpActivity extends ControllerActivity {
         Button back=Ui.button(this,"‹ Volver",false);back.setOnClickListener(v->finish());list.addView(back);
         list.addView(Ui.text(this,"Recursos RPG Maker · RTP",25,Ui.TEXT,true));
         list.addView(Ui.text(this,"Algunos juegos necesitan gráficos y audio RTP además de su descarga. Usa recursos que tengas permiso para utilizar. El instalador EXE oficial necesita Windows; en Android puedes importar un ZIP de los recursos ya extraídos (Graphics y Audio).",16,Ui.TEXT_DIM,false));
-        RadioGroup group=new RadioGroup(this);
+        list.addView(Ui.text(this,"1 · Elige la versión de RPG Maker",20,Ui.ACCENT_LIGHT,true));
+        RadioGroup group=new RadioGroup(this);group.setBackground(Ui.rounded(this,Ui.SURFACE,16));group.setPadding(p,Ui.dp(this,8),p,Ui.dp(this,8));
         for(String name:new String[]{"XP","VX","VXAce"}){
             RadioButton b=new RadioButton(this);b.setText(name);b.setTextColor(Ui.TEXT);b.setChecked(engine.equals(name));b.setOnClickListener(v->engine=name);group.addView(b);
         }list.addView(group);
+        list.addView(Ui.text(this,"2 · Importa tu paquete autorizado",20,Ui.ACCENT_LIGHT,true));
         Button install=Ui.button(this,"Importar recursos desde ZIP",false);list.addView(install);
         install.setOnClickListener(v->{
             if(working)return;
@@ -35,6 +37,7 @@ public class RtpActivity extends ControllerActivity {
         });
         Button official=Ui.button(this,"Página oficial y condiciones del RTP",false);list.addView(official);
         official.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://www.rpgmakerweb.com/run-time-package"))));
+        list.addView(Ui.text(this,"Recursos en este dispositivo",20,Ui.ACCENT_LIGHT,true));
         for(String name:new String[]{"XP","VX","VXAce"}){
             File f=new File(EssentiaSettings.rtpRoot(),name);
             list.addView(Ui.text(this,name+": "+(new File(f,"Graphics").isDirectory()?"recursos instalados":"sin instalar"),16,Ui.TEXT,false));
