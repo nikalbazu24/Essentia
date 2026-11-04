@@ -198,17 +198,18 @@
       "note": "El error de inicio (\"Dark Maps\") se corrigió en la compilación 43.",
       "author": "ClaraDragon, Horo, Angeleiro, KidFates, SrGio y StevenMix",
       "page": "https://pokemonperseida.blogspot.com/p/gs-vitro-descarga.html",
-      "media_page": "https://pokemonperseida.blogspot.com/p/gs-vitro-descarga.html",
+      "media_page": "https://pokeliberty.net/fangames/pokemon-gs-vitro-140",
       "logo": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh_hEiKCSVAbGrindetHmY2q4DUMIQI_D7nuv4MuXXiakQQiOW9xmtK2BPKYVzwCwz4m0XsYkrpJftU3zUSFed-V-fNrF83jfr5UYZMsR68D7vDHvSmMd_yjfX1_W_ikUR5K3hmgs_yCA4qpRwvZphHvYr7sm7rNtc1mgpJNQ3_j6Cb3CWTZYrpAjWTvlk/s1200-rw/LOGO%20VITRO.png",
       "cover": "https://pbs.twimg.com/media/GLiwxo1XwAAoYmv?format=png",
       "screens": [
+        "https://cdn.pokeliberty.net/libertyweb/resource_description_images/86f51762-562d-4a0d-b054-f8e5ff2d38b9",
         "https://pbs.twimg.com/media/GLiwxo1XwAAoYmv?format=png",
         "https://pbs.twimg.com/media/GMuVd7JXcAAIlDS?format=png",
         "https://pbs.twimg.com/media/GO-1wG7XcAAjWEq?format=png",
         "https://pbs.twimg.com/media/GTe-jV3W8AAEnfk?format=png&name=small",
         "https://pbs.twimg.com/media/GRGXBuuXcAELqxS?format=png&name=small"
       ],
-      "media_credit": "Equipo GS Vitro · Perseida Project (blog oficial)"
+      "media_credit": "Equipo GS Vitro · Perseida Project y PokéLiberty"
     },
     {
       "id": "pokemon-consonancia",
@@ -434,6 +435,7 @@
       "logo": "https://i.imgur.com/7DRXXBq.gif",
       "cover": "https://i.imgur.com/7DRXXBq.gif",
       "screens": [
+        "https://i.imgur.com/OzOxhHe_d.webp?maxwidth=760&fidelity=grand",
         "https://i.imgur.com/La7yOHq_d.webp?maxwidth=760&fidelity=grand"
       ],
       "color": "#A471C6",
