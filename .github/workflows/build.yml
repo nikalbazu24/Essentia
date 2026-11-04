@@ -71,6 +71,7 @@ jobs:
           cp work/archive-android/libessentia-archive.so app/src/main/jniLibs/arm64-v8a/
           cmake -S app/archive-native -B work/archive-host -DCMAKE_BUILD_TYPE=Release
           cmake --build work/archive-host --target essentia-archive -j2
+          python3 tools/prepare_archive_fixtures.py
 
       # Guarda las librerías ya compiladas para que las próximas veces sea mucho más rápido.
       - name: Recuperar librerías compiladas antes
@@ -144,6 +145,12 @@ jobs:
             echo "::warning::Sin los secretos ESSENTIA_KEYSTORE_*: el APK usa una firma de prueba y no se podrá actualizar encima."
           fi
 
+      - name: Probar archivos, restauración y compatibilidad de scripts
+        run: |
+          find app/src/main/assets/essentia_preload -name '*.rb' -exec ruby -c {} \;
+          ruby tools/test_live_progress.rb
+          ./gradlew --no-daemon testReleaseUnitTest -x externalNativeBuildRelease
+
       - name: Compilar el APK (versión optimizada)
         run: |
           if ./gradlew --no-daemon assembleRelease > "$RUNNER_TEMP/gradle.log" 2>&1; then
@@ -161,9 +168,6 @@ jobs:
             tail -40 "$RUNNER_TEMP/gradle.log"
             exit 1
           fi
-
-      - name: Probar lectura del catálogo y enlaces de comunidades
-        run: ./gradlew --no-daemon testReleaseUnitTest
 
       - name: Dejar Ruby 1.8 listo para la próxima vez
         if: always()

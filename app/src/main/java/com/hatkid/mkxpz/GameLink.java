@@ -5,7 +5,7 @@ import android.content.Context;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,8 +45,8 @@ public final class GameLink
         File reading = new File(f.getPath() + ".read");
         if (!f.renameTo(reading)) return Collections.emptyList();
         List<String> out = new ArrayList<>();
-        try {
-            for (String line : new String(Files.readAllBytes(reading.toPath()), StandardCharsets.UTF_8).split("\n")) {
+        try (FileInputStream in = new FileInputStream(reading)) {
+            for (String line : new String(SaveTransaction.read(in, 65536), StandardCharsets.UTF_8).split("\n")) {
                 if (!line.trim().isEmpty()) out.add(line.trim());
             }
         } catch (Exception ignored) { }

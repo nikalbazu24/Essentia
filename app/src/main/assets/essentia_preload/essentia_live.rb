@@ -8,18 +8,33 @@ module Essentia
   LIVE_FILE = ENV['ESSENTIA_LIVE_FILE']
   @live_frame = 0
   @live_last = nil
+  @live_time = 0.0
+  @progress_last = nil
+  PROGRESS_FILE = ENV['ESSENTIA_PROGRESS_FILE'].to_s
 
   def self.live_update
+    return if LIVE_FILE.to_s.empty? && PROGRESS_FILE.empty?
     @live_frame += 1
-    return unless (@live_frame % 30).zero?
+    return unless (@live_frame % 15).zero?
+    now = Time.now.to_f
+    return if now - @live_time < 0.5
+    @live_time = now
     return unless defined?($game_map) && $game_map && defined?($game_player) && $game_player
 
     map_id = $game_map.map_id
     name = live_map_name(map_id)
     region, mx, my = live_town_map_spot(map_id)
     image = live_town_map_image(region)
+    progress = live_progress
+    if !PROGRESS_FILE.empty? && progress != @progress_last
+      tmp_progress = PROGRESS_FILE + '.tmp'
+      File.open(tmp_progress, 'wb') { |f| f.write(progress.map { |v| v.to_s.gsub(/[\t\r\n]/, ' ') }.join("\t")) }
+      File.rename(tmp_progress, PROGRESS_FILE)
+      @progress_last = progress
+    end
+    return if LIVE_FILE.to_s.empty?
     fields = [map_id, $game_player.x, $game_player.y, $game_map.width, $game_map.height,
-              region, mx, my, image, name]
+              region, mx, my, image, name] + progress
     line = fields.map { |v| v.to_s.gsub(/[\t\r\n]/, ' ') }.join("\t")
     return if line == @live_last
     @live_last = line
@@ -27,6 +42,39 @@ module Essentia
     File.open(tmp, 'wb') { |f| f.write(line) }
     File.rename(tmp, LIVE_FILE)
   rescue Exception
+  end
+
+  # Optional reads only: never load, deserialize or modify a saved game.
+  def self.live_progress
+    trainer = (defined?($player) && $player) || (defined?($Trainer) && $Trainer)
+    return ['', '', '', ''] unless trainer
+    party = (trainer.party rescue []) || []
+    team = party.compact[0, 6].map do |pk|
+      name = (pk.name rescue '?').to_s
+      level = (pk.level rescue '?')
+      hp = (pk.hp rescue '?')
+      total = (pk.totalhp rescue '?')
+      "#{name} Nv.#{level} #{hp}/#{total} PS"
+    end.join(' · ')
+    badges = (trainer.badge_count rescue nil)
+    if badges.nil?
+      raw = (trainer.badges rescue nil)
+      badges = raw.select { |v| v == true }.length if raw.is_a?(Array)
+    end
+    dex = (trainer.pokedex rescue nil)
+    owned = (dex.owned_count rescue nil)
+    seen = (dex.seen_count rescue nil)
+    if owned.nil?
+      raw = (trainer.owned rescue nil)
+      owned = raw.select { |v| v == true }.length if raw.is_a?(Array)
+    end
+    if seen.nil?
+      raw = (trainer.seen rescue nil)
+      seen = raw.select { |v| v == true }.length if raw.is_a?(Array)
+    end
+    [team, badges, owned, seen]
+  rescue Exception
+    ['', '', '', '']
   end
 
   def self.live_map_name(map_id)

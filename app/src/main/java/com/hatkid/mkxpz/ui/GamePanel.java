@@ -68,6 +68,8 @@ public final class GamePanel extends Presentation
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private LiveMapView mMap;
     private TextView mPlace;
+    private TextView mProgress;
+    private TextView mNotes;
     private TextView mMessage;
     private TextView mTurboChip;
     private Tile mTurboTile;
@@ -144,6 +146,13 @@ public final class GamePanel extends Presentation
         col.setPadding(pad, pad, pad, pad);
 
         col.addView(buildHeader(c));
+        mProgress = Ui.text(c, "Equipo y logros · esperando al juego", 12, Ui.ACCENT_LIGHT, false);
+        mProgress.setMaxLines(3);
+        col.addView(mProgress);
+        String notes = c.getSharedPreferences("essentia_notes", Context.MODE_PRIVATE).getString(mGameDir.getAbsolutePath(), "");
+        mNotes = Ui.text(c, notes.isEmpty() ? "Añade notas desde las herramientas del juego" : "Notas · " + notes, 12, Ui.TEXT_DIM, false);
+        mNotes.setMaxLines(2);
+        col.addView(mNotes);
 
         LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.25f);
         mlp.topMargin = Ui.dp(c, 10);
@@ -485,6 +494,12 @@ public final class GamePanel extends Presentation
         mPlace.setText(name.isEmpty() ? getContext().getString(R.string.panel_map_position,
             parse(f[1]), parse(f[2])) : name);
 
+        if (f.length >= 14 && mProgress != null) {
+            String team = f[10].isEmpty() ? "Equipo no disponible" : f[10];
+            mProgress.setText(team + "\nMedallas: " + (f[11].isEmpty() ? "—" : f[11])
+                + " · Pokédex: " + (f[12].isEmpty() ? "—" : f[12]) + " capturados / "
+                + (f[13].isEmpty() ? "—" : f[13]) + " vistos");
+        }
         String image = f[8].trim();
         int sx = parse(f[6]), sy = parse(f[7]);
         if (image.isEmpty() || sx < 0) {
@@ -522,7 +537,15 @@ public final class GamePanel extends Presentation
         }
         if (f == null || !f.isFile()) return null;
         try {
-            return BitmapFactory.decodeFile(f.getAbsolutePath());
+            if (!f.getCanonicalPath().startsWith(mGameDir.getCanonicalPath() + File.separator)) return null;
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(f.getAbsolutePath(), options);
+            int sample = 1;
+            while (options.outWidth / sample > 1600 || options.outHeight / sample > 1600) sample *= 2;
+            options.inJustDecodeBounds = false;
+            options.inSampleSize = sample;
+            return BitmapFactory.decodeFile(f.getAbsolutePath(), options);
         } catch (Throwable t) {
             return null;
         }

@@ -46,6 +46,7 @@ public class GuideActivity extends ControllerActivity {
         button("Comunidad beta y sugerencias", () -> open("https://github.com/nikalbazu24/Essentia/issues"));
         if (path != null && game != null) {
             text(title,23);
+            text(GameProgress.summary(this,path),16);
             Catalog.Game catalog = Catalog.match(Catalog.cached(this),title,new File(path));
             if (catalog != null && !Catalog.webUrl(catalog.page).isEmpty())
                 button("Página del creador y contenido del juego", () -> open(catalog.page));

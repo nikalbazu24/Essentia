@@ -13,6 +13,7 @@ def hasReleaseKey = keystorePath && keystorePassword && file(keystorePath).exist
 
 android {
     namespace 'com.hatkid.mkxpz'
+    buildFeatures { buildConfig true }
     compileSdk 33
     ndkVersion '25.2.9519653'
 

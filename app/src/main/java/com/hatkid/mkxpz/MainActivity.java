@@ -203,6 +203,7 @@ public class MainActivity extends SDLActivity
             //noinspection ResultOfMethodCallIgnored
             new java.io.File(getCacheDir(), "essentia_live.txt").delete();
             boolean livePanel = EssentiaSettings.GAME2_PANEL.equals(EssentiaSettings.gameSecondScreen(this));
+            android.system.Os.setenv("ESSENTIA_PROGRESS_FILE", GameProgress.file(this, GAME_PATH).getAbsolutePath(), true);
             android.system.Os.setenv("ESSENTIA_LIVE_FILE",
                 livePanel ? new java.io.File(getCacheDir(), "essentia_live.txt").getAbsolutePath() : "", true);
 

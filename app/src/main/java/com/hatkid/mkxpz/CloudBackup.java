@@ -106,11 +106,16 @@ public final class CloudBackup
     /** The game's backups, newest first: [id, files summary]. */
     public static List<String[]> list(Context c, String path) throws Exception
     {
+        return list(c, path, 45000);
+    }
+
+    public static List<String[]> list(Context c, String path, int timeout) throws Exception
+    {
         JSONObject body = new JSONObject();
         body.put("action", "backup_list");
         body.put("key", Cloud.backupKey(c));
         body.put("game", titleOf(c, path));
-        JSONArray arr = Cloud.post(c, body, 45000).getJSONArray("backups");
+        JSONArray arr = Cloud.post(c, body, timeout).getJSONArray("backups");
         List<String[]> out = new ArrayList<>();
         for (int i = 0; i < arr.length(); i++) {
             JSONObject o = arr.getJSONObject(i);
@@ -154,8 +159,11 @@ public final class CloudBackup
         synchronized (UpdateService.class) {
             if (GameRemoval.busy() || UpdateService.hasWork() || Games.isGameRunning(c))
                 throw new java.io.IOException("Cierra el juego y espera a que terminen las instalaciones");
-            return SaveTransaction.restore(target, new File(Environment.getExternalStorageDirectory(),
+            int count = SaveTransaction.restore(target, new File(Environment.getExternalStorageDirectory(),
                 "Essentia/Respaldos/" + Saves.safeName(title)), payload);
+            c.getSharedPreferences("essentia_backups", Context.MODE_PRIVATE).edit()
+                .putLong(path + ":time", System.currentTimeMillis()).apply();
+            return count;
         }
     }
 
