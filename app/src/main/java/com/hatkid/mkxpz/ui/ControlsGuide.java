@@ -65,7 +65,7 @@ public final class ControlsGuide
         else if (alt) r.setBackground(Ui.rounded(c, Ui.SURFACE, 8));
 
         int color = header ? Ui.ACCENT_LIGHT : Ui.TEXT;
-        r.addView(cell(c, a, header ? Ui.ACCENT_LIGHT : Ui.GOLD, true), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.1f));
+        r.addView(cell(c, a, header ? Ui.ACCENT_LIGHT : (Ui.LIGHT?Ui.ACCENT_LIGHT:Ui.GOLD), true), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.1f));
         r.addView(cell(c, b, color, header), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.1f));
         r.addView(cell(c, d, header ? Ui.ACCENT_LIGHT : Ui.TEXT_DIM, header), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f));
         return r;
@@ -86,7 +86,7 @@ public final class ControlsGuide
         int p = Ui.dp(a, 12);
         table.setPadding(p, p, p, p);
         scroll.addView(table);
-        new AlertDialog.Builder(a, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(a, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.ctl_title)
             .setView(scroll)
             .setPositiveButton(R.string.close, null)

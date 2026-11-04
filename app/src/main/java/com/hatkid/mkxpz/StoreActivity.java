@@ -153,7 +153,7 @@ public class StoreActivity extends ControllerActivity
     {
         mDetail = null;
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(Ui.backdrop());
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         int pad = Ui.dp(this, 20);
@@ -345,6 +345,7 @@ public class StoreActivity extends ControllerActivity
         TextView title = Ui.text(this, g.title, 16, Ui.TEXT, true);
         title.setMaxLines(1);
         title.setEllipsize(TextUtils.TruncateAt.END);
+        title.setTextColor(android.graphics.Color.WHITE);
         title.setShadowLayer(6, 0, 1, 0xFF000000);
         text.addView(title);
         Catalog.Source source = Catalog.sourceFor(g.sourcePage);
@@ -358,7 +359,7 @@ public class StoreActivity extends ControllerActivity
 
         LinearLayout badges = new LinearLayout(this);
         badges.setPadding(0, Ui.dp(this, 8), Ui.dp(this, 8), 0);
-        if (Catalog.installed(this, g) != null) badges.addView(badge(getString(R.string.store_in_library), Ui.ACCENT_LIGHT), gapSmall());
+        if (Catalog.installed(this, g) != null) badges.addView(badge(getString(R.string.store_in_library), Ui.pastel(1)), gapSmall());
         badges.addView(badge(statusLabel(g.status), statusColor(g.status)), gapSmall());
         art.addView(badges, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END));
@@ -532,7 +533,7 @@ public class StoreActivity extends ControllerActivity
         if (manual.isEmpty()) return;
         String[] names = new String[manual.size()];
         for (int i = 0; i < names.length; i++) names[i] = manual.get(i).title + "  →  " + manual.get(i).latest;
-        AlertDialog d = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        AlertDialog d = new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.store_manual_title)
             .setItems(names, (x, w) -> {
                 Catalog.Update u = manual.get(w);
@@ -562,7 +563,7 @@ public class StoreActivity extends ControllerActivity
     {
         mDetail = g;
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(Ui.backdrop());
 
         // blurred backdrop of the picture
         ImageView backdrop = new ImageView(this);
@@ -822,7 +823,7 @@ public class StoreActivity extends ControllerActivity
                             DateUtils.MINUTE_IN_MILLIS));
                 }
                 labels.add(getString(R.string.store_zip_other));
-                AlertDialog d = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                AlertDialog d = new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                     .setTitle(zips.isEmpty() ? getString(R.string.store_zip_none) : getString(R.string.store_zip_pick))
                     .setItems(labels.toArray(new String[0]), (x, w) -> {
                         if (w < zips.size()) installZip(zips.get(w), g, path);
@@ -942,7 +943,7 @@ public class StoreActivity extends ControllerActivity
         EditText link = com.hatkid.mkxpz.ui.Ui.input(this);
         link.setHint(R.string.store_suggest_link);
         box.addView(link);
-        AlertDialog d = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        AlertDialog d = new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.store_suggest)
             .setView(box)
             .setPositiveButton(R.string.rep_send, (x, w) -> {
@@ -977,7 +978,7 @@ public class StoreActivity extends ControllerActivity
 
     private void message(String text)
     {
-        AlertDialog d = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        AlertDialog d = new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setMessage(text)
             .setPositiveButton(android.R.string.ok, null)
             .create();
@@ -1191,7 +1192,7 @@ public class StoreActivity extends ControllerActivity
     {
         float lum = (0.2126f * Color.red(color) + 0.7152f * Color.green(color) + 0.0722f * Color.blue(color)) / 255f;
         boolean light = lum > 0.55f;
-        TextView t = Ui.text(this, text, 11, Color.alpha(color) < 0x80 ? Ui.TEXT : (light ? 0xFF14162B : Ui.TEXT), true);
+        TextView t = Ui.text(this, text, 11, Color.alpha(color) < 0x80 ? Ui.TEXT : Ui.contrast(color), true);
         t.setBackground(Ui.rounded(this, color, 8));
         t.setPadding(Ui.dp(this, 7), Ui.dp(this, 2), Ui.dp(this, 7), Ui.dp(this, 2));
         t.setSingleLine(true);
@@ -1200,7 +1201,7 @@ public class StoreActivity extends ControllerActivity
 
     private TextView pill(String text, boolean selected)
     {
-        TextView t = Ui.text(this, text, 15, Ui.TEXT, true);
+        TextView t = Ui.text(this, text, 15, selected?Ui.ON_ACCENT:Ui.TEXT, true);
         t.setGravity(Gravity.CENTER);
         t.setBackground(Ui.focusable(this, selected ? Ui.ACCENT : Ui.SURFACE, 22));
         t.setPadding(Ui.dp(this, 18), Ui.dp(this, 9), Ui.dp(this, 18), Ui.dp(this, 9));

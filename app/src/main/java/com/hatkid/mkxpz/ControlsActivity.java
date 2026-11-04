@@ -54,7 +54,7 @@ public class ControlsActivity extends ControllerActivity
             labels[i] = getString(ButtonMap.ACTIONS[i].labelRes);
             if (current != null && current.id.equals(ButtonMap.ACTIONS[i].id)) checked = i;
         }
-        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new android.app.AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(getString(R.string.btn_map_choose, ButtonMap.buttonName(button)))
             .setSingleChoiceItems(labels, checked, (d, which) -> {
                 ButtonMap.set(this, button, ButtonMap.ACTIONS[which].id);
@@ -102,7 +102,7 @@ public class ControlsActivity extends ControllerActivity
         box.setBackground(Ui.rounded(this, Ui.SURFACE, 14));
         int p = Ui.dp(this, 14);
         box.setPadding(p, p, p, p);
-        mLastButton = Ui.text(this, getString(R.string.ctl_test_press), 17, Ui.GOLD, true);
+        mLastButton = Ui.text(this, getString(R.string.ctl_test_press), 17, Ui.LIGHT?Ui.ACCENT_LIGHT:Ui.GOLD, true);
         box.addView(mLastButton);
         mSticks = Ui.text(this, getString(R.string.ctl_test_sticks, "—"), 14, Ui.TEXT_DIM, false);
         mSticks.setPadding(0, Ui.dp(this, 6), 0, 0);

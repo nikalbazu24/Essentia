@@ -83,7 +83,7 @@ public final class Updater
 
     private static void askToUpdate(Activity activity, String versionName, String apkUrl, Done then)
     {
-        new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(activity, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.update_title)
             .setMessage(activity.getString(R.string.update_message, versionName, BuildConfig.VERSION_NAME))
             .setCancelable(false)

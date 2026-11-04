@@ -23,3 +23,8 @@ sección «Renovación Android» de `docs/2.0-beta.md`. GS Vitro sigue sin causa
 reporte manual de beta.61 sin traza; adjunto privado nuevo no transferido ni comparado. Se añade
 registro local optativo de la decisión real de motor, fases y salidas de Android, sin cambiar la
 política automática. `ExperienceTest` y `ui-review.yml` producen capturas Android revisables.
+
+El dueño envió durante esta continuación la referencia visual de code.xr (Dashboard V15,
+Instagram reel DezD0vhzvvL). La dirección aprobada pasa a lavanda claro, tarjetas blancas y
+pastel y acciones oscuras; mantener los temas oscuros como opción. Repetir capturas y controles
+de contraste después de este ajuste. El PR continúa sin integrar mientras se valida.

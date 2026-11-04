@@ -19,8 +19,9 @@ public abstract class ControllerActivity extends Activity
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
-        super.onCreate(savedInstanceState);
         Ui.applyTheme(this);
+        setTheme(Ui.LIGHT?com.hatkid.mkxpz.R.style.AppThemeLight:com.hatkid.mkxpz.R.style.AppTheme);
+        super.onCreate(savedInstanceState);
         mAppearanceStamp=Ui.themeStamp();
         Window w = getWindow();
         w.getDecorView().setBackgroundColor(Ui.BG);

@@ -144,6 +144,7 @@ public class MainActivity extends SDLActivity
         }
 
         com.hatkid.mkxpz.ui.Ui.applyTheme(this);
+        setTheme(com.hatkid.mkxpz.ui.Ui.LIGHT?R.style.AppThemeLight:R.style.AppTheme);
         if(requestedPath!=null)Diagnostics.start(this,requestedPath,mClassicEngine?"classic":"modern",
             getIntent().getStringExtra(EXTRA_ENGINE_REASON),getIntent().getStringExtra(EXTRA_SCREEN_MODE));
         // Essentia: settings read by the native engine through the environment
@@ -431,7 +432,7 @@ public class MainActivity extends SDLActivity
 
     private void confirmExit()
     {
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.exit_title)
             .setMessage(R.string.exit_message)
             .setPositiveButton(R.string.exit_confirm, (d, w) -> {Diagnostics.event(this,gamePath(),"user_exit");finish();})

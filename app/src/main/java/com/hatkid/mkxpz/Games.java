@@ -46,7 +46,7 @@ public final class Games
 
     public static void askAllFilesAccess(Activity a, int requestCode, Runnable onCancel)
     {
-        new AlertDialog.Builder(a, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(a, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.perm_title)
             .setMessage(R.string.perm_message)
             .setCancelable(false)

@@ -130,7 +130,7 @@ public final class CompanionView extends FrameLayout
             addView(root, new FrameLayout.LayoutParams(-1,-1));
             return;
         }
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(Ui.backdrop());
         LinearLayout col=new LinearLayout(c);col.setOrientation(LinearLayout.VERTICAL);
         int pad=Ui.dp(c,12);col.setPadding(pad,pad,pad,pad);
         col.addView(buildHeader(c));
@@ -138,7 +138,7 @@ public final class CompanionView extends FrameLayout
         mPages=new FrameLayout(c);
         LinearLayout summary=new LinearLayout(c);summary.setOrientation(LinearLayout.VERTICAL);
         mProgress=Ui.text(c,"Equipo y progreso\nAbre tu partida para consultar datos compatibles.",16,Ui.TEXT,false);
-        mProgress.setPadding(pad,pad,pad,pad);mProgress.setBackground(Ui.rounded(c,Ui.SURFACE,16));
+        mProgress.setPadding(pad,pad,pad,pad);mProgress.setBackground(Ui.rounded(c,Ui.pastel(1),20));
         summary.addView(mProgress);
         TextView status=Ui.text(c,"Solo datos leídos del juego. Si no hay conexión compatible, puedes usar tus notas y los controles.",14,Ui.TEXT_DIM,false);
         status.setPadding(0,pad,0,pad);summary.addView(status);
@@ -152,7 +152,7 @@ public final class CompanionView extends FrameLayout
         notes.addView(Ui.text(c,"Tu cuaderno de aventura",22,Ui.TEXT,true));
         notes.addView(Ui.text(c,"Objetivos, lugares y recordatorios. Se guardan en este dispositivo para este juego.",14,Ui.TEXT_DIM,false));
         mNotes=Ui.text(c,c.getSharedPreferences("essentia_notes",0).getString(mGameDir.getAbsolutePath(),"Aún no tienes notas."),17,Ui.TEXT,false);mNotes.setPadding(pad,pad,pad,pad);
-        mNotes.setBackground(Ui.rounded(c,Ui.SURFACE,16));notes.addView(mNotes);
+        mNotes.setBackground(Ui.rounded(c,Ui.pastel(2),20));notes.addView(mNotes);
         android.widget.Button edit=Ui.button(c,"Editar mis notas",true);edit.setOnClickListener(v->mActions.notes());notes.addView(edit);
         mPageViews[PAGE_NOTES]=scroll(c,notes);
         mPageViews[PAGE_ACTIONS]=buildActions(c);
@@ -195,7 +195,7 @@ public final class CompanionView extends FrameLayout
         titles.addView(mPlace);
         header.addView(titles, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        mTurboChip = Ui.text(c, "", 13, Ui.BG, true);
+        mTurboChip = Ui.text(c, "", 13, Ui.INK, true);
         mTurboChip.setBackground(Ui.rounded(c, Ui.GOLD, 10));
         mTurboChip.setPadding(Ui.dp(c, 8), Ui.dp(c, 3), Ui.dp(c, 8), Ui.dp(c, 3));
         mTurboChip.setVisibility(View.GONE);
@@ -319,6 +319,7 @@ public final class CompanionView extends FrameLayout
         LinearLayout view;
         ImageView icon;
         TextView label;
+        int baseColor;
     }
 
     private GridLayout grid(Context c, int columns)
@@ -343,6 +344,7 @@ public final class CompanionView extends FrameLayout
     {
         Context c = getContext();
         Tile t = new Tile();
+        t.baseColor=Ui.pastel(g.getChildCount()%4);
         t.view = new LinearLayout(c);
         t.view.setOrientation(LinearLayout.VERTICAL);
         t.view.setGravity(Gravity.CENTER);
@@ -367,8 +369,8 @@ public final class CompanionView extends FrameLayout
     private void setTileOn(Tile t, boolean on)
     {
         Context c = getContext();
-        t.view.setBackground(Ui.focusable(c, on ? Ui.GOLD : Ui.SURFACE_HI, 18));
-        int color = on ? Ui.BG : Ui.TEXT;
+        t.view.setBackground(Ui.focusable(c, on ? Ui.GOLD : t.baseColor, 18));
+        int color = on ? Ui.INK : Ui.TEXT;
         t.label.setTextColor(color);
         t.icon.setColorFilter(color);
     }
@@ -377,9 +379,9 @@ public final class CompanionView extends FrameLayout
     private void keyTile(GridLayout grid, int labelRes, int keycode, boolean primary)
     {
         Context c = getContext();
-        TextView b = Ui.text(c, c.getString(labelRes), 16, Ui.TEXT, true);
+        TextView b = Ui.text(c, c.getString(labelRes), 16, primary?Ui.ON_ACCENT:Ui.TEXT, true);
         b.setGravity(Gravity.CENTER);
-        b.setBackground(Ui.focusable(c, primary ? Ui.ACCENT : Ui.SURFACE_HI, 18));
+        b.setBackground(Ui.focusable(c, primary ? Ui.ACCENT : Ui.pastel(grid.getChildCount()%4), 18));
         b.setFocusable(true);b.setClickable(true);
         b.setOnClickListener(v->{mKeys.down(keycode);mKeys.up(keycode);});
         b.setOnTouchListener((v, e) -> {

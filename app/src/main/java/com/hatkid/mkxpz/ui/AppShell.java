@@ -21,7 +21,7 @@ public final class AppShell {
         boolean rail = a.getResources().getConfiguration().screenWidthDp >= 740;
         LinearLayout root = new LinearLayout(a);
         root.setOrientation(rail ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(Ui.backdrop());
         // Respect cutouts even in immersive mode; navigation stays reachable.
         root.setOnApplyWindowInsetsListener((v,insets)-> {
             if (android.os.Build.VERSION.SDK_INT >= 28 && insets.getDisplayCutout()!=null) {

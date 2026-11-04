@@ -111,7 +111,7 @@ public final class SecondScreen extends Presentation
         Context c = getContext();
 
         FrameLayout root = new FrameLayout(c);
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(Ui.backdrop());
 
         mBackdrop = new ImageView(c); // retained loader target; no decorative full-screen layer
         LinearLayout col = new LinearLayout(c);

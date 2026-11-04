@@ -202,7 +202,7 @@ public class SettingsActivity extends ControllerActivity
             d.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             dot.setBackground(d);
             swatch.addView(dot, new LinearLayout.LayoutParams(Ui.dp(this, 34), Ui.dp(this, 34)));
-            TextView name = Ui.text(this, getString(names[i]), 13, Ui.TEXT, t[0].equals(current));
+            TextView name = Ui.text(this, getString(names[i]), 13, Ui.contrast(android.graphics.Color.parseColor(t[2])), t[0].equals(current));
             name.setGravity(Gravity.CENTER);
             name.setPadding(0, Ui.dp(this, 6), 0, 0);
             swatch.addView(name);
@@ -470,7 +470,7 @@ public class SettingsActivity extends ControllerActivity
             return;
         }
         int n = Shortcuts.export(this, new java.io.File(path));
-        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new android.app.AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.set_fe_title)
             .setMessage(getResources().getQuantityString(R.plurals.fe_done, n, n, path))
             .setPositiveButton(android.R.string.ok, null)

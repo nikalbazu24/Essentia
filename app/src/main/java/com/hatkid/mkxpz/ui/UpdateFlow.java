@@ -221,7 +221,7 @@ public final class UpdateFlow
 
     private static AlertDialog.Builder dialog(Activity a)
     {
-        return new AlertDialog.Builder(a, android.R.style.Theme_DeviceDefault_Dialog_Alert);
+        return new AlertDialog.Builder(a, com.hatkid.mkxpz.ui.Ui.dialogTheme());
     }
 
     private static void message(Activity a, String title, String text, Runnable after)

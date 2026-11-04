@@ -130,6 +130,16 @@ public class ExperienceTest {
         if(v instanceof EditText)return (EditText)v;
         if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){EditText found=findEditor(((ViewGroup)v).getChildAt(i));if(found!=null)return found;}return null;
     }
+    @Test public void referenceThemeAndDarkOptionKeepReadableActions()throws Exception {
+        RuntimeEnvironment.setQualifiers("es-rES-w390dp-h844dp-port-mdpi");
+        for(String theme:new String[]{"esencia","noche"}) {
+            Ui.setTheme(app,theme);
+            Button primary=Ui.button(app,"Jugar",true);assertEquals(Ui.contrast(Ui.ACCENT),primary.getCurrentTextColor());
+            org.robolectric.android.controller.ActivityController<SettingsActivity> controller=Robolectric.buildActivity(SettingsActivity.class).setup();
+            shot("theme-"+theme,controller.get().findViewById(android.R.id.content),390,844);controller.pause().stop().destroy();
+        }
+        Ui.setTheme(app,"esencia");
+    }
     @Test public void diagnosticsAreOptInAndPreserveRealEngineDecision()throws Exception {
         String path="/fixture/diagnostics";Diagnostics.file(app,path,"session").delete();
         Diagnostics.start(app,path,"classic","learned_fallback","wide_safe");assertFalse(Diagnostics.file(app,path,"session").exists());

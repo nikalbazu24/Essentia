@@ -42,7 +42,7 @@ public final class GamePanel extends Presentation {
         Dialog dialog=new Dialog(a,android.R.style.Theme_Material_NoActionBar);
         CompanionView view=new CompanionView(a,false,title,path,live,keys,withNotes(actions,()->editNotes(a,path)));
         view.setTag("phone-companion");
-        android.widget.LinearLayout root=new android.widget.LinearLayout(a);root.setOrientation(1);
+        android.widget.LinearLayout root=new android.widget.LinearLayout(a);root.setOrientation(1);root.setBackgroundColor(Ui.BG);
         android.widget.Button close=Ui.button(a,"Volver al juego",false);close.setOnClickListener(v->dialog.dismiss());root.addView(close);
         root.addView(view,new android.widget.LinearLayout.LayoutParams(-1,0,1f));dialog.setContentView(root);
         dialog.setOnDismissListener(d->view.dispose());

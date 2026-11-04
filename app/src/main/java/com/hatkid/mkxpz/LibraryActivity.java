@@ -260,7 +260,7 @@ public class LibraryActivity extends ControllerActivity
     {
         FrameLayout root = new FrameLayout(this);
         mRoot = root;
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(Ui.backdrop());
 
         mBackdrop = new ImageView(this); // cover loader target; no animated full-screen backdrop
         LinearLayout col = new LinearLayout(this);
@@ -343,7 +343,7 @@ public class LibraryActivity extends ControllerActivity
     private View buildHero()
     {
         LinearLayout hero=new LinearLayout(this);hero.setGravity(Gravity.CENTER_VERTICAL);
-        hero.setBackground(Ui.rounded(this,Ui.SURFACE,18));int p=Ui.dp(this,12);hero.setPadding(p,p,p,p);
+        hero.setBackground(Ui.rounded(this,Ui.pastel(0),22));int p=Ui.dp(this,12);hero.setPadding(p,p,p,p);
         mHeroCover=new ImageView(this);mHeroCover.setScaleType(ImageView.ScaleType.CENTER_CROP);
         mHeroCover.setBackground(Ui.rounded(this,Ui.SURFACE_HI,10));mHeroCover.setClipToOutline(true);
         hero.addView(mHeroCover,new LinearLayout.LayoutParams(Ui.dp(this,72),Ui.dp(this,72)));
@@ -397,7 +397,7 @@ public class LibraryActivity extends ControllerActivity
 
     private void hint(LinearLayout row, String button, int labelRes)
     {
-        TextView key = Ui.text(this, button, 11, Ui.BG, true);
+        TextView key = Ui.text(this, button, 11, Ui.contrast(Ui.TEXT_DIM), true);
         key.setGravity(Gravity.CENTER);
         key.setBackground(Ui.rounded(this, Ui.TEXT_DIM, 10));
         key.setPadding(Ui.dp(this, 7), Ui.dp(this, 1), Ui.dp(this, 7), Ui.dp(this, 1));
@@ -460,7 +460,7 @@ public class LibraryActivity extends ControllerActivity
         b.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         int p = Ui.dp(this, 10);
         b.setPadding(p, p, p, p);
-        b.setBackground(Ui.focusable(this, 0x33FFFFFF, 22));
+        b.setBackground(Ui.focusable(this, Ui.SURFACE, 22));
         b.setFocusable(true);
         b.setClickable(true);
         b.setContentDescription(getString(descRes));
@@ -477,7 +477,7 @@ public class LibraryActivity extends ControllerActivity
     {
         LinearLayout b = new LinearLayout(this);
         b.setGravity(Gravity.CENTER_VERTICAL);
-        b.setBackground(Ui.focusable(this, primary ? Ui.ACCENT : 0x33FFFFFF, 22));
+        b.setBackground(Ui.focusable(this, primary ? Ui.ACCENT : Ui.SURFACE, 22));
         b.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 18), 0);
         b.setFocusable(true);
         b.setClickable(true);
@@ -485,10 +485,10 @@ public class LibraryActivity extends ControllerActivity
 
         ImageView i = new ImageView(this);
         i.setImageResource(icon);
-        i.setImageTintList(Ui.tint(Ui.TEXT));
+        i.setImageTintList(Ui.tint(primary?Ui.ON_ACCENT:Ui.TEXT));
         b.addView(i, new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20)));
 
-        TextView t = Ui.text(this, text, 15, Ui.TEXT, true);
+        TextView t = Ui.text(this, text, 15, primary?Ui.ON_ACCENT:Ui.TEXT, true);
         t.setTag("label");
         t.setPadding(Ui.dp(this, 8), 0, 0, 0);
         b.addView(t);
@@ -664,7 +664,7 @@ public class LibraryActivity extends ControllerActivity
         card.addView(h.title, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
 
-        h.badge = Ui.text(this, "16:9", 11, Ui.BG, true);
+        h.badge = Ui.text(this, "16:9", 11, Ui.INK, true);
         h.badge.setBackground(Ui.rounded(this, Ui.GOLD, 8));
         h.badge.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1043,7 +1043,7 @@ public class LibraryActivity extends ControllerActivity
 
     private void chip(String text, boolean highlight)
     {
-        TextView t = Ui.text(this, text, 13, highlight ? Ui.BG : Ui.TEXT, true);
+        TextView t = Ui.text(this, text, 13, highlight ? Ui.INK : Ui.TEXT, true);
         t.setBackground(Ui.rounded(this, highlight ? Ui.GOLD : 0x33FFFFFF, 12));
         t.setPadding(Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4));
         t.setSingleLine(true);
@@ -1061,7 +1061,7 @@ public class LibraryActivity extends ControllerActivity
         Library.Entry e = mGames.get(pos);
         File dir = new File(e.path);
         if (!dir.isDirectory() || !Games.isGameFolder(dir)) {
-            new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                 .setTitle(e.displayTitle())
                 .setMessage(R.string.lib_missing)
                 .setPositiveButton(R.string.lib_remove, (d, w) -> { Library.remove(this, e.path); reload(); })
@@ -1128,7 +1128,7 @@ public class LibraryActivity extends ControllerActivity
         input.setText(e.displayTitle());
         input.setSelectAllOnFocus(true);
         input.setSingleLine(true);
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.opt_rename)
             .setView(input)
             .setPositiveButton(android.R.string.ok, (d, w) -> {
@@ -1163,7 +1163,7 @@ public class LibraryActivity extends ControllerActivity
         Library.update(this, e);
         int msg = !e.translate ? R.string.tr_off
             : Cloud.configured(this) ? R.string.tr_on : R.string.tr_on_no_cloud;
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(e.displayTitle())
             .setMessage(getString(msg, Translator.folder(e.displayTitle()).getAbsolutePath()))
             .setPositiveButton(android.R.string.ok, null)
@@ -1174,7 +1174,7 @@ public class LibraryActivity extends ControllerActivity
     private void cloudBackup(Library.Entry e)
     {
         if (!Cloud.backupsReady(this)) {
-            new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                 .setTitle(R.string.opt_cloud)
                 .setMessage(R.string.cloud_not_ready)
                 .setPositiveButton(R.string.lib_settings, (d, w) -> startActivity(new Intent(this, SettingsActivity.class)))
@@ -1185,7 +1185,7 @@ public class LibraryActivity extends ControllerActivity
         long last = CloudBackup.lastBackup(this, e.path);
         String when = last == 0 ? getString(R.string.cloud_never)
             : DateUtils.getRelativeTimeSpanString(last, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString();
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(e.displayTitle())
             .setMessage(getString(R.string.cloud_last, when))
             .setPositiveButton(R.string.cloud_now, (d, w) -> runCloud(() -> {
@@ -1225,9 +1225,9 @@ public class LibraryActivity extends ControllerActivity
                 }
                 String[] names = new String[found.size()];
                 for (int i = 0; i < found.size(); i++) names[i] = CloudBackup.readable(found.get(i)[0]) + "\n" + found.get(i)[1];
-                new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                     .setTitle(R.string.cloud_restore)
-                    .setItems(names, (d, which) -> new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setItems(names, (d, which) -> new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                         .setTitle(R.string.cloud_restore)
                         .setMessage(getString(R.string.cloud_restore_confirm, CloudBackup.readable(found.get(which)[0])))
                         .setPositiveButton(R.string.cloud_restore, (d2, w2) -> runCloud(() -> {
@@ -1288,7 +1288,7 @@ public class LibraryActivity extends ControllerActivity
         final String[] labels = { auto, getString(R.string.eng_modern), getString(R.string.eng_classic) };
         int checked = EssentiaSettings.ENGINE_CLASSIC.equals(e.engine) ? 2
             : EssentiaSettings.ENGINE_MODERN.equals(e.engine) ? 1 : 0;
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.opt_engine)
             .setSingleChoiceItems(labels, checked, (d, which) -> {
                 if (which == 2 && !available) {
@@ -1315,7 +1315,7 @@ public class LibraryActivity extends ControllerActivity
             getString(R.string.scr_stretch) };
         int checked = 0;
         for (int i = 0; i < values.length; i++) if (values[i].equals(e.screenMode)) checked = i;
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.opt_screen)
             .setSingleChoiceItems(labels, checked, (d, which) -> {
                 e.screenMode = values[which];
@@ -1411,7 +1411,7 @@ public class LibraryActivity extends ControllerActivity
         int p = Ui.dp(this, 20);
         info.setPadding(p, Ui.dp(this, 8), p, 0);
 
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(getString(R.string.imp_title, e.displayTitle()))
             .setItems(labels.toArray(new String[0]), (d, which) -> actions.get(which).run())
             .setNegativeButton(R.string.cancel, null)
@@ -1433,7 +1433,7 @@ public class LibraryActivity extends ControllerActivity
             names[i] = files.get(i).getName() + "   (" + fmt.format(new Date(files.get(i).lastModified())) + ")";
             checked[i] = true;
         }
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
             .setTitle(R.string.imp_choose)
             .setMultiChoiceItems(names, checked, (d, which, on) -> checked[which] = on)
             .setPositiveButton(R.string.imp_do, (d, w) -> {
@@ -1586,7 +1586,7 @@ public class LibraryActivity extends ControllerActivity
             final int count = added, total = found.size();
             runOnUiThread(() -> {
                 if (total == 0) {
-                    new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
                         .setTitle(R.string.app_name)
                         .setMessage(getString(R.string.lib_none_found, root.getAbsolutePath()))
                         .setPositiveButton(R.string.choose_folder, (d, w) -> openFolderPicker())
