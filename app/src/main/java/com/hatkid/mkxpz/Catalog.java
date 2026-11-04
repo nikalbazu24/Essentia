@@ -471,7 +471,7 @@ public final class Catalog
         if (list == null || depth > 2) return;
         for (File f : list) {
             if (f.isDirectory()) collectZips(f, out, depth + 1);
-            else if (f.getName().toLowerCase(Locale.ROOT).endsWith(".zip") && f.length() > 1024 * 1024) out.add(f);
+            else if (GameArchives.supported(f.getName()) && f.length() > 1024 * 1024) out.add(f);
         }
     }
 

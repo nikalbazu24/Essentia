@@ -20,8 +20,8 @@ android {
         applicationId "io.github.nikalbazu24.essentia"
         minSdk 21
         targetSdk 33
-        versionCode 100 + buildNumber
-        versionName "1.0-beta1.${buildNumber}"
+        versionCode 20000 + buildNumber
+        versionName "2.0-beta.${buildNumber}"
         archivesBaseName = "essentia"
         ndk {
             // AYN Thor y equipos actuales: solo 64 bits
@@ -73,7 +73,13 @@ android {
 
 dependencies {
     implementation 'com.intuit.sdp:sdp-android:1.1.0'
+    implementation 'org.apache.commons:commons-compress:1.28.0'
+    implementation 'org.tukaani:xz:1.12'
     testImplementation 'junit:junit:4.13.2'
     // The local JVM tests need the real JSON parser, not Android's stub implementation.
     testImplementation 'org.json:json:20240303'
+}
+
+tasks.withType(Test).configureEach {
+    systemProperty 'java.library.path', rootProject.file('work/archive-host').absolutePath
 }

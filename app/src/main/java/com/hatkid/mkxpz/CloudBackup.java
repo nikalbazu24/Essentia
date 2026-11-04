@@ -60,6 +60,8 @@ public final class CloudBackup
 
     private static String fingerprint(List<File> files)
     {
+        files = new ArrayList<>(files);
+        java.util.Collections.sort(files, (a, b) -> a.getName().compareTo(b.getName()));
         StringBuilder sb = new StringBuilder();
         for (File f : files) sb.append(f.getName()).append(':').append(f.length()).append(':').append(f.lastModified()).append(';');
         return sb.toString();
@@ -69,6 +71,7 @@ public final class CloudBackup
     public static boolean backup(Context c, String path, boolean force) throws Exception
     {
         List<File> files = saves(c, path);
+        java.util.Collections.sort(files, (a, b) -> a.getName().compareTo(b.getName()));
         if (files.isEmpty()) return false;
         SharedPreferences p = c.getSharedPreferences("essentia_backups", Context.MODE_PRIVATE);
         String fp = fingerprint(files);
@@ -77,10 +80,10 @@ public final class CloudBackup
         long total = 0;
         for (File f : files) {
             total += f.length();
-            if (total > MAX_BYTES) break;
+            if (total > MAX_BYTES) throw new java.io.IOException("Las partidas superan 20 MB; no se subió una copia incompleta");
             JSONObject o = new JSONObject();
             o.put("name", f.getName());
-            o.put("data", Base64.encodeToString(readAll(f), Base64.NO_WRAP));
+            o.put("data", Base64.encodeToString(SaveTransaction.read(f), Base64.NO_WRAP));
             arr.put(o);
         }
         JSONObject body = new JSONObject();
@@ -88,6 +91,8 @@ public final class CloudBackup
         body.put("key", Cloud.backupKey(c));
         body.put("game", titleOf(c, path));
         body.put("files", arr);
+        if (!fp.equals(fingerprint(saves(c, path))))
+            throw new java.io.IOException("Las partidas cambiaron durante la copia. Cierra el juego y vuelve a intentarlo.");
         Cloud.post(c, body, 90000);
         p.edit().putString(path, fp).putLong(path + ":time", System.currentTimeMillis()).apply();
         return true;
@@ -131,22 +136,27 @@ public final class CloudBackup
         JSONArray files = Cloud.post(c, body, 90000).getJSONArray("files");
         String title = titleOf(c, path);
         File target = Saves.dirFor(c, new File(path), title);
-        File aside = new File(Environment.getExternalStorageDirectory(), "Essentia/Respaldos/" + Saves.safeName(title)
-            + "/antes de restaurar " + new SimpleDateFormat("yyyy-MM-dd HH.mm", Locale.US).format(new Date()));
-        //noinspection ResultOfMethodCallIgnored
-        aside.mkdirs();
-        for (File f : Saves.findIn(target)) copy(f, new File(aside, f.getName()));
-        int n = 0;
+        java.util.Map<String, byte[]> payload = new java.util.LinkedHashMap<>();
+        long total = 0;
         for (int i = 0; i < files.length(); i++) {
             JSONObject o = files.getJSONObject(i);
-            String name = new File(o.getString("name")).getName();
-            if (!Saves.looksLikeSave(name)) continue;
-            try (FileOutputStream out = new FileOutputStream(new File(target, name))) {
-                out.write(Base64.decode(o.getString("data"), Base64.DEFAULT));
-            }
-            n++;
+            String name = o.getString("name");
+            SaveTransaction.child(target, name);
+            if (!Saves.looksLikeSave(name) || payload.containsKey(name))
+                throw new java.io.IOException("El respaldo contiene un archivo no válido");
+            String encoded = o.getString("data");
+            if (encoded.length() > MAX_BYTES * 4 / 3 + 8) throw new java.io.IOException("Respaldo demasiado grande");
+            byte[] data = Base64.decode(encoded, Base64.DEFAULT);
+            total += data.length;
+            if (total > MAX_BYTES) throw new java.io.IOException("Respaldo demasiado grande");
+            payload.put(name, data);
         }
-        return n;
+        synchronized (UpdateService.class) {
+            if (GameRemoval.busy() || UpdateService.hasWork() || Games.isGameRunning(c))
+                throw new java.io.IOException("Cierra el juego y espera a que terminen las instalaciones");
+            return SaveTransaction.restore(target, new File(Environment.getExternalStorageDirectory(),
+                "Essentia/Respaldos/" + Saves.safeName(title)), payload);
+        }
     }
 
     /** "20261103-174512" → readable date. */

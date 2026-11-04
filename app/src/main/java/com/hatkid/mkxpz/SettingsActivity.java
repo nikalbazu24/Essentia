@@ -482,6 +482,9 @@ public class SettingsActivity extends ControllerActivity
 
     private void buildAbout()
     {
+        Button guide = Ui.button(this, "Essentia by Díptico · Guía y herramientas", false);
+        guide.setOnClickListener(v -> startActivity(new Intent(this, GuideActivity.class)));
+        mList.addView(guide, wrap());
         Button news = Ui.button(this, getString(R.string.wn_show), false);
         news.setOnClickListener(v -> com.hatkid.mkxpz.ui.WhatsNew.show(this));
 

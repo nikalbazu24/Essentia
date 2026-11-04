@@ -125,6 +125,14 @@ public class LibraryActivity extends ControllerActivity
             showIntro();
         }
         applyViewMode();
+        if (savedInstanceState == null && !getPreferences(MODE_PRIVATE).getBoolean("guide_v2", false)) {
+            mRoot.postDelayed(() -> {
+                if (!isFinishing()) {
+                    getPreferences(MODE_PRIVATE).edit().putBoolean("guide_v2", true).apply();
+                    startActivity(new Intent(this, GuideActivity.class));
+                }
+            }, 2600);
+        }
 
         if (!Games.hasAllFilesAccess()) {
             Games.askAllFilesAccess(this, REQ_ALL_FILES, this::finish);
@@ -202,7 +210,7 @@ public class LibraryActivity extends ControllerActivity
         flask.setImageResource(R.drawable.ic_launcher_foreground);
         int fs = Ui.dp(this, 150);
         col.addView(flask, new LinearLayout.LayoutParams(fs, fs));
-        TextView name = Ui.text(this, getString(R.string.app_name), 34, Ui.TEXT, true);
+        TextView name = Ui.text(this, "Essentia by Díptico", 34, Ui.TEXT, true);
         name.setLetterSpacing(0.12f);
         name.setGravity(Gravity.CENTER);
         col.addView(name);
@@ -611,6 +619,7 @@ public class LibraryActivity extends ControllerActivity
             : EssentiaSettings.VIEW_GRID.equals(mView) ? EssentiaSettings.VIEW_LIST : EssentiaSettings.VIEW_SHELF;
         EssentiaSettings.setViewMode(this, mView);
         applyViewMode();
+
         focusSelected();
         String name = getString(isShelf() ? R.string.lib_view_shelf
             : isList() ? R.string.lib_view_list : R.string.lib_view_grid);
@@ -932,6 +941,7 @@ public class LibraryActivity extends ControllerActivity
         mCount.setText(getResources().getQuantityString(R.plurals.lib_count, mGames.size(), mGames.size()));
         if (mSelected >= mGames.size()) mSelected = Math.max(0, mGames.size() - 1);
         applyViewMode();
+
         select(mSelected);
         focusSelected();
     }
@@ -1112,6 +1122,10 @@ public class LibraryActivity extends ControllerActivity
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
         labels.add(getString(R.string.lib_play)); actions.add(() -> play(pos));
+        labels.add("Herramientas, notas y recuperación"); actions.add(() -> startActivity(
+            new Intent(this, GuideActivity.class).putExtra(MainActivity.EXTRA_GAME_PATH, e.path)));
+        labels.add("Controles de este juego"); actions.add(() -> startActivity(
+            new Intent(this, ControlsActivity.class).putExtra(MainActivity.EXTRA_GAME_PATH, e.path)));
         labels.add(getString(R.string.opt_cover)); actions.add(() -> pickCover(e));
         if (!e.cover.isEmpty()) { labels.add(getString(R.string.opt_cover_reset)); actions.add(() -> resetCover(e)); }
         labels.add(getString(R.string.opt_rename)); actions.add(() -> rename(e));

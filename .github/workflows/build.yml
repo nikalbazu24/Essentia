@@ -63,6 +63,15 @@ jobs:
           # OpenSSL busca el compilador de Android en el PATH
           echo "$ANDROID_HOME/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
 
+      - name: Compilar lector RAR para Android y pruebas
+        run: |
+          cmake -S app/archive-native -B work/archive-android -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-21 -DCMAKE_BUILD_TYPE=Release
+          cmake --build work/archive-android --target essentia-archive -j2
+          mkdir -p app/src/main/jniLibs/arm64-v8a
+          cp work/archive-android/libessentia-archive.so app/src/main/jniLibs/arm64-v8a/
+          cmake -S app/archive-native -B work/archive-host -DCMAKE_BUILD_TYPE=Release
+          cmake --build work/archive-host --target essentia-archive -j2
+
       # Guarda las librerías ya compiladas para que las próximas veces sea mucho más rápido.
       - name: Recuperar librerías compiladas antes
         id: deps-cache
@@ -165,15 +174,7 @@ jobs:
       - name: Preparar archivos para publicar
         run: |
           cp app/build/outputs/apk/release/*.apk essentia.apk
-          cat > version.json <<JSON
-          {
-            "versionCode": $((100 + ESSENTIA_BUILD_NUMBER)),
-            "versionName": "1.0-beta1.${ESSENTIA_BUILD_NUMBER}",
-            "signed": ${ESSENTIA_SIGNED},
-            "apk": "essentia.apk",
-            "commit": "${GITHUB_SHA}"
-          }
-          JSON
+          python3 tools/release_manifest.py app/build/outputs/apk/release/output-metadata.json version.json
           cat version.json
 
       - name: Guardar el APK como artefacto

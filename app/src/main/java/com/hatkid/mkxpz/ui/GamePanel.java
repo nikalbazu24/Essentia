@@ -27,7 +27,8 @@ import com.hatkid.mkxpz.R;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.io.FileInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -462,7 +463,16 @@ public final class GamePanel extends Presentation
                     mMap.setEmptyText(getContext().getString(R.string.panel_map_none));
                 return;
             }
-            line = new String(Files.readAllBytes(mLiveFile.toPath()), StandardCharsets.UTF_8);
+            if (mLiveFile.length() > 16384) return;
+            try (FileInputStream in = new FileInputStream(mLiveFile)) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024]; int n;
+                while ((n = in.read(buffer)) != -1) {
+                    if (out.size() + n > 16384) return;
+                    out.write(buffer, 0, n);
+                }
+                line = new String(out.toByteArray(), StandardCharsets.UTF_8);
+            }
         } catch (Exception e) {
             return;
         }
