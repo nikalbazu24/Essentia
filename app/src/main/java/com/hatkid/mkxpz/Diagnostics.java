@@ -36,7 +36,11 @@ public final class Diagnostics {
         if(path==null||!enabled(c))return;
         try{
             JSONObject old=session(c,path);
-            if(old.has("started"))write(file(c,path,"previous_session"),describe(c,old));
+            if(old.has("started")) {
+                String previousError=read(file(c,path,"error"));
+                write(file(c,path,"previous_session"),describe(c,old)
+                    +(previousError.isEmpty()?"":"\nError del intento anterior:\n"+previousError));
+            }
             JSONObject data=new JSONObject();data.put("started",System.currentTimeMillis());
             data.put("pid",android.os.Process.myPid());data.put("engine",engine);
             data.put("decision",decision==null?"unknown":decision);data.put("screen",screen==null?"unknown":screen);
