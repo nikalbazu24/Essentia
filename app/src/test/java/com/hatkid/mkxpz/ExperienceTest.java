@@ -107,7 +107,7 @@ public class ExperienceTest {
         GamePanel.editNotes(a,"/fixture/notes");
         AlertDialog editor=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
         EditText input=findEditor(editor.findViewById(android.R.id.content));assertNotNull(input);input.setText("Visitar el siguiente pueblo");
-        editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
         assertEquals("Visitar el siguiente pueblo",a.getSharedPreferences("essentia_notes",0).getString("/fixture/notes",""));
         assertFalse(a.getSharedPreferences("essentia_notes",0).contains("/fixture/other"));a.finish();
     }
