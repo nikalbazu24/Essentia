@@ -1,51 +1,98 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-11-04",
   "games": [
     {
       "id": "pokemon-anil",
       "title": "Pokémon Añil",
-      "aliases": ["Pokemon Anil", "Pokémon Añil Definitive Edition"],
-      "lang": ["es"],
+      "aliases": [
+        "Pokemon Anil",
+        "Pokémon Añil Definitive Edition"
+      ],
+      "lang": [
+        "es"
+      ],
       "essentials": "21.1",
       "maker": "RPG Maker XP",
       "status": "jugable",
       "pokeupdater": true,
       "color": "#2F6FD6",
       "description": "Fan game en español hecho con Pokémon Essentials. Trae su propio actualizador (PokéUpdater): Essentia descarga e instala las versiones nuevas sin perder partidas.",
-      "note": "Probado en la AYN Thor. La mochila puede ir algo lenta."
+      "note": "Probado en la AYN Thor. La mochila puede ir algo lenta.",
+      "author": "EricLostie",
+      "source_page": "https://whackahack.com/juegos/pokemon-anil/",
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-anil-cover.png",
+      "media_credit": "EricLostie · Whack a Hack!",
+      "cover": "https://whackahack.com/uploads/images/2230ab526ba884787884efb77e19cd4b.png",
+      "screens": [
+        "https://whackahack.com/uploads/images/2230ab526ba884787884efb77e19cd4b.png",
+        "https://whackahack.com/uploads/images/64ad199a41371fe93138ae38906cb4d1.jpg",
+        "https://whackahack.com/uploads/images/267ff15fb08a6fbe700bf3080873c030.jpg"
+      ],
+      "trailer": "https://www.youtube.com/watch?v=vwpCLxTRSFk",
+      "page": "https://lostiefangames.blogspot.com/"
     },
     {
       "id": "pokemon-iberia",
       "title": "Pokémon Iberia",
-      "aliases": ["Pokemon Iberia"],
+      "aliases": [
+        "Pokemon Iberia"
+      ],
       "author": "Eric Lostie",
-      "lang": ["es"],
+      "lang": [
+        "es"
+      ],
       "essentials": "18.1",
       "maker": "RPG Maker XP",
       "status": "con_fallas",
       "color": "#C8402F",
       "page": "https://x.com/pkmntitan",
       "description": "Fan game que parodia los tópicos de España, hecho en RPG Maker XP.",
-      "note": "Abre con el motor clásico (Ruby 1.8). Los controles se arreglaron en la compilación 43; se está revisando la pantalla."
+      "note": "Abre con el motor clásico (Ruby 1.8). Los controles se arreglaron en la compilación 43; se está revisando la pantalla.",
+      "source_page": "https://whackahack.com/juegos/pokemon-iberia/",
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-iberia-cover.jpg",
+      "media_credit": "EricLostie · Whack a Hack!",
+      "cover": "https://whackahack.com/uploads/images/428d53b56373e939d07e854af5561ebd.png",
+      "screens": [
+        "https://whackahack.com/uploads/images/428d53b56373e939d07e854af5561ebd.png",
+        "https://whackahack.com/uploads/images/8e465dc7995368dec5318d26f1d41f82.png"
+      ]
     },
     {
       "id": "pokemon-opalo",
       "title": "Pokémon Ópalo",
-      "aliases": ["Pokemon Opalo"],
+      "aliases": [
+        "Pokemon Opalo"
+      ],
       "author": "Eric Lostie",
-      "lang": ["es"],
+      "lang": [
+        "es"
+      ],
       "maker": "RPG Maker XP",
       "status": "sin_probar",
       "color": "#7A5BD8",
       "page": "https://x.com/pkmntitan",
-      "description": "Uno de los fan games en español más conocidos, del mismo creador de Pokémon Iberia."
+      "description": "Uno de los fan games en español más conocidos, del mismo creador de Pokémon Iberia.",
+      "source_page": "https://whackahack.com/juegos/pokemon-opalo-2/",
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-opalo-2-cover.jpg",
+      "media_credit": "EricLostie · Whack a Hack!",
+      "cover": "https://whackahack.com/uploads/images/8827f1eaff6bc2d90c82f8a3fe29660e.png",
+      "screens": [
+        "https://whackahack.com/uploads/images/8827f1eaff6bc2d90c82f8a3fe29660e.png",
+        "https://whackahack.com/uploads/images/b24e265ccf2fb5937933a438f6702a02.png",
+        "https://whackahack.com/uploads/images/191e0b07f17eac13f259166e663b6364.png"
+      ],
+      "trailer": "https://www.youtube.com/watch?v=j_l8VAXQlLk"
     },
     {
       "id": "pokemon-insurgence",
       "title": "Pokémon Insurgence",
-      "aliases": ["Pokemon Insurgence"],
-      "lang": ["en"],
+      "aliases": [
+        "Pokemon Insurgence"
+      ],
+      "lang": [
+        "en"
+      ],
       "maker": "RPG Maker XP",
       "status": "sin_probar",
       "color": "#3A9A6B",
@@ -55,32 +102,67 @@
     {
       "id": "pokemon-reborn",
       "title": "Pokémon Reborn",
-      "aliases": ["Pokemon Reborn"],
+      "aliases": [
+        "Pokemon Reborn"
+      ],
       "author": "Amethyst y equipo Reborn",
-      "lang": ["en"],
+      "lang": [
+        "en",
+        "es"
+      ],
       "maker": "RPG Maker XP",
       "status": "sin_probar",
       "color": "#B0367A",
       "page": "https://www.rebornevo.com",
-      "description": "Fan game en inglés conocido por su dificultad, su ciudad en ruinas y sus campos de batalla."
+      "description": "Fan game en inglés conocido por su dificultad, su ciudad en ruinas y sus campos de batalla.",
+      "source_page": "https://whackahack.com/juegos/pokemon-reborn/",
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-reborn-cover.png",
+      "media_credit": "Amethyst y equipo Reborn · Whack a Hack!",
+      "cover": "https://whackahack.com/uploads/images/20de469f412e246d55582ec7ebb8d01d.png",
+      "screens": [
+        "https://whackahack.com/uploads/images/20de469f412e246d55582ec7ebb8d01d.png",
+        "https://whackahack.com/uploads/images/c30cb7f48e533c89840c7dc44dfa2256.png",
+        "https://whackahack.com/uploads/images/3697a9f57800157bd70a14ce669439aa.png"
+      ],
+      "trailer": "https://www.youtube.com/watch?v=RxXayZFAW1g"
     },
     {
       "id": "pokemon-z",
       "title": "Pokémon Z",
-      "aliases": ["Pokemon Z"],
-      "lang": ["es"],
+      "aliases": [
+        "Pokemon Z"
+      ],
+      "lang": [
+        "es"
+      ],
       "essentials": "16",
       "maker": "RPG Maker XP",
       "status": "con_fallas",
       "color": "#C9A13A",
       "description": "Fan game hecho con una versión antigua de Pokémon Essentials.",
-      "note": "Llega al mapa y se juega. Usa el panorámico seguro por defecto."
+      "note": "Llega al mapa y se juega. Usa el panorámico seguro por defecto.",
+      "author": "EricLostie",
+      "source_page": "https://whackahack.com/juegos/pokemon-z/",
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-z-cover.png",
+      "media_credit": "EricLostie · Whack a Hack!",
+      "cover": "https://whackahack.com/uploads/images/a49fe9bd5bb5d9eea45c58fe51e28a15.png",
+      "screens": [
+        "https://whackahack.com/uploads/images/a49fe9bd5bb5d9eea45c58fe51e28a15.png",
+        "https://whackahack.com/uploads/images/35118b5355031ba8c15ea3cc610c25cc.png",
+        "https://whackahack.com/uploads/images/03697d95cfc1221264cc38766b458238.png"
+      ],
+      "trailer": "https://www.youtube.com/watch?v=dNs5WoYSGRM",
+      "page": "https://lostiefangames.blogspot.com/"
     },
     {
       "id": "pokemon-cristal",
       "title": "Pokémon Cristal",
-      "aliases": ["Pokemon Cristal"],
-      "lang": ["es"],
+      "aliases": [
+        "Pokemon Cristal"
+      ],
+      "lang": [
+        "es"
+      ],
       "essentials": "17.1",
       "maker": "RPG Maker XP",
       "status": "con_fallas",
@@ -91,8 +173,12 @@
     {
       "id": "pokemon-gs-vitro",
       "title": "Pokémon GS Vitro",
-      "aliases": ["Pokemon GS Vitro"],
-      "lang": ["es"],
+      "aliases": [
+        "Pokemon GS Vitro"
+      ],
+      "lang": [
+        "es"
+      ],
       "maker": "RPG Maker XP",
       "status": "con_fallas",
       "color": "#5D8F3A",
@@ -102,14 +188,106 @@
     {
       "id": "pokemon-consonancia",
       "title": "Pokémon Consonancia",
-      "aliases": ["Pokemon Consonancia"],
-      "lang": ["es"],
+      "aliases": [
+        "Pokemon Consonancia"
+      ],
+      "lang": [
+        "es"
+      ],
       "essentials": "21.1",
       "maker": "RPG Maker XP",
       "status": "sin_probar",
       "pokeupdater": true,
       "color": "#2C8C9E",
-      "description": "Fan game en español hecho con Pokémon Essentials 21. Trae PokéUpdater: Essentia lo actualiza solo."
+      "description": "Fan game en español hecho con Pokémon Essentials 21. Trae PokéUpdater: Essentia lo actualiza solo.",
+      "author": "DanzantSinMega / equipo Consonancia",
+      "source_page": "https://whackahack.com/juegos/pokemon-consonancia/",
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-consonancia-cover.png",
+      "media_credit": "DanzantSinMega / equipo Consonancia · Whack a Hack!",
+      "page": "https://x.com/pkmnconsonancia",
+      "screens": [
+        "https://whackahack.com/foro/attachments/c0284c83-0a93-4c5a-9633-f198f897714a-png.18295/",
+        "https://whackahack.com/foro/attachments/65bd7d21-0cbd-48f7-892f-9586767196fb-png.18296/",
+        "https://whackahack.com/foro/attachments/801d3350-cf6b-4eb1-a496-717c6560c6f5-png.18297/"
+      ],
+      "cover": "https://whackahack.com/foro/attachments/c0284c83-0a93-4c5a-9633-f198f897714a-png.18295/"
+    },
+    {
+      "id": "pokemon-tectonic",
+      "title": "Pokémon Tectonic",
+      "aliases": [
+        "Pokemon Tectonic"
+      ],
+      "author": "Team Tectonic",
+      "lang": [
+        "es",
+        "en"
+      ],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "color": "#BC7742",
+      "page": "https://www.tectonic-game.com/",
+      "source_page": "https://whackahack.com/juegos/pokemon-tectonic/",
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-tectonic-cover.png",
+      "screens": [
+        "https://whackahack.com/foro/attachments/tectonic_advert_stitch_5-compressed-jpg.15676/"
+      ],
+      "trailer": "https://www.youtube.com/watch?v=5K16xLX06jQ",
+      "media_credit": "Team Tectonic · Whack a Hack!",
+      "description": "Explora Makya con un sistema de combate y progresión renovado. Incluye opciones para formar equipos variados y una versión en español.",
+      "note": "La ficha del creador ofrece información y descargas. Compatibilidad con Essentia todavía sin probar."
+    },
+    {
+      "id": "pokemon-edicion-sombria",
+      "title": "Pokémon Edición Sombría",
+      "aliases": [
+        "Pokemon Edicion Sombria"
+      ],
+      "author": "YAMATO y VaniK",
+      "lang": [
+        "es"
+      ],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "color": "#6552A1",
+      "page": "https://whackahack.com/juegos/pokemon-edicion-sombria/",
+      "source_page": "https://whackahack.com/juegos/pokemon-edicion-sombria/",
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-edicion-sombria-cover.png",
+      "cover": "https://whackahack.com/uploads/images/314a5156087f16539d07a55035bbac45.png",
+      "screens": [
+        "https://whackahack.com/uploads/images/314a5156087f16539d07a55035bbac45.png"
+      ],
+      "media_credit": "YAMATO y VaniK · Whack a Hack!",
+      "description": "Una aventura por episodios en una Johto transformada, con viajes temporales, nuevas misiones y decisiones durante la historia.",
+      "note": "Proyecto en desarrollo. Compatibilidad con Essentia todavía sin probar."
+    },
+    {
+      "id": "pokemon-hydro-bliss",
+      "title": "Pokémon Hydro Bliss",
+      "aliases": [
+        "Pokemon Hydro Bliss",
+        "Hydro Bliss"
+      ],
+      "author": "5PastPoliwag",
+      "lang": [
+        "en"
+      ],
+      "maker": "RPG Maker XP",
+      "essentials": "18.1",
+      "status": "sin_probar",
+      "color": "#287CA6",
+      "page": "https://eeveeexpo.com/threads/9100/",
+      "source_page": "https://eeveeexpo.com/threads/9100/",
+      "logo": "https://i.ibb.co/kgWtkbrp/Title-screen.png",
+      "cover": "https://i.ibb.co/sJCy9qmv/screenshot4.png",
+      "screens": [
+        "https://i.ibb.co/sJCy9qmv/screenshot4.png",
+        "https://i.ibb.co/ZRHxGBZx/screenshot3.png",
+        "https://i.ibb.co/FZv4s89/screenshot1.png"
+      ],
+      "media_credit": "5PastPoliwag · imágenes de su publicación en Eevee Expo",
+      "description": "Aventura en inglés con dos regiones de mundo abierto, opciones de dificultad y una banda sonora original. El creador publica sus capturas y enlaces de descarga en Eevee Expo.",
+      "note": "Hecho con Pokémon Essentials 18.1. Compatibilidad con Essentia todavía sin probar."
     }
   ]
 }

@@ -4,6 +4,27 @@
 
 Essentia **no aloja juegos**: cada juego apunta a la página oficial de su creador.
 
+## Comunidades y multimedia
+
+La tienda permite explorar **Whack a Hack!** (catálogo filtrado por RPG Maker XP)
+y **Eevee Expo** (juegos completados). Los botones abren sus páginas en el navegador.
+Ambas comunidades también publican proyectos de otros motores: aparecer allí no
+confirma que un juego funcione en Essentia. El estado de compatibilidad se conserva
+por separado y los juegos nuevos se marcan `sin_probar`.
+
+Las fichas seleccionadas enlazan portadas, arte de título, capturas y vídeos publicados
+por sus creadores o en la ficha de la comunidad. Se muestran los créditos y un enlace
+a esa ficha. Essentia no copia juegos ni aloja las imágenes; las descargas continúan
+desde las páginas de sus creadores. Las imágenes se guardan temporalmente en el
+dispositivo después de cargarlas. Una imagen que deja de estar disponible no impide
+abrir la ficha: se conserva el título sobre el fondo de color.
+
+Esta integración es una selección mantenida en `catalog.json`, no una importación
+automática de todos los juegos de esas webs. Sus catálogos completos siguen accesibles
+desde los botones «Explorar». Para añadir una ficha, comprueba los enlaces reales y
+los créditos de sus imágenes; no deduzcas versiones nuevas ni compatibilidad a partir
+del estado de publicación de la comunidad.
+
 ## Campos de cada juego
 
 | Campo | Para qué sirve |
@@ -23,8 +44,32 @@ Essentia **no aloja juegos**: cada juego apunta a la página oficial de su cread
 | `download` | Enlace directo a un `.zip` (GitHub, Dropbox o MEGA), **solo si el creador lo publica así**. Con él, Essentia instala y actualiza sola. |
 | `pokeupdater` | `true` si el juego trae PokéUpdater (Essentia lo actualiza sola). |
 | `cover` | Imagen de portada (enlace a una imagen publicada por el creador). Sin ella se dibuja una portada de color. |
+| `logo` | Logotipo o arte de título. Se muestra sin recortar en la ficha; también sirve de portada si no hay `cover`. |
 | `screens` | Lista de capturas (enlaces a imágenes). |
+| `source_page` | Ficha concreta en `https://whackahack.com/` o `https://eeveeexpo.com/` (también se acepta `www`). Determina el filtro de comunidad. |
+| `media_credit` | Autor/equipo de las imágenes y comunidad donde se publicaron. Obligatorio si hay imágenes o vídeos. |
+| `trailer` | Vídeo o tráiler HTTPS publicado en la ficha. Se abre en el navegador o aplicación de vídeo. |
 | `size` | Tamaño aproximado (`"1,2 GB"`). |
 | `color` | Color de la portada dibujada (`"#2F6FD6"`). |
 
 Después de editar, copia el mismo contenido a `app/src/main/assets/essentia_catalog.json` cuando salga una versión nueva de la app (es la copia para el primer inicio sin internet).
+
+El catálogo con multimedia declara `"version": 2`: una copia antigua en caché o en
+internet no debe sustituir la incluida en la nueva app. Antes de publicar, ejecuta
+`python3 tools/check_catalog.py`. Comprueba las dos copias, enlaces HTTPS, identificadores,
+créditos y estados de compatibilidad. La compilación de GitHub ejecuta esta validación
+y las pruebas de lectura del catálogo.
+
+Fuentes comprobadas el 4 de noviembre de 2026:
+
+- [Whack a Hack! — RPG Maker XP](https://whackahack.com/juegos/?category=4)
+- Fichas de [Añil](https://whackahack.com/juegos/pokemon-anil/),
+  [Iberia](https://whackahack.com/juegos/pokemon-iberia/),
+  [Ópalo](https://whackahack.com/juegos/pokemon-opalo-2/),
+  [Z](https://whackahack.com/juegos/pokemon-z/),
+  [Reborn](https://whackahack.com/juegos/pokemon-reborn/),
+  [Consonancia](https://whackahack.com/juegos/pokemon-consonancia/),
+  [Tectonic](https://whackahack.com/juegos/pokemon-tectonic/) y
+  [Edición Sombría](https://whackahack.com/juegos/pokemon-edicion-sombria/).
+- [Eevee Expo — juegos completados](https://eeveeexpo.com/completed-games/)
+  y [publicación de Hydro Bliss por 5PastPoliwag](https://eeveeexpo.com/threads/9100/).

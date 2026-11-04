@@ -73,4 +73,7 @@ android {
 
 dependencies {
     implementation 'com.intuit.sdp:sdp-android:1.1.0'
+    testImplementation 'junit:junit:4.13.2'
+    // The local JVM tests need the real JSON parser, not Android's stub implementation.
+    testImplementation 'org.json:json:20240303'
 }

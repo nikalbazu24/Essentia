@@ -14,6 +14,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import java.util.Map;
  */
 public final class Catalog
 {
+    private static final int CATALOG_VERSION = 2;
     public static final String URL =
         "https://raw.githubusercontent.com/nikalbazu24/Essentia/main/catalog/catalog.json";
     private static final long REFRESH_MS = 6L * 60 * 60 * 1000;
@@ -45,6 +47,44 @@ public final class Catalog
     public static final String ISSUES = "con_fallas";
     public static final String BROKEN = "no_abre";
     public static final String UNTESTED = "sin_probar";
+
+    /** Communities with RPG Maker games; the website also contains games for other engines. */
+    public static final class Source
+    {
+        public final String name, host, url;
+        private Source(String name, String host, String url) {
+            this.name = name;
+            this.host = host;
+            this.url = url;
+        }
+    }
+
+    public static final Source[] SOURCES = {
+        new Source("Whack a Hack!", "whackahack.com", "https://whackahack.com/juegos/?category=4"),
+        new Source("Eevee Expo", "eeveeexpo.com", "https://eeveeexpo.com/completed-games/")
+    };
+
+    /** Remote catalog links are web links, never file://, intent:// or javascript:. */
+    public static String webUrl(String value)
+    {
+        try {
+            URI uri = new URI(value.trim());
+            if ("https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null
+                && uri.getUserInfo() == null && (uri.getPort() == -1 || uri.getPort() == 443)) return uri.toString();
+        } catch (Exception ignored) { }
+        return "";
+    }
+
+    public static Source sourceFor(String page)
+    {
+        String safe = webUrl(page);
+        if (safe.isEmpty()) return null;
+        String host = URI.create(safe).getHost();
+        for (Source source : SOURCES) {
+            if (source.host.equalsIgnoreCase(host) || ("www." + source.host).equalsIgnoreCase(host)) return source;
+        }
+        return null;
+    }
 
     /** One game of the catalog. */
     public static final class Game
@@ -65,6 +105,10 @@ public final class Catalog
         /** A direct .zip link, only when the creator publishes one. */
         public String download = "";
         public String cover = "";
+        public String logo = "";
+        public String sourcePage = "";
+        public String mediaCredit = "";
+        public String trailer = "";
         public final List<String> screens = new ArrayList<>();
         public String size = "";
         /** Updated with PokéUpdater from inside the game folder. */
@@ -91,7 +135,9 @@ public final class Catalog
         List<Game> out = null;
         File f = cacheFile(c);
         if (f.isFile()) {
-            try (InputStream in = new FileInputStream(f)) { out = parse(readAll(in)); } catch (Exception ignored) { }
+            try (InputStream in = new FileInputStream(f)) {
+                out = parseCurrent(readAll(in));
+            } catch (Exception ignored) { }
         }
         if (out == null || out.isEmpty()) {
             try (InputStream in = c.getAssets().open("essentia_catalog.json")) { out = parse(readAll(in)); }
@@ -106,8 +152,9 @@ public final class Catalog
     {
         File f = cacheFile(c);
         if (!force && f.isFile() && System.currentTimeMillis() - f.lastModified() < REFRESH_MS) return cached(c);
+        HttpURLConnection con = null;
         try {
-            HttpURLConnection con = (HttpURLConnection) new URL(URL).openConnection();
+            con = (HttpURLConnection) new URL(URL).openConnection();
             con.setConnectTimeout(12000);
             con.setReadTimeout(20000);
             con.setRequestProperty("User-Agent", "Essentia");
@@ -115,16 +162,23 @@ public final class Catalog
             if (con.getResponseCode() == 200) {
                 String text;
                 try (InputStream in = con.getInputStream()) { text = readAll(in); }
-                List<Game> games = parse(text);
-                if (!games.isEmpty()) {
+                // An older online copy must not replace the richer catalog bundled in a new APK.
+                List<Game> games = parseCurrent(text);
+                if (games != null && !games.isEmpty()) {
                     try (FileOutputStream out = new FileOutputStream(f)) { out.write(text.getBytes(StandardCharsets.UTF_8)); }
                     synchronized (Catalog.class) { sGames = games; }
                     return games;
                 }
             }
-            con.disconnect();
         } catch (Exception ignored) { }
+        finally { if (con != null) con.disconnect(); }
         return cached(c);
+    }
+
+    static List<Game> parseCurrent(String json) throws Exception
+    {
+        if (new JSONObject(json).optInt("version", 1) < CATALOG_VERSION) return null;
+        return parse(json);
     }
 
     static List<Game> parse(String json) throws Exception
@@ -149,8 +203,18 @@ public final class Catalog
             g.note = o.optString("note", "");
             g.page = o.optString("page", "");
             g.download = o.optString("download", "");
-            g.cover = o.optString("cover", "");
-            list(o.optJSONArray("screens"), g.screens);
+            g.cover = webUrl(o.optString("cover", ""));
+            g.logo = webUrl(o.optString("logo", ""));
+            g.sourcePage = webUrl(o.optString("source_page", ""));
+            if (sourceFor(g.sourcePage) == null) g.sourcePage = "";
+            g.mediaCredit = o.optString("media_credit", "");
+            g.trailer = webUrl(o.optString("trailer", ""));
+            List<String> screens = new ArrayList<>();
+            list(o.optJSONArray("screens"), screens);
+            for (String screen : screens) {
+                String safe = webUrl(screen);
+                if (!safe.isEmpty() && g.screens.size() < 12) g.screens.add(safe);
+            }
             g.size = o.optString("size", "");
             g.pokeUpdater = o.optBoolean("pokeupdater", false);
             g.color = o.optString("color", "");
