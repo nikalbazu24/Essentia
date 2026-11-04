@@ -27,4 +27,9 @@ política automática. `ExperienceTest` y `ui-review.yml` producen capturas Andr
 El dueño envió durante esta continuación la referencia visual de code.xr (Dashboard V15,
 Instagram reel DezD0vhzvvL). La dirección aprobada pasa a lavanda claro, tarjetas blancas y
 pastel y acciones oscuras; mantener los temas oscuros como opción. Repetir capturas y controles
-de contraste después de este ajuste. El PR continúa sin integrar mientras se valida.
+de contraste después de este ajuste. El PR #5 ya está integrado; compilación y firma original verificadas. La validación física continúa pendiente.
+
+Prioridad explícita del dueño: GS Vitro. La revisión del diagnóstico detectó que iniciar el
+motor clásico borraba el error que había disparado el fallback. Se conserva ahora como
+«Error del intento anterior», separado de la sesión actual, acotado y con la redacción de
+credenciales existente. No equivale a identificar ni corregir el cierre del juego.

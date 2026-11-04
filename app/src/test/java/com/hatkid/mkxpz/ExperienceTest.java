@@ -140,6 +140,19 @@ public class ExperienceTest {
         }
         Ui.setTheme(app,"esencia");
     }
+    @Test public void automaticRetryKeepsPreviousErrorWithoutAttributingItToClassic(){
+        String path="/fixture/fallback-evidence";
+        app.getSharedPreferences("diagnostics",0).edit().putBoolean("enabled",true).commit();
+        Diagnostics.start(app,path,"modern","automatic_modern","wide_safe");
+        Diagnostics.error(app,path,"Solicitud de motor clásico: fallback-fixture token=secret-fixture");
+        Diagnostics.event(app,path,"fallback_requested");
+        Diagnostics.start(app,path,"classic","learned_fallback","wide_safe");
+        String report=Diagnostics.summary(app,path);
+        assertTrue(report.contains("Error del intento anterior"));assertTrue(report.contains("fallback-fixture"));
+        assertFalse(report.contains("secret-fixture"));assertTrue(report.contains("learned_fallback"));
+        assertFalse(Diagnostics.sessionSummary(app,path).contains("fallback-fixture"));
+        assertFalse(Diagnostics.file(app,path,"error").exists());
+    }
     @Test public void diagnosticsAreOptInAndPreserveRealEngineDecision()throws Exception {
         String path="/fixture/diagnostics";Diagnostics.file(app,path,"session").delete();
         Diagnostics.start(app,path,"classic","learned_fallback","wide_safe");assertFalse(Diagnostics.file(app,path,"session").exists());
