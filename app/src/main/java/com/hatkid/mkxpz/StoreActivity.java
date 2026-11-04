@@ -95,7 +95,7 @@ public class StoreActivity extends ControllerActivity
         mPool.execute(() -> {
             List<Catalog.Game> fresh = Catalog.refresh(this, false);
             mMain.post(() -> {
-                if (isFinishing()) return;
+                if (isFinishing() || isDestroyed()) return;
                 mGames = fresh;
                 if (mDetail == null) showList();
             });
@@ -936,6 +936,7 @@ public class StoreActivity extends ControllerActivity
     /** Loads a picture from the internet (kept on disk after the first time). */
     private void loadImage(String url, ImageView into)
     {
+        if (isFinishing() || isDestroyed() || mPool.isShutdown()) return;
         if (Catalog.webUrl(url).isEmpty()) return;
         into.setTag(url);
         Bitmap cached = mImages.get(url);
@@ -996,7 +997,7 @@ public class StoreActivity extends ControllerActivity
             if (bmp == null) return;
             mImages.put(url, bmp);
             mMain.post(() -> {
-                if (url.equals(into.getTag())) {
+                if (!isFinishing() && !isDestroyed() && url.equals(into.getTag())) {
                     float target = into.getAlpha();
                     into.setImageBitmap(bmp);
                     into.setAlpha(0f);

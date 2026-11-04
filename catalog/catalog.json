@@ -204,7 +204,13 @@
       "source_page": "https://whackahack.com/juegos/pokemon-consonancia/",
       "logo": "https://whackahack.com/uploads/images/games/pokemon-consonancia-cover.png",
       "media_credit": "DanzantSinMega / equipo Consonancia · Whack a Hack!",
-      "page": "https://x.com/pkmnconsonancia"
+      "page": "https://x.com/pkmnconsonancia",
+      "screens": [
+        "https://whackahack.com/foro/attachments/c0284c83-0a93-4c5a-9633-f198f897714a-png.18295/",
+        "https://whackahack.com/foro/attachments/65bd7d21-0cbd-48f7-892f-9586767196fb-png.18296/",
+        "https://whackahack.com/foro/attachments/801d3350-cf6b-4eb1-a496-717c6560c6f5-png.18297/"
+      ],
+      "cover": "https://whackahack.com/foro/attachments/c0284c83-0a93-4c5a-9633-f198f897714a-png.18295/"
     },
     {
       "id": "pokemon-tectonic",

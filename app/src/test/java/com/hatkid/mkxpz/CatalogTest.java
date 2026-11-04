@@ -5,6 +5,12 @@ import static org.junit.Assert.*;
 
 public class CatalogTest
 {
+    @Test public void oldCachedOrOnlineCatalogCannotReplaceBundledMedia() throws Exception {
+        assertNull(Catalog.parseCurrent("{\"version\":1,\"games\":[{\"title\":\"Old catalog\"}]}"));
+        assertEquals("New catalog", Catalog.parseCurrent("{\"version\":2,\"games\":[{\"title\":\"New catalog\"}]}")
+            .get(0).title);
+    }
+
     @Test public void oldEntriesStillParseWithoutCommunityFields() throws Exception {
         Catalog.Game game = Catalog.parse("{\"games\":[{\"title\":\"Legacy game\",\"lang\":[\"es\"]}]}").get(0);
         assertTrue(game.spanish());

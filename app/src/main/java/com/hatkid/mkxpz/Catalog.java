@@ -136,8 +136,7 @@ public final class Catalog
         File f = cacheFile(c);
         if (f.isFile()) {
             try (InputStream in = new FileInputStream(f)) {
-                String text = readAll(in);
-                if (new JSONObject(text).optInt("version", 1) >= CATALOG_VERSION) out = parse(text);
+                out = parseCurrent(readAll(in));
             } catch (Exception ignored) { }
         }
         if (out == null || out.isEmpty()) {
@@ -164,9 +163,8 @@ public final class Catalog
                 String text;
                 try (InputStream in = con.getInputStream()) { text = readAll(in); }
                 // An older online copy must not replace the richer catalog bundled in a new APK.
-                if (new JSONObject(text).optInt("version", 1) < CATALOG_VERSION) return cached(c);
-                List<Game> games = parse(text);
-                if (!games.isEmpty()) {
+                List<Game> games = parseCurrent(text);
+                if (games != null && !games.isEmpty()) {
                     try (FileOutputStream out = new FileOutputStream(f)) { out.write(text.getBytes(StandardCharsets.UTF_8)); }
                     synchronized (Catalog.class) { sGames = games; }
                     return games;
@@ -175,6 +173,12 @@ public final class Catalog
         } catch (Exception ignored) { }
         finally { if (con != null) con.disconnect(); }
         return cached(c);
+    }
+
+    static List<Game> parseCurrent(String json) throws Exception
+    {
+        if (new JSONObject(json).optInt("version", 1) < CATALOG_VERSION) return null;
+        return parse(json);
     }
 
     static List<Game> parse(String json) throws Exception
