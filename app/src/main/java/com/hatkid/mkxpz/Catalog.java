@@ -35,7 +35,7 @@ import java.util.Map;
 public final class Catalog
 {
     public static final String URL =
-        "https://raw.githubusercontent.com/Nikalbazu24/essentia/main/catalog/catalog.json";
+        "https://raw.githubusercontent.com/nikalbazu24/Essentia/main/catalog/catalog.json";
     private static final long REFRESH_MS = 6L * 60 * 60 * 1000;
     /** All the library is checked for updates at most this often (when the library opens). */
     public static final long CHECK_ALL_MS = 12L * 60 * 60 * 1000;
