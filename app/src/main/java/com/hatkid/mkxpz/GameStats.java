@@ -94,8 +94,7 @@ public final class GameStats
             for (File f : found) s.lastSave = Math.max(s.lastSave, f.lastModified());
         } catch (Exception ignored) { }
         try {
-            String v = GameUpdater.localVersion(dir);
-            s.version = v == null ? "" : v;
+            s.version = Catalog.localVersion(c, dir);
         } catch (Exception ignored) { }
         try {
             s.kind = GameProfile.of(c, dir).label();

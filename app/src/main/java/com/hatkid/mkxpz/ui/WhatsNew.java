@@ -24,16 +24,13 @@ public final class WhatsNew
     private static final String KEY = "whats_new_seen";
     private static final String KEY_TOUR = "whats_new_tour";
     /** Raise this when PAGES change: small fix releases don't show the tour again. */
-    private static final int TOUR = 3;
+    private static final int TOUR = 4;
 
     /** Icon, title, text for this release. */
     private static final int[][] PAGES = {
-        { R.drawable.ic_launcher_foreground, R.string.wn_beta_title, R.string.wn_beta_text },
-        { R.drawable.ic_e_grid, R.string.wn_colors_title, R.string.wn_colors_text },
-        { R.drawable.ic_e_shelf, R.string.wn_safe_title, R.string.wn_safe_text },
-        { R.drawable.ic_e_more, R.string.wn_tr_title, R.string.wn_tr_text },
-        { R.drawable.ic_e_sort, R.string.wn_cloud_title, R.string.wn_cloud_text },
-        { R.drawable.ic_w_speed, R.string.wn_start_title, R.string.wn_start_text },
+        { R.drawable.ic_e_store, R.string.wn_store_title, R.string.wn_store_text },
+        { R.drawable.ic_e_sort, R.string.wn_allupd_title, R.string.wn_allupd_text },
+        { R.drawable.ic_e_gamepad, R.string.wn_oldfix_title, R.string.wn_oldfix_text },
     };
 
     /** First time Essentia opens: a short welcome instead. */

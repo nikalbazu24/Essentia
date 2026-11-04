@@ -24,4 +24,16 @@
         <item quantity="one">%d save restored</item>
         <item quantity="other">%d saves restored</item>
     </plurals>
+    <plurals name="store_count">
+        <item quantity="one">%d game</item>
+        <item quantity="other">%d games</item>
+    </plurals>
+    <plurals name="store_updating">
+        <item quantity="one">Updating %d game in the background</item>
+        <item quantity="other">Updating %d games in the background</item>
+    </plurals>
+    <plurals name="store_found">
+        <item quantity="one">New version for %d game: look in the Store</item>
+        <item quantity="other">New versions for %d games: look in the Store</item>
+    </plurals>
 </resources>

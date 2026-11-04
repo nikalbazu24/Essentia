@@ -176,7 +176,9 @@ end
 
 def get_raw_keystates
 	if $win32KeyStates == nil
-		$win32KeyStates = Input.raw_key_states
+		# Essentia: the live keyboard (old Essentials replaces Input.update, so
+		# the engine's own copy would never change and no key would work)
+		$win32KeyStates = Input.respond_to?(:essentia_live_keys) ? Input.essentia_live_keys : Input.raw_key_states
 	end
 
 	return $win32KeyStates

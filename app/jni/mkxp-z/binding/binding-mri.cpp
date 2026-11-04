@@ -931,6 +931,41 @@ static VALUE essentiaPrepareScript(VALUE string)
     }
     return out;
 }
+
+static VALUE essentiaRetryCb(VALUE a)
+{
+    VALUE *args = (VALUE*) a;
+    VALUE mod = rb_const_get(rb_cObject, rb_intern("Essentia"));
+    return rb_funcall(mod, rb_intern("retry_after_error"), 2, args[0], args[1]);
+}
+
+/* Essentia: when a script section stops with an error the old Ruby didn't have
+ * (a class defined again with another parent), Essentia.retry_after_error
+ * gives back the part still to run and it runs again from there. */
+static void essentiaRetryAfterError(VALUE string, VALUE fname, int &state)
+{
+    for (int n = 0; state && n < 8; n++) {
+        if (!rb_const_defined(rb_cObject, rb_intern("Essentia")))
+            return;
+        VALUE mod = rb_const_get(rb_cObject, rb_intern("Essentia"));
+        if (!rb_respond_to(mod, rb_intern("retry_after_error")))
+            return;
+        VALUE exc = rb_gv_get("$!");
+        if (NIL_P(exc))
+            return;
+        VALUE args[2] = { string, exc };
+        int st = 0;
+        VALUE rest = rb_protect(essentiaRetryCb, (VALUE) args, &st);
+        if (st || !RB_TYPE_P(rest, RUBY_T_STRING)) {
+            rb_set_errinfo(exc);
+            return;
+        }
+        rb_set_errinfo(Qnil);
+        string = rest;
+        state = 0;
+        evalString(string, fname, &state);
+    }
+}
 #endif
 
 #if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
@@ -1218,6 +1253,10 @@ static void runRMXPScripts(BacktraceData &btData) {
             // parse in modern Ruby. Rewrite the old syntax and try once more.
             if (state)
                 essentiaRetryLegacy(string, fname, state);
+#endif
+#if defined(MKXPZ_BUILD_ANDROID)
+            if (state)
+                essentiaRetryAfterError(string, fname, state);
 #endif
             if (state)
                 break;

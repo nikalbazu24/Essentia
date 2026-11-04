@@ -62,6 +62,15 @@ public class UpdateService extends Service
 
     public static void start(Context c, String path, String title, String link, String version)
     {
+        start(c, path, title, link, null, version, false);
+    }
+
+    /**
+     * link: download it; or zip: a game zip already on the device. fresh: a new
+     * game (from the store) that goes into the library when it's ready.
+     */
+    public static void start(Context c, String path, String title, String link, String zip, String version, boolean fresh)
+    {
         synchronized (UpdateService.class) {
             if (sStates.containsKey(path)) return;
             sStates.put(path, new State(title));
@@ -69,7 +78,8 @@ public class UpdateService extends Service
         changed();
         Intent i = new Intent(c, UpdateService.class)
             .putExtra("path", path).putExtra("title", title)
-            .putExtra("link", link).putExtra("version", version);
+            .putExtra("link", link).putExtra("zip", zip).putExtra("fresh", fresh)
+            .putExtra("version", version == null ? "" : version);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) c.startForegroundService(i);
         else c.startService(i);
     }
@@ -151,6 +161,8 @@ public class UpdateService extends Service
         String title = job.getStringExtra("title");
         String link = job.getStringExtra("link");
         String version = job.getStringExtra("version");
+        String zip = job.getStringExtra("zip");
+        boolean fresh = job.getBooleanExtra("fresh", false);
         State state = stateFor(path);
         if (state == null) state = new State(title);
         final State st = state;
@@ -176,13 +188,23 @@ public class UpdateService extends Service
         String message;
         boolean ok = false;
         try {
-            File backup = GameUpdater.install(new File(path), link,
-                new File(Environment.getExternalStorageDirectory(), "Essentia/Respaldos"), progress);
+            File dir = new File(path);
+            File backupRoot = new File(Environment.getExternalStorageDirectory(), "Essentia/Respaldos");
+            if (fresh && !dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("can't create " + dir);
+            File backup = zip != null ? GameUpdater.installLocalZip(new File(zip), dir, backupRoot, progress)
+                : GameUpdater.install(dir, link, backupRoot, progress);
             if (mCancel) {
                 message = getString(R.string.upd_cancelled);
             } else {
                 ok = true;
-                message = getString(R.string.upd_done_notif, version);
+                Catalog.rememberVersion(this, path, version);
+                if (fresh) {
+                    Library.add(this, dir);
+                    message = getString(R.string.store_installed_notif);
+                } else {
+                    message = version == null || version.isEmpty() ? getString(R.string.store_updated_notif)
+                        : getString(R.string.upd_done_notif, version);
+                }
                 // no need to look for an update again right away
                 getSharedPreferences("essentia_game_updates", MODE_PRIVATE).edit()
                     .putLong(path + ":time", System.currentTimeMillis()).apply();
@@ -194,6 +216,14 @@ public class UpdateService extends Service
         } catch (Exception ex) {
             message = getString(R.string.upd_failed);
         }
+        if (!ok && fresh) {
+            // a new game that didn't arrive: leave no empty folder behind
+            File d = new File(path);
+            String[] left = d.list();
+            //noinspection ResultOfMethodCallIgnored
+            if (left != null && left.length == 0) d.delete();
+        }
+        if (ok) Catalog.clearUpdate(this, path);
         synchronized (UpdateService.class) { sStates.remove(path); }
         changed();
         doneNotification(path, title, message, ok);

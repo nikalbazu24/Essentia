@@ -201,6 +201,57 @@ public final class GameUpdater
         }
     }
 
+    /**
+     * Installs a game zip that is already on the device: over a game (update,
+     * saves backed up first) or into a new folder (a game from the store).
+     * Returns the saves backup folder (or null).
+     */
+    public static File installLocalZip(File zip, File gameDir, File backupRoot, Progress p) throws Exception
+    {
+        if (!zip.getName().toLowerCase(Locale.ROOT).endsWith(".zip")) throw new UnsupportedFormat(zip.getName());
+        if (!gameDir.isDirectory() && !gameDir.mkdirs()) throw new IOException("can't create " + gameDir);
+        File backup = backupSaves(gameDir, backupRoot);
+        List<String> ignored = new ArrayList<>();
+        File cfg = configFile(gameDir);
+        if (cfg != null) {
+            String s = readConfig(cfg).get("IGNORED_FOLDERS");
+            if (s != null) for (String f : s.split(",")) if (!f.trim().isEmpty()) ignored.add(f.trim().toLowerCase(Locale.ROOT));
+        }
+        installFromZip(zip, gameDir, ignored, p);
+        return backup;
+    }
+
+    /** True when the zip holds an RPG Maker game. */
+    public static boolean zipHasGame(File zip)
+    {
+        try (ZipFile z = openZip(zip)) {
+            return gameRoot(z) != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** The game's name inside the zip (its folder), or the zip's own name. */
+    public static String zipGameName(File zip)
+    {
+        String base = zip.getName().replaceAll("(?i)\\.zip$", "");
+        try (ZipFile z = openZip(zip)) {
+            String root = gameRoot(z);
+            if (root != null && root.length() > 1) {
+                String r = root.substring(0, root.length() - 1);
+                return r.substring(r.lastIndexOf('/') + 1);
+            }
+        } catch (Exception ignored) { }
+        return base;
+    }
+
+    /** Downloads a direct link (GitHub, Dropbox, MEGA or any .zip) into a folder. */
+    public static File downloadTo(String link, File dir, Progress p) throws Exception
+    {
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("can't create " + dir);
+        return download(link, dir, p);
+    }
+
     public static final class UnsupportedFormat extends IOException
     {
         UnsupportedFormat(String name) { super(name); }

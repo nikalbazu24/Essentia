@@ -138,25 +138,81 @@ end
 
 # RPG Maker XP's Ruby (1.8.1) let a script define a class again with another
 # parent class: the new class simply replaced the old one. Newer Ruby stops
-# with "superclass mismatch" (Pokémon Cristal: BerryPlantSprite). Every
-# top-level "class X < Y" gets a tiny check in front, on the same line, that
-# does what the old Ruby did.
+# with "superclass mismatch" (Pokémon Cristal: BerryPlantSprite, GS Vitro:
+# DarknessSprite). Every "class X < Y" gets a tiny check in front, on the same
+# line, that does what the old Ruby did.
 module Essentia
-  RECLASS = /^class[ \t]+([A-Z]\w*)[ \t]*<[ \t]*([A-Z][\w:]*)(?=[ \t]*(?:#|;|\r?$))/
+  RECLASS = /^([ \t]*)class[ \t]+([A-Z]\w*)[ \t]*<[ \t]*([A-Z][\w:]*)(?=[ \t]*(?:#|;|\r?$))/n
+  MISMATCH = /superclass mismatch for class ([A-Z]\w*)/
 
   def self.prepare_script(src)
     return src unless src.is_a?(String) && src.index('class ')
-    src.gsub(RECLASS) { "Essentia.reclass(:#{$1}, #{$2}); class #{$1} < #{$2}" }
+    # bytes, not characters: a script may have text that isn't valid UTF-8
+    # (old comments in Latin-1), and modern Ruby refuses to search those
+    enc = src.respond_to?(:encoding) ? src.encoding : nil
+    bin = enc ? src.dup.force_encoding('BINARY') : src
+    out = bin.gsub(RECLASS) { "#{$1}Essentia.reclass(self, :#{$2}, #{$3}); class #{$2} < #{$3}" }
+    enc ? out.force_encoding(enc) : out
   rescue Exception
     src
   end
 
-  def self.reclass(name, parent)
-    return unless Object.const_defined?(name)
-    k = Object.const_get(name)
+  # scope: where the class is being defined (a module or class body, or the
+  # top level)
+  def self.reclass(scope, name, parent = nil)
+    scope, name, parent = Object, scope, name if parent.nil?
+    owner = scope.is_a?(Module) ? scope : Object
+    here = RUBY_VERSION < '1.9' ? owner.const_defined?(name.to_s) : owner.const_defined?(name, false)
+    return unless here
+    k = owner.const_get(name)
     return unless k.is_a?(Class) && parent.is_a?(Class)
-    sup = k.superclass
-    Object.send(:remove_const, name) if sup != parent
+    owner.send(:remove_const, name) if k.superclass != parent
   rescue Exception
+  end
+
+  # Called by the engine when a script section stops with an error: returns
+  # the part of the script still to run (same line numbers) when the error is
+  # one the old Ruby didn't have, or nil. A class defined again with another
+  # parent ("superclass mismatch") that the check above couldn't see (written
+  # inside other code, or with an unusual layout) ends up here.
+  def self.retry_after_error(src, exc)
+    return nil unless src.is_a?(String) && exc.is_a?(TypeError)
+    return nil unless exc.message.to_s =~ MISMATCH
+    name = $1
+    where = (exc.backtrace || []).find { |l| l.to_s =~ /:\d+/ }.to_s
+    return nil unless where =~ /:(\d+)(?::in |\z)/
+    line = $1.to_i
+    return nil if line < 1
+    enc = src.respond_to?(:encoding) ? src.encoding : nil
+    bin = enc ? src.dup.force_encoding('BINARY') : src
+    lines = bin.split(/\n/, -1)
+    return nil if line > lines.length
+    # the error may point a line or two below "class X <" (parent on its own line)
+    start = line
+    (0..3).each do |back|
+      l = line - back
+      break if l < 1
+      if lines[l - 1] =~ /^[ \t]*class[ \t]+#{name}\b/n
+        start = l
+        break
+      end
+    end
+    line = start
+    rest = ("\n" * (line - 1)) + lines[line - 1..-1].join("\n")
+    rest.force_encoding(enc) if enc
+    # only when what's left is a complete piece of code (the class was at the
+    # top level of the script)
+    ok = catch(:essentia_parsed) do
+      begin
+        eval("throw :essentia_parsed, true\n" + rest, TOPLEVEL_BINDING)
+      rescue SyntaxError
+        false
+      end
+    end
+    return nil unless ok == true
+    Object.send(:remove_const, name) if Object.const_defined?(name)
+    rest
+  rescue Exception
+    nil
   end
 end

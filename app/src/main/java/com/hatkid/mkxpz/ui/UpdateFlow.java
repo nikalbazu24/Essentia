@@ -237,7 +237,7 @@ public final class UpdateFlow
     }
 
     /** A presses the selected button, B cancels (some devices don't do this in dialogs). */
-    private static void controllerFriendly(AlertDialog d)
+    public static void controllerFriendly(AlertDialog d)
     {
         d.setOnKeyListener((dialog, code, ev) -> {
             if (ev.getAction() != KeyEvent.ACTION_UP) {
@@ -245,12 +245,22 @@ public final class UpdateFlow
             }
             if (code == KeyEvent.KEYCODE_BUTTON_A) {
                 View f = d.getCurrentFocus();
-                if (f != null) f.performClick();
+                if (f instanceof android.widget.ListView) {
+                    android.widget.ListView lv = (android.widget.ListView) f;
+                    int pos = lv.getSelectedItemPosition();
+                    if (pos >= 0) lv.performItemClick(lv.getSelectedView(), pos, lv.getItemIdAtPosition(pos));
+                } else if (f != null) {
+                    f.performClick();
+                }
                 return true;
             }
             if (code == KeyEvent.KEYCODE_BUTTON_B) {
                 View neg = d.getButton(AlertDialog.BUTTON_NEGATIVE);
-                if (neg != null && neg.isEnabled()) neg.performClick();
+                if (neg != null && neg.getVisibility() == View.VISIBLE && neg.isEnabled()) neg.performClick();
+                else {
+                    View pos = d.getButton(AlertDialog.BUTTON_POSITIVE);
+                    if (pos == null || pos.getVisibility() != View.VISIBLE) d.cancel(); // a plain list
+                }
                 return true;
             }
             return false;

@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "updated": "2026-11-04",
+  "games": [
+    {
+      "id": "pokemon-anil",
+      "title": "Pokémon Añil",
+      "aliases": ["Pokemon Anil", "Pokémon Añil Definitive Edition"],
+      "lang": ["es"],
+      "essentials": "21.1",
+      "maker": "RPG Maker XP",
+      "status": "jugable",
+      "pokeupdater": true,
+      "color": "#2F6FD6",
+      "description": "Fan game en español hecho con Pokémon Essentials. Trae su propio actualizador (PokéUpdater): Essentia descarga e instala las versiones nuevas sin perder partidas.",
+      "note": "Probado en la AYN Thor. La mochila puede ir algo lenta."
+    },
+    {
+      "id": "pokemon-iberia",
+      "title": "Pokémon Iberia",
+      "aliases": ["Pokemon Iberia"],
+      "author": "Eric Lostie",
+      "lang": ["es"],
+      "essentials": "18.1",
+      "maker": "RPG Maker XP",
+      "status": "con_fallas",
+      "color": "#C8402F",
+      "page": "https://x.com/pkmntitan",
+      "description": "Fan game que parodia los tópicos de España, hecho en RPG Maker XP.",
+      "note": "Abre con el motor clásico (Ruby 1.8). Los controles se arreglaron en la compilación 43; se está revisando la pantalla."
+    },
+    {
+      "id": "pokemon-opalo",
+      "title": "Pokémon Ópalo",
+      "aliases": ["Pokemon Opalo"],
+      "author": "Eric Lostie",
+      "lang": ["es"],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "color": "#7A5BD8",
+      "page": "https://x.com/pkmntitan",
+      "description": "Uno de los fan games en español más conocidos, del mismo creador de Pokémon Iberia."
+    },
+    {
+      "id": "pokemon-insurgence",
+      "title": "Pokémon Insurgence",
+      "aliases": ["Pokemon Insurgence"],
+      "lang": ["en"],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "color": "#3A9A6B",
+      "page": "https://p-insurgence.com",
+      "description": "Fan game en inglés hecho con RPG Maker XP y Pokémon Essentials, con megaevoluciones y Pokémon Delta."
+    },
+    {
+      "id": "pokemon-reborn",
+      "title": "Pokémon Reborn",
+      "aliases": ["Pokemon Reborn"],
+      "author": "Amethyst y equipo Reborn",
+      "lang": ["en"],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "color": "#B0367A",
+      "page": "https://www.rebornevo.com",
+      "description": "Fan game en inglés conocido por su dificultad, su ciudad en ruinas y sus campos de batalla."
+    },
+    {
+      "id": "pokemon-z",
+      "title": "Pokémon Z",
+      "aliases": ["Pokemon Z"],
+      "lang": ["es"],
+      "essentials": "16",
+      "maker": "RPG Maker XP",
+      "status": "con_fallas",
+      "color": "#C9A13A",
+      "description": "Fan game hecho con una versión antigua de Pokémon Essentials.",
+      "note": "Llega al mapa y se juega. Usa el panorámico seguro por defecto."
+    },
+    {
+      "id": "pokemon-cristal",
+      "title": "Pokémon Cristal",
+      "aliases": ["Pokemon Cristal"],
+      "lang": ["es"],
+      "essentials": "17.1",
+      "maker": "RPG Maker XP",
+      "status": "con_fallas",
+      "color": "#4FA9C9",
+      "description": "Fan game hecho con Pokémon Essentials 17.",
+      "note": "Abre con el motor clásico. Los controles se arreglaron en la compilación 43."
+    },
+    {
+      "id": "pokemon-gs-vitro",
+      "title": "Pokémon GS Vitro",
+      "aliases": ["Pokemon GS Vitro"],
+      "lang": ["es"],
+      "maker": "RPG Maker XP",
+      "status": "con_fallas",
+      "color": "#5D8F3A",
+      "description": "Fan game hecho con Pokémon Essentials.",
+      "note": "El error de inicio (\"Dark Maps\") se corrigió en la compilación 43."
+    },
+    {
+      "id": "pokemon-consonancia",
+      "title": "Pokémon Consonancia",
+      "aliases": ["Pokemon Consonancia"],
+      "lang": ["es"],
+      "essentials": "21.1",
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "pokeupdater": true,
+      "color": "#2C8C9E",
+      "description": "Fan game en español hecho con Pokémon Essentials 21. Trae PokéUpdater: Essentia lo actualiza solo."
+    }
+  ]
+}

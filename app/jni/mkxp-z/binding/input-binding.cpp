@@ -306,6 +306,19 @@ RB_METHOD(inputRawKeyStates) {
     return ret;
 }
 
+/* Essentia: the keyboard as it is right now. Old Pokémon Essentials games (up to
+ * v18) read keys through Win32API and replace Input.update, so the engine's own
+ * copy (raw_key_states) would never change for them. */
+RB_METHOD(inputEssentiaLiveKeys) {
+    RB_UNUSED_PARAM;
+    
+    VALUE ret = rb_ary_new();
+    for (unsigned int i = 0; i < SDL_NUM_SCANCODES; i++)
+        rb_ary_push(ret, rb_bool_new(EventThread::keyStates[i]));
+    
+    return ret;
+}
+
 #define M_SYMBOL(x) ID2SYM(rb_intern(x))
 #define POWERCASE(v, c)                                                        \
 case SDL_JOYSTICK_POWER_##c:                                                 \
@@ -591,6 +604,7 @@ void inputBindingInit() {
     _rb_define_module_function(module, "mouse_in_window?", inputMouseInWindow);
     
     _rb_define_module_function(module, "raw_key_states", inputRawKeyStates);
+    _rb_define_module_function(module, "essentia_live_keys", inputEssentiaLiveKeys);
     
     VALUE submod = rb_define_module_under(module, "Controller");
     _rb_define_module_function(submod, "connected?", inputControllerConnected);

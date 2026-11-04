@@ -100,6 +100,8 @@ public class LibraryActivity extends ControllerActivity
     private static boolean sIntroShown = false;
     /** Details of games (saves, version, size...), measured in the background. */
     private final java.util.Map<String, GameStats> mStats = new java.util.HashMap<>();
+    private TextView mStoreLabel;
+    private boolean mCheckingAll;
     private final java.util.concurrent.ExecutorService mStatsExec =
         java.util.concurrent.Executors.newSingleThreadExecutor();
     private long mTotalPlay = 0;
@@ -148,6 +150,7 @@ public class LibraryActivity extends ControllerActivity
         UpdateService.setListener(() -> runOnUiThread(this::refreshUpdates));
         reload();
         showSecondScreen();
+        checkAllUpdates();
     }
 
     @Override
@@ -324,6 +327,14 @@ public class LibraryActivity extends ControllerActivity
         mViewIcon = iconButton(bar, R.drawable.ic_e_shelf, R.string.lib_view_label, v -> cycleView());
         View sort = pillButton(bar, R.drawable.ic_e_sort, "", false, v -> toggleSort());
         mSortLabel = sort.findViewWithTag("label");
+        if (isPortrait()) {
+            mStoreLabel = null;
+            iconButton(bar, R.drawable.ic_e_store, R.string.store_title, v -> startActivity(new Intent(this, StoreActivity.class)));
+        } else {
+            View store = pillButton(bar, R.drawable.ic_e_store, getString(R.string.store_short), false,
+                v -> startActivity(new Intent(this, StoreActivity.class)));
+            mStoreLabel = store.findViewWithTag("label");
+        }
         iconButton(bar, R.drawable.ic_e_gamepad, R.string.lib_controls, v -> startActivity(new Intent(this, ControlsActivity.class)));
         iconButton(bar, R.drawable.ic_e_settings, R.string.lib_settings, v -> startActivity(new Intent(this, SettingsActivity.class)));
         pillButton(bar, R.drawable.ic_e_add, getString(R.string.lib_add_short), true, v -> openFolderPicker());
@@ -710,6 +721,7 @@ public class LibraryActivity extends ControllerActivity
         String mode = screenLabel(e.screenMode);
         UpdateService.State up = UpdateService.stateFor(e.path);
         if (up != null) mode = "\u2193 " + (up.percent() >= 0 ? up.percent() + "%" : "…");
+        else if (Catalog.pending(this, e) != null) mode = "\u2191 " + getString(R.string.store_badge_new);
         h.badge.setText(mode == null ? "" : mode);
         h.badge.setVisibility(mode == null ? View.GONE : View.VISIBLE);
         mCovers.load(e.path, e.cover, h.cover, R.drawable.ic_launcher_foreground);
@@ -864,10 +876,40 @@ public class LibraryActivity extends ControllerActivity
         if (level >= TRIM_MEMORY_UI_HIDDEN && mCovers != null) mCovers.trim();
     }
 
+    /** Looks for new versions of every game now and then (in the background), for the badges. */
+    private void checkAllUpdates()
+    {
+        updateStoreLabel();
+        if (mCheckingAll || mGames.isEmpty() || !EssentiaSettings.flag(this, EssentiaSettings.AUTO_UPDATE, true)
+            || !Catalog.checkAllDue(this)) return;
+        mCheckingAll = true;
+        android.content.Context app = getApplicationContext();
+        new Thread(() -> {
+            List<Catalog.Update> found = Catalog.checkAll(app);
+            runOnUiThread(() -> {
+                mCheckingAll = false;
+                if (isFinishing()) return;
+                refreshUpdates();
+                if (!found.isEmpty()) {
+                    Toast.makeText(this, getResources().getQuantityString(R.plurals.store_found, found.size(), found.size()),
+                        Toast.LENGTH_LONG).show();
+                }
+            });
+        }, "EssentiaCheckAll").start();
+    }
+
+    private void updateStoreLabel()
+    {
+        if (mStoreLabel == null) return;
+        int n = Catalog.pendingCount(this, mGames);
+        mStoreLabel.setText(n > 0 ? getString(R.string.store_short_n, n) : getString(R.string.store_short));
+    }
+
     /** A game update in the background moved on: show its progress on the cards. */
     private void refreshUpdates()
     {
         if (isFinishing()) return;
+        updateStoreLabel();
         if (isShelf()) {
             for (int i = 0; i < mShelf.getChildCount() && i < mGames.size(); i++) {
                 bindCard(mShelf.getChildAt(i), mGames.get(i));
@@ -949,7 +991,13 @@ public class LibraryActivity extends ControllerActivity
             DateUtils.getRelativeTimeSpanString(st.lastSave, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString())
             : getString(R.string.stat_saves);
         list.add(new SecondScreen.Stat(savesLabel, saves));
-        list.add(new SecondScreen.Stat(getString(R.string.stat_version), st.version.isEmpty() ? "—" : st.version));
+        Catalog.Update pend = Catalog.pending(this, e);
+        if (pend != null) {
+            list.add(new SecondScreen.Stat(getString(R.string.store_chip_new, "").trim(),
+                (st.version.isEmpty() ? "?" : st.version) + " \u2192 " + pend.latest));
+        } else {
+            list.add(new SecondScreen.Stat(getString(R.string.stat_version), st.version.isEmpty() ? "—" : st.version));
+        }
         list.add(new SecondScreen.Stat(getString(R.string.stat_size), st.size < 0 ? "…" : GameStats.bytes(st.size)));
 
         StringBuilder sub = new StringBuilder();
@@ -1001,6 +1049,8 @@ public class LibraryActivity extends ControllerActivity
         mHeroChips.removeAllViews();
         UpdateService.State up = UpdateService.stateFor(e.path);
         if (up != null) chip(detailOf(e), true);
+        Catalog.Update pend = up == null ? Catalog.pending(this, e) : null;
+        if (pend != null) chip("\u2191 " + getString(R.string.store_chip_new, pend.latest), true);
         if (st.playMs > 0) chip("\u23F1 " + GameStats.duration(this, st.playMs), false);
         chip(e.lastPlayed == 0 ? getString(R.string.lib_never_played)
             : DateUtils.getRelativeTimeSpanString(e.lastPlayed, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(), false);
@@ -1068,9 +1118,11 @@ public class LibraryActivity extends ControllerActivity
         labels.add(getString(R.string.opt_screen)); actions.add(() -> chooseScreen(e));
         labels.add(getString(R.string.opt_engine)); actions.add(() -> chooseEngine(e));
         labels.add(getString(R.string.opt_import)); actions.add(() -> importSaves(e));
-        if (GameUpdater.supported(new File(e.path))) {
-            labels.add(getString(R.string.upd_game)); actions.add(() -> updateGame(e));
-        }
+        labels.add(getString(R.string.upd_game)); actions.add(() -> {
+            if (GameUpdater.supported(new File(e.path))) updateGame(e);
+            else startActivity(new Intent(this, StoreActivity.class).putExtra(StoreActivity.EXTRA_TAB, 1)
+                .putExtra(StoreActivity.EXTRA_GAME, e.path));
+        });
         if (Shortcuts.canPin(this)) {
             labels.add(getString(R.string.opt_pin)); actions.add(() -> {
                 boolean ok = Shortcuts.pin(this, e);

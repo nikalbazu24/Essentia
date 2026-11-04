@@ -83,6 +83,14 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"
             android:exported="false" />
 
+        <!-- Essentia: fan game store and updates of every game -->
+        <activity
+            android:name=".StoreActivity"
+            android:label="@string/store_title"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"
+            android:exported="false" />
+
         <!-- Essentia: controls manual and controller tester -->
         <activity
             android:name=".ControlsActivity"

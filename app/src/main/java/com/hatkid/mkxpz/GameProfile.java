@@ -24,6 +24,7 @@ public final class GameProfile
 {
     public String maker = "RPG Maker";      // XP, VX, VX Ace
     public String essentials = "";          // "", or its version ("16.2", "21.1"...)
+    public String gameVersion = "";         // the game's own version (GAME_VERSION), if it says
     public boolean essentials_ = false;     // made with Pokémon Essentials
     public boolean oldResizer = false;      // old Essentials window resizer (up to v16-17)
     /** Recommended settings ("" = no recommendation). */
@@ -44,11 +45,8 @@ public final class GameProfile
     {
         if (!essentials_) return false;
         if (oldResizer) return true;
-        try {
-            return !essentials.isEmpty() && Float.parseFloat(essentials.replaceAll("[^0-9.].*$", "")) < 19f;
-        } catch (Exception e) {
-            return false;
-        }
+        float v = versionNumber();
+        return v > 0f && v < 19f;
     }
 
     // ------------------------------------------------------------ detection
@@ -61,16 +59,17 @@ public final class GameProfile
         SharedPreferences p = c.getSharedPreferences("essentia_profiles", Context.MODE_PRIVATE);
         String key = dir.getAbsolutePath();
         GameProfile g = new GameProfile();
-        if (p.getLong(key + ":stamp", -1) == stamp && p.contains(key + ":maker")) {
+        if (p.getLong(key + ":stamp", -1) == stamp && p.contains(key + ":maker") && p.contains(key + ":gver")) {
             g.maker = p.getString(key + ":maker", g.maker);
             g.essentials = p.getString(key + ":ess", "");
             g.essentials_ = p.getBoolean(key + ":isess", false);
             g.oldResizer = p.getBoolean(key + ":old", false);
+            g.gameVersion = p.getString(key + ":gver", "");
         } else {
             detect(dir, scripts, g);
             p.edit().putLong(key + ":stamp", stamp).putString(key + ":maker", g.maker)
                 .putString(key + ":ess", g.essentials).putBoolean(key + ":isess", g.essentials_)
-                .putBoolean(key + ":old", g.oldResizer).apply();
+                .putBoolean(key + ":old", g.oldResizer).putString(key + ":gver", g.gameVersion).apply();
         }
         applyKnown(c, dir, g);
         recommend(g);
@@ -98,6 +97,9 @@ public final class GameProfile
         return null;
     }
 
+    /** GAME_VERSION = "4.1.1" (Settings script of most Essentials games). */
+    private static final Pattern GAME_VER = Pattern.compile("(?m)^\\s*GAME_VERSION\\s*=\\s*[\"']([^\"'\\n]{1,24})[\"']");
+
     private static void detect(File dir, File scripts, GameProfile g)
     {
         String name = scripts != null ? scripts.getName().toLowerCase(java.util.Locale.ROOT) : "";
@@ -117,6 +119,10 @@ public final class GameProfile
                 if (section.equalsIgnoreCase("Sprite_Resizer")) { g.oldResizer = true; g.essentials_ = true; }
                 if (section.startsWith("PokeBattle_") || section.startsWith("PScreen_") || section.equals("Compiler")) {
                     g.essentials_ = true;
+                }
+                if (g.gameVersion.isEmpty() && s[1] != null) {
+                    Matcher gv = GAME_VER.matcher(s[1]);
+                    if (gv.find()) g.gameVersion = gv.group(1).trim();
                 }
                 if (g.essentials.isEmpty() && s[1] != null) {
                     Matcher m = ver.matcher(s[1]);
@@ -151,6 +157,23 @@ public final class GameProfile
     {
         // old Essentials: menus and battles are kept in their own shape
         if (g.screen.isEmpty() && g.oldEssentials()) g.screen = EssentiaSettings.SCREEN_WIDE_SAFE;
+        // Essentials 17 and 18 were written for RPG Maker XP's Ruby 1.8: the
+        // classic engine from the start (the modern one may close without a word)
+        if (g.engine.isEmpty() && g.essentials_ && !g.oldResizer) {
+            float v = g.versionNumber();
+            if (v >= 17f && v < 19f) g.engine = EssentiaSettings.ENGINE_CLASSIC;
+        }
+    }
+
+    /** The Essentials version as a number (17.2, 21.1...), or 0 if unknown. */
+    public float versionNumber()
+    {
+        java.util.regex.Matcher m = Pattern.compile("(\\d+(?:\\.\\d+)?)").matcher(essentials);
+        try {
+            return m.find() ? Float.parseFloat(m.group(1)) : 0f;
+        } catch (Exception e) {
+            return 0f;
+        }
     }
 
     // ------------------------------------------------------------ Scripts.rxdata (Ruby Marshal)
