@@ -122,6 +122,8 @@ public final class LoadingScreen extends FrameLayout
     {
         Context c = getContext();
         switch (phase) {
+            case "preloads": return "Preparando compatibilidad";
+            case "game_scripts": return "Iniciando el juego";
             case "files": return c.getString(R.string.loading_files);
             case "engine": return c.getString(R.string.loading_engine);
             case "scripts": return c.getString(R.string.loading_scripts);

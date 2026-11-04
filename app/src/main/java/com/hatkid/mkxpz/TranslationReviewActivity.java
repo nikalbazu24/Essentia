@@ -24,7 +24,7 @@ public class TranslationReviewActivity extends ControllerActivity {
         list.addView(Ui.text(this,"Cierra el juego antes de corregir. Las correcciones son locales y conservan los códigos de formato.",15,Ui.TEXT_DIM,false));
         EditText search=new EditText(this);search.setHint("Buscar texto original o traducción");search.setTextColor(Ui.TEXT);list.addView(search);
         Button find=Ui.button(this,"Buscar",false);list.addView(find);
-        LinearLayout results=new LinearLayout(this);results.setOrientation(1);list.addView(results);
+        LinearLayout results=new LinearLayout(this);results.setOrientation(1);results.setBackground(Ui.rounded(this,Ui.SURFACE,16));results.setPadding(p,p,p,p);list.addView(results);
         find.setOnClickListener(v->{
             if(Games.isGameRunning(this)){new AlertDialog.Builder(this).setMessage("Cierra el juego antes de revisar traducciones").setPositiveButton("Aceptar",null).show();return;}
             results.removeAllViews();
@@ -41,7 +41,7 @@ public class TranslationReviewActivity extends ControllerActivity {
                     if(problem!=null){results.addView(Ui.text(this,problem,16,Ui.TEXT,false));return;}
                     int count=0;
                     for(Map.Entry<String,String> row:rows.entrySet())if((row.getKey()+" "+row.getValue()).toLowerCase(Locale.ROOT).contains(query)){
-                        Button b=Ui.button(this,row.getKey()+"\n→ "+row.getValue(),false);b.setOnClickListener(x->edit(row.getKey(),row.getValue()));results.addView(b);if(++count==100)break;
+                        Button b=Ui.button(this,row.getKey()+"\n→ "+row.getValue(),false);b.setGravity(android.view.Gravity.START|android.view.Gravity.CENTER_VERTICAL);b.setOnClickListener(x->edit(row.getKey(),row.getValue()));results.addView(b);if(++count==100)break;
                     }
                     results.addView(Ui.text(this,count==0?"No hay traducciones coincidentes":"Mostrando hasta 100 coincidencias",14,Ui.TEXT_DIM,false));
                 });

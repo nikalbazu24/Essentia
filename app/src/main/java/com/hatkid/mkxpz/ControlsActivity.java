@@ -75,6 +75,7 @@ public class ControlsActivity extends ControllerActivity
         list.setOrientation(LinearLayout.VERTICAL);
         int pad = Ui.dp(this, 20);
         list.setPadding(pad, pad, pad, pad);
+        list.setBackgroundColor(Ui.BG);
         scroll.addView(list);
 
         LinearLayout header = new LinearLayout(this);

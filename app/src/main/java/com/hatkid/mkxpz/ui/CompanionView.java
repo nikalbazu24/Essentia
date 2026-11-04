@@ -108,7 +108,7 @@ public final class CompanionView extends FrameLayout
     };
 
     private final Runnable mHideMessage = () -> {
-        if (mMessage != null) mMessage.animate().alpha(0f).setDuration(250).start();
+        if (mMessage != null) mMessage.setVisibility(View.GONE);
     };
 
     public CompanionView(Context c, boolean black, String title, String gamePath,
@@ -151,7 +151,7 @@ public final class CompanionView extends FrameLayout
         LinearLayout notes=new LinearLayout(c);notes.setOrientation(LinearLayout.VERTICAL);
         notes.addView(Ui.text(c,"Tu cuaderno de aventura",22,Ui.TEXT,true));
         notes.addView(Ui.text(c,"Objetivos, lugares y recordatorios. Se guardan en este dispositivo para este juego.",14,Ui.TEXT_DIM,false));
-        mNotes=Ui.text(c,"",17,Ui.TEXT,false);mNotes.setPadding(pad,pad,pad,pad);
+        mNotes=Ui.text(c,c.getSharedPreferences("essentia_notes",0).getString(mGameDir.getAbsolutePath(),"Aún no tienes notas."),17,Ui.TEXT,false);mNotes.setPadding(pad,pad,pad,pad);
         mNotes.setBackground(Ui.rounded(c,Ui.SURFACE,16));notes.addView(mNotes);
         android.widget.Button edit=Ui.button(c,"Editar mis notas",true);edit.setOnClickListener(v->mActions.notes());notes.addView(edit);
         mPageViews[PAGE_NOTES]=scroll(c,notes);
@@ -160,6 +160,8 @@ public final class CompanionView extends FrameLayout
         mPageViews[PAGE_CHEATS]=buildCheats(c);
         for(View view:mPageViews)mPages.addView(view,new FrameLayout.LayoutParams(-1,-1));
         LinearLayout.LayoutParams pages=new LinearLayout.LayoutParams(-1,0,1f);pages.topMargin=pad;col.addView(mPages,pages);
+        mMessage=Ui.text(c,"",14,Ui.TEXT,true);mMessage.setPadding(pad,pad,pad,pad);
+        mMessage.setBackground(Ui.rounded(c,Ui.SURFACE_HI,12));mMessage.setVisibility(View.GONE);col.addView(mMessage);
         root.addView(col, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT));
         addView(root, new FrameLayout.LayoutParams(-1,-1));
@@ -234,15 +236,6 @@ public final class CompanionView extends FrameLayout
         zlp.setMargins(0, Ui.dp(c, 8), Ui.dp(c, 8), 0);
         card.addView(zoom, zlp);
 
-        mMessage = Ui.text(c, "", 14, Ui.BG, true);
-        mMessage.setGravity(Gravity.CENTER);
-        mMessage.setBackground(Ui.rounded(c, 0xF2F3EEFE, 14));
-        mMessage.setPadding(Ui.dp(c, 14), Ui.dp(c, 7), Ui.dp(c, 14), Ui.dp(c, 7));
-        mMessage.setAlpha(0f);
-        FrameLayout.LayoutParams msg = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        msg.bottomMargin = Ui.dp(c, 10);
-        card.addView(mMessage, msg);
         return card;
     }
 
@@ -437,6 +430,7 @@ public final class CompanionView extends FrameLayout
     {
         if (mMessage == null) return;
         mMessage.setText(text);
+        mMessage.setVisibility(View.VISIBLE);
         mMessage.animate().cancel();
         mMessage.setAlpha(1f);
         mHandler.removeCallbacks(mHideMessage);

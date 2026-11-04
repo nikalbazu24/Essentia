@@ -105,7 +105,8 @@ public final class Ui
         StateListDrawable s = new StateListDrawable();
         s.addState(new int[]{android.R.attr.state_pressed}, pressed);
         s.addState(new int[]{android.R.attr.state_focused}, focused);
-        s.addState(new int[]{android.R.attr.state_selected}, focused);
+        GradientDrawable selected=rounded(c,SURFACE_HI,radiusDp);selected.setStroke(dp(c,1),alpha(ACCENT_LIGHT,0x99));
+        s.addState(new int[]{android.R.attr.state_selected}, selected);
         s.addState(new int[]{}, normal);
         return s;
     }
@@ -140,6 +141,46 @@ public final class Ui
         t.setFontFeatureSettings("kern");
         t.setLineSpacing(dp(c, 2), 1f);
         return t;
+    }
+
+    /** Grouped per-game actions; all operations keep their existing safety flows. */
+    public static void gameOptions(android.app.Activity a,String title,java.util.List<String> labels,
+                                   java.util.List<Runnable> actions,int[] groups) {
+        android.app.Dialog dialog=new android.app.Dialog(a);
+        android.widget.LinearLayout col=new android.widget.LinearLayout(a);col.setOrientation(1);
+        int p=dp(a,16);col.setPadding(p,p,p,p);col.setBackground(rounded(a,SURFACE,20));
+        TextView heading=text(a,title,22,TEXT,true);heading.setMaxLines(2);col.addView(heading);
+        android.widget.HorizontalScrollView tabsScroll=new android.widget.HorizontalScrollView(a);tabsScroll.setHorizontalScrollBarEnabled(false);
+        android.widget.LinearLayout tabs=new android.widget.LinearLayout(a);tabsScroll.addView(tabs);col.addView(tabsScroll);
+        android.widget.ScrollView scroll=new android.widget.ScrollView(a);
+        android.widget.LinearLayout content=new android.widget.LinearLayout(a);content.setOrientation(1);scroll.addView(content);
+        col.addView(scroll,new android.widget.LinearLayout.LayoutParams(-1,0,1f));
+        String[] names={"Jugar","Personalizar","Partidas","Gestionar"};
+        for(int group=0;group<names.length;group++) {
+            final int selected=group;Button tab=button(a,names[group],false);
+            android.widget.LinearLayout.LayoutParams lp=new android.widget.LinearLayout.LayoutParams(-2,-2);lp.rightMargin=dp(a,6);tabs.addView(tab,lp);
+            tab.setOnClickListener(v->{
+                for(int i=0;i<tabs.getChildCount();i++)tabs.getChildAt(i).setSelected(i==selected);
+                content.removeAllViews();
+                for(int i=0;i<labels.size();i++)if(groups[i]==selected){
+                    final Runnable action=actions.get(i);Button item=button(a,labels.get(i),false);
+                    item.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);item.setOnClickListener(x->{dialog.dismiss();action.run();});
+                    android.widget.LinearLayout.LayoutParams row=new android.widget.LinearLayout.LayoutParams(-1,-2);row.topMargin=dp(a,8);content.addView(item,row);
+                }
+                scroll.scrollTo(0,0);
+            });
+        }
+        Button close=button(a,"Cerrar",false);close.setOnClickListener(v->dialog.dismiss());col.addView(close);
+        dialog.setContentView(col);
+        dialog.setOnKeyListener((d,code,event)->{
+            if(code==android.view.KeyEvent.KEYCODE_BUTTON_B){if(event.getAction()==android.view.KeyEvent.ACTION_UP)dialog.dismiss();return true;}
+            if(code==android.view.KeyEvent.KEYCODE_BUTTON_A){dialog.getWindow().superDispatchKeyEvent(new android.view.KeyEvent(event.getDownTime(),event.getEventTime(),event.getAction(),android.view.KeyEvent.KEYCODE_DPAD_CENTER,event.getRepeatCount()));return true;}
+            return false;
+        });dialog.show();
+        android.util.DisplayMetrics dm=a.getResources().getDisplayMetrics();
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.getWindow().setLayout(Math.min(dm.widthPixels-dp(a,24),dp(a,620)),Math.min(dm.heightPixels-dp(a,32),dp(a,620)));
+        tabs.getChildAt(0).performClick();
     }
 
     public static ColorStateList tint(int color)

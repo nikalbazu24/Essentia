@@ -25,7 +25,7 @@ import java.io.FileInputStream;
  * sends the error, the game's details and, if wanted, its scripts to Essentia's
  * database, where they can be read to fix the problem.
  */
-public class ReportActivity extends Activity
+public class ReportActivity extends com.hatkid.mkxpz.ui.ControllerActivity
 {
     public static final String EXTRA_PATH = "path";
     public static final String EXTRA_ERROR = "error";
@@ -55,7 +55,10 @@ public class ReportActivity extends Activity
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         int p = Ui.dp(this, 20);
-        box.setPadding(p, Ui.dp(this, 8), p, 0);
+        box.setPadding(p,p,p,p);box.setBackgroundColor(Ui.BG);
+        android.widget.Button back=Ui.button(this,"‹ Volver",false);back.setOnClickListener(v->finish());box.addView(back);
+        box.addView(Ui.text(this,"Reportar un problema",26,Ui.TEXT,true));
+        box.addView(Ui.text(this,title,18,Ui.ACCENT_LIGHT,true));
 
         TextView info = Ui.text(this, getString(error != null ? R.string.rep_crash_text : R.string.rep_manual_text),
             14, Ui.TEXT_DIM, false);
@@ -68,24 +71,26 @@ public class ReportActivity extends Activity
         }
         EditText note = new EditText(this);
         note.setHint(R.string.rep_note_hint);
-        note.setMinLines(2);
+        note.setMinLines(4);
+        note.setTextColor(Ui.TEXT);note.setHintTextColor(Ui.TEXT_DIM);
         box.addView(note, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT));
         CheckBox scripts = new CheckBox(this);
         scripts.setText(R.string.rep_include_scripts);
-        scripts.setChecked(true);
+        scripts.setChecked(false);
+        scripts.setTextColor(Ui.TEXT);
         box.addView(scripts);
 
         boolean cloud = Cloud.configured(this);
-        AlertDialog d = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(getString(error != null ? R.string.rep_crash_title : R.string.rep_manual_title, title))
-            .setView(box)
-            .setPositiveButton(cloud ? R.string.rep_send : R.string.rep_share, (x, w) ->
-                send(path, title, error, note.getText().toString(), scripts.isChecked(), cloud))
-            .setNegativeButton(R.string.rep_dont, (x, w) -> finish())
-            .setOnCancelListener(x -> finish())
-            .create();
-        d.show();
+        box.addView(Ui.text(this,"El informe se envía solo al tocar Enviar o al confirmar con qué app compartirlo. Adjuntar scripts es opcional.",14,Ui.TEXT_DIM,false));
+        if(Diagnostics.enabled(this)) {
+            TextView diagnostic=Ui.text(this,Diagnostics.summary(this,path),13,Ui.TEXT_DIM,false);
+            diagnostic.setPadding(p,p,p,p);diagnostic.setBackground(Ui.rounded(this,Ui.SURFACE,14));box.addView(diagnostic);
+        }
+        android.widget.Button submit=Ui.button(this,getString(cloud?R.string.rep_send:R.string.rep_share),true);
+        submit.setOnClickListener(v->{submit.setEnabled(false);send(path,title,error,note.getText().toString(),scripts.isChecked(),cloud);});
+        box.addView(submit);
+        android.widget.ScrollView scroll=new android.widget.ScrollView(this);scroll.setFillViewport(true);scroll.addView(box);setContentView(scroll);
     }
 
     private void send(String path, String title, String error, String note, boolean withScripts, boolean cloud)

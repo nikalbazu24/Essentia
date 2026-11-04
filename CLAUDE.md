@@ -15,3 +15,11 @@ La entrega actual es **2.0 beta para Android (teléfono y AYN Thor)**. El dueño
 La compilación en `.github/workflows/build.yml` comprueba catálogo, servicio, Ruby, pruebas JVM/UI,
 ambos motores, contenido del APK y firma antes de publicar en `dev`. `main` es la rama de distribución.
 La bitácora privada de Claude no se sincroniza automáticamente; actualiza este registro compartido al cambiar el proyecto.
+
+
+Continuación del 4 de noviembre: PR #5 renueva navegación y pantallas Android con `ui/AppShell`,
+`ui/CompanionView` compartido entre teléfono/Thor y herramientas por juego agrupadas. Lee la
+sección «Renovación Android» de `docs/2.0-beta.md`. GS Vitro sigue sin causa confirmada: nuevo
+reporte manual de beta.61 sin traza; adjunto privado nuevo no transferido ni comparado. Se añade
+registro local optativo de la decisión real de motor, fases y salidas de Android, sin cambiar la
+política automática. `ExperienceTest` y `ui-review.yml` producen capturas Android revisables.

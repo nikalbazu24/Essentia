@@ -124,7 +124,7 @@ jobs:
           sh ./make_xxd.sh
 
       # Motor clásico (Ruby 1.8.7, el Ruby de RPG Maker XP) para juegos muy antiguos.
-      # Si algo falla aquí, el APK se publica igual, solo que sin el motor clásico.
+      # Ambos motores son obligatorios: un fallo detiene la entrega.
       - name: Recuperar Ruby 1.8 compilado antes
         id: ruby18-cache
         uses: actions/cache@v4
@@ -134,7 +134,6 @@ jobs:
 
       - name: Compilar Ruby 1.8 (motor clásico)
         if: steps.ruby18-cache.outputs.cache-hit != 'true'
-        continue-on-error: true
         working-directory: app/jni
         run: ./build_ruby18.sh
 
@@ -169,13 +168,6 @@ jobs:
           if ./gradlew --no-daemon assembleRelease > "$RUNNER_TEMP/gradle.log" 2>&1; then
             tail -5 "$RUNNER_TEMP/gradle.log"
             if [ -d app/jni/ruby18-out ]; then echo "Motor clásico (Ruby 1.8): incluido."; fi
-          elif [ -d app/jni/ruby18-out ] && grep -q "mkxp-z-legacy" "$RUNNER_TEMP/gradle.log"; then
-            echo "::warning::El motor clásico no compiló; el APK sale sin él."
-            grep -n -E "error:|undefined reference|undefined symbol|FAILED" "$RUNNER_TEMP/gradle.log" | head -120 || true
-            mv app/jni/ruby18-out app/jni/ruby18-out.failed
-            # Gradle remembers the list of native modules: start the native build fresh
-            rm -rf app/.cxx app/build/intermediates/cxx
-            ./gradlew --no-daemon assembleRelease
           else
             grep -n -E "error:|undefined reference|undefined symbol|FAILED|What went wrong" -A3 "$RUNNER_TEMP/gradle.log" | head -120 || true
             tail -40 "$RUNNER_TEMP/gradle.log"
@@ -194,6 +186,10 @@ jobs:
           python3 tools/release_manifest.py app/build/outputs/apk/release/output-metadata.json version.json
           cat version.json
           python3 tools/verify_apk.py essentia.apk version.json
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ] && [ "$ESSENTIA_SIGNED" != "true" ]; then
+            echo "::error::La distribución requiere la firma fija de Essentia."
+            exit 1
+          fi
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose essentia.apk
 
       - name: Guardar el APK como artefacto

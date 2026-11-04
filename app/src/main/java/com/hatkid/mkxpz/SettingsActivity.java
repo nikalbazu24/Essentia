@@ -58,12 +58,13 @@ public class SettingsActivity extends ControllerActivity
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
+        if(!portrait)header.setOrientation(LinearLayout.VERTICAL);
         Button back = Ui.button(this, "\u2039  " + getString(R.string.set_back), false);
         back.setOnClickListener(v -> finish());
         header.addView(back);
         TextView title = Ui.text(this, getString(R.string.lib_settings), 22, Ui.TEXT, true);
-        title.setPadding(Ui.dp(this, 12), 0, 0, 0);
-        header.addView(title);
+        title.setPadding(portrait?Ui.dp(this,12):0,portrait?0:Ui.dp(this,12),0,0);
+        header.addView(title,new LinearLayout.LayoutParams(portrait?0:-1,-2,portrait?1f:0f));
         side.addView(header);
 
         mTabs = new LinearLayout(this);

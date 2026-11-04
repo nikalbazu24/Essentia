@@ -47,26 +47,31 @@ public class ExperienceTest {
     }
     private void shot(String name,View v,int w,int h)throws Exception {
         v.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));v.layout(0,0,w,h);
-        Bitmap bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);v.draw(new Canvas(bitmap));
+        Bitmap bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(bitmap);canvas.drawColor(Ui.BG);v.draw(canvas);
         File folder=new File("build/reports/ui");folder.mkdirs();
         try(FileOutputStream out=new FileOutputStream(new File(folder,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}
     }
     @Test public void phoneNavigationAndLibrary()throws Exception {
-        RuntimeEnvironment.setQualifiers("w390dp-h844dp-port-mdpi");
+        RuntimeEnvironment.setQualifiers("es-rES-w390dp-h844dp-port-mdpi");
+        org.json.JSONArray entries=new org.json.JSONArray();
+        for(int i=0;i<6;i++)entries.put(new org.json.JSONObject().put("path","/fixture/adventure-"+i).put("title",i==0?"Una aventura con un nombre muy largo":"Aventura "+(i+1)));
+        app.getSharedPreferences(EssentiaSettings.PREFS,0).edit().putString("library_v1",entries.toString()).commit();
         Activity a=Robolectric.buildActivity(LibraryActivity.class).setup().get();View root=a.findViewById(android.R.id.content);
         assertTrue(text(root).contains("Biblioteca"));assertTrue(text(root).contains("Descubrir"));assertTrue(text(root).contains("Ajustes"));
         shot("phone-library",root,390,844);a.finish();
+        RuntimeEnvironment.setQualifiers("es-rES-w960dp-h540dp-land-mdpi");
+        a=Robolectric.buildActivity(LibraryActivity.class).setup().get();shot("handheld-library",a.findViewById(android.R.id.content),960,540);a.finish();
     }
     @Test public void settingsPhoneAndHandheld()throws Exception {
-        RuntimeEnvironment.setQualifiers("w360dp-h800dp-port-mdpi");
+        RuntimeEnvironment.setQualifiers("es-rES-w360dp-h800dp-port-mdpi");
         org.robolectric.android.controller.ActivityController<SettingsActivity> controller=Robolectric.buildActivity(SettingsActivity.class).setup();
         SettingsActivity a=controller.get();shot("phone-settings",a.findViewById(android.R.id.content),360,800);controller.pause().stop().destroy();
-        RuntimeEnvironment.setQualifiers("w960dp-h540dp-land-mdpi");
+        RuntimeEnvironment.setQualifiers("es-rES-w960dp-h540dp-land-mdpi");
         controller=Robolectric.buildActivity(SettingsActivity.class).setup();a=controller.get();
         shot("handheld-settings",a.findViewById(android.R.id.content),960,540);controller.pause().stop().destroy();
     }
     @Test public void discoverAndTools()throws Exception {
-        RuntimeEnvironment.setQualifiers("w390dp-h844dp-port-mdpi");
+        RuntimeEnvironment.setQualifiers("es-rES-w390dp-h844dp-port-mdpi");
         org.robolectric.android.controller.ActivityController<StoreActivity> store=Robolectric.buildActivity(StoreActivity.class).setup();
         shot("phone-discover",store.get().findViewById(android.R.id.content),390,844);store.pause().stop().destroy();
         Activity guide=Robolectric.buildActivity(GuideActivity.class).setup().get();shot("phone-guide",guide.findViewById(android.R.id.content),390,844);guide.finish();
@@ -82,7 +87,7 @@ public class ExperienceTest {
     @Test public void companionHasSameToolsAtBothSizesAndNotesStayPerGame()throws Exception {
         app.getSharedPreferences("essentia_notes",0).edit().putString("/fixture/one","Buscar la siguiente ruta").putString("/fixture/two","Otro objetivo").commit();
         for(int[] size:new int[][]{{390,730},{640,480},{800,300}}){
-            RuntimeEnvironment.setQualifiers("w"+size[0]+"dp-h"+size[1]+"dp-mdpi");
+            RuntimeEnvironment.setQualifiers("es-rES-w"+size[0]+"dp-h"+size[1]+"dp-mdpi");
             Activity a=Robolectric.buildActivity(GuideActivity.class).setup().get();
             CompanionView view=new CompanionView(a,false,"Aventura de prueba","/fixture/one",new File(a.getCacheDir(),"no-live"),KEYS,ACTIONS);a.setContentView(view);
             shot("companion-"+size[0]+"-summary",view,size[0],size[1]);
@@ -93,6 +98,22 @@ public class ExperienceTest {
             view.dispose();a.finish();
         }
         assertEquals("Otro objetivo",app.getSharedPreferences("essentia_notes",0).getString("/fixture/two",""));
+    }
+    @Test public void phoneCompanionDoesNotStealSdlFocusAndNotesSavePerGame()throws Exception {
+        Activity a=Robolectric.buildActivity(GuideActivity.class).setup().get();
+        Dialog dialog=GamePanel.phone(a,"Prueba","/fixture/notes",new File(a.getCacheDir(),"none"),KEYS,ACTIONS,false,3,false);
+        assertTrue((dialog.getWindow().getAttributes().flags&WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)!=0);
+        dialog.dismiss();
+        GamePanel.editNotes(a,"/fixture/notes");
+        AlertDialog editor=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+        EditText input=findEditor(editor.findViewById(android.R.id.content));assertNotNull(input);input.setText("Visitar el siguiente pueblo");
+        editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        assertEquals("Visitar el siguiente pueblo",a.getSharedPreferences("essentia_notes",0).getString("/fixture/notes",""));
+        assertFalse(a.getSharedPreferences("essentia_notes",0).contains("/fixture/other"));a.finish();
+    }
+    private EditText findEditor(View v){
+        if(v instanceof EditText)return (EditText)v;
+        if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){EditText found=findEditor(((ViewGroup)v).getChildAt(i));if(found!=null)return found;}return null;
     }
     @Test public void diagnosticsAreOptInAndPreserveRealEngineDecision()throws Exception {
         String path="/fixture/diagnostics";Diagnostics.file(app,path,"session").delete();

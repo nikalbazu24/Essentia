@@ -1183,6 +1183,8 @@ static void runRMXPScripts(BacktraceData &btData) {
     
     essentiaLoadPhase("start");
 
+    essentiaLoadPhase("preloads");
+
     /* Execute preloaded scripts */
     for (std::vector<std::string>::const_iterator i = conf.preloadScripts.begin();
          i != conf.preloadScripts.end(); ++i)
@@ -1192,6 +1194,7 @@ static void runRMXPScripts(BacktraceData &btData) {
     if (exc != Qnil)
         return;
     
+    essentiaLoadPhase("game_scripts");
     while (true) {
         for (long i = 0; i < scriptCount; ++i) {
             VALUE script = rb_ary_entry(scriptArray, i);

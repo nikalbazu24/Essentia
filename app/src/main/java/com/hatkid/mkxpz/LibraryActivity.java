@@ -73,6 +73,8 @@ public class LibraryActivity extends ControllerActivity
     private int mBaseColumn;
     private String mView;
     private String mSort;
+    private String mQuery="";
+    private boolean mTypingSearch;
     /** Game waiting for a picked cover or save files. */
     private Library.Entry mPending;
 
@@ -113,10 +115,11 @@ public class LibraryActivity extends ControllerActivity
 
         DisplayMetrics dm = getResources().getDisplayMetrics();
         float widthDp = dm.widthPixels / dm.density;
-        mBaseColumn = Ui.dp(this, widthDp >= 900 ? 220 : (widthDp >= 600 ? 190 : 150));
+        mBaseColumn = Ui.dp(this, widthDp >= 900 ? 170 : (widthDp >= 600 ? 160 : 150));
         mCovers = new CoverLoader(Ui.dp(this, 360));
         mView = EssentiaSettings.viewMode(this);
         mSort = EssentiaSettings.sortMode(this);
+        if(savedInstanceState!=null){mSelected=savedInstanceState.getInt("selected",0);mQuery=savedInstanceState.getString("query","");}
 
         setContentView(buildUi());
         mThemeStamp = Ui.themeStamp();
@@ -275,8 +278,19 @@ public class LibraryActivity extends ControllerActivity
         help.setGravity(Gravity.CENTER);help.setMinHeight(Ui.dp(this,48));help.setFocusable(true);
         help.setBackground(Ui.focusable(this,Ui.SURFACE,12));
         help.setOnClickListener(v->startActivity(new Intent(this,GuideActivity.class)));
-        LinearLayout.LayoutParams helpLp=new LinearLayout.LayoutParams(0,-2,1f);helpLp.leftMargin=Ui.dp(this,8);tools.addView(help,helpLp);
+        LinearLayout.LayoutParams helpLp=new LinearLayout.LayoutParams(isPortrait()?0:Ui.dp(this,80),-2,isPortrait()?1f:0f);helpLp.leftMargin=Ui.dp(this,8);tools.addView(help,helpLp);
         col.addView(tools,wrapWidth());
+        EditText search=new EditText(this);search.setSingleLine(true);search.setTextSize(15);search.setTextColor(Ui.TEXT);search.setHintTextColor(Ui.TEXT_DIM);
+        search.setHint("Buscar en tu biblioteca");search.setContentDescription("Buscar en tu biblioteca");search.setBackground(Ui.rounded(this,Ui.SURFACE,12));
+        search.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),0);search.setText(mQuery);
+        LinearLayout.LayoutParams searchLp=new LinearLayout.LayoutParams(isPortrait()?-1:0,Ui.dp(this,48),isPortrait()?0f:1f);
+        searchLp.topMargin=isPortrait()?Ui.dp(this,8):0;searchLp.leftMargin=isPortrait()?0:Ui.dp(this,8);
+        if(isPortrait())col.addView(search,searchLp);else tools.addView(search,searchLp);
+        search.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){
+                mQuery=s.toString();mSelected=0;mTypingSearch=true;reload();mTypingSearch=false;
+            }public void afterTextChanged(android.text.Editable e){}
+        });
 
         // Featured game (shelf view)
         mHero = buildHero();
@@ -339,10 +353,10 @@ public class LibraryActivity extends ControllerActivity
         mHeroDetail=Ui.text(this,"",12,Ui.TEXT_DIM,false);mHeroDetail.setMaxLines(1);info.addView(mHeroDetail);
         mHeroChips=new LinearLayout(this); // full statistics stay in the game tools and lower screen
         hero.addView(info,new LinearLayout.LayoutParams(0,-2,1f));
-        LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout actions=new LinearLayout(this);actions.setOrientation(isPortrait()?LinearLayout.VERTICAL:LinearLayout.HORIZONTAL);
         mHeroPlay=pillButton(actions,R.drawable.ic_e_play,"Jugar",true,v->play(mSelected));
         View options=pillButton(actions,R.drawable.ic_e_more,"Más",false,v->showOptions(mSelected));
-        ((LinearLayout.LayoutParams)options.getLayoutParams()).topMargin=Ui.dp(this,6);
+        ((LinearLayout.LayoutParams)options.getLayoutParams()).topMargin=isPortrait()?Ui.dp(this,6):0;
         hero.addView(actions);return hero;
     }
 
@@ -407,10 +421,12 @@ public class LibraryActivity extends ControllerActivity
         col.addView(flask, new LinearLayout.LayoutParams(s, s));
 
         TextView title = Ui.text(this, getString(R.string.lib_empty_title), 20, Ui.TEXT, true);
+        title.setTag("empty-title");
         title.setGravity(Gravity.CENTER);
         col.addView(title);
 
         TextView body = Ui.text(this, getString(R.string.lib_empty_text), 15, Ui.TEXT_DIM, false);
+        body.setTag("empty-body");
         body.setGravity(Gravity.CENTER);
         body.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 16));
         body.setMaxWidth(Ui.dp(this, 460));
@@ -529,6 +545,9 @@ public class LibraryActivity extends ControllerActivity
         mShelfScroll.setVisibility(isShelf() && !empty ? View.VISIBLE : View.GONE);
         mGrid.setVisibility(!isShelf() && !empty ? View.VISIBLE : View.GONE);
         mEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+        TextView emptyTitle=mEmpty.findViewWithTag("empty-title");TextView emptyBody=mEmpty.findViewWithTag("empty-body");
+        emptyTitle.setText(mQuery.isEmpty()?getString(R.string.lib_empty_title):"No hay coincidencias");
+        emptyBody.setText(mQuery.isEmpty()?getString(R.string.lib_empty_text):"Prueba con otro nombre o borra la búsqueda para ver tus juegos.");
 
         int gap = Ui.dp(this, isList() ? 8 : 14);
         mGrid.setHorizontalSpacing(gap);
@@ -866,7 +885,7 @@ public class LibraryActivity extends ControllerActivity
     private void reload()
     {
         mGames.clear();
-        mGames.addAll(Library.load(this));
+        for(Library.Entry game:Library.load(this))if(mQuery.isEmpty()||game.displayTitle().toLowerCase(java.util.Locale.ROOT).contains(mQuery.toLowerCase(java.util.Locale.ROOT)))mGames.add(game);
         mStats.clear(); // play time and saves may have changed
         mTotalPlay = GameStats.totalPlay(this, mGames);
         if (EssentiaSettings.SORT_AZ.equals(mSort)) {
@@ -877,8 +896,10 @@ public class LibraryActivity extends ControllerActivity
         applyViewMode();
 
         select(mSelected);
-        focusSelected();
+        if(!mTypingSearch&&mQuery.isEmpty())focusSelected();
     }
+
+    @Override protected void onSaveInstanceState(Bundle out){out.putInt("selected",mSelected);out.putString("query",mQuery);super.onSaveInstanceState(out);}
 
     /** A game was selected: update the featured area, the backdrop and the second screen. */
     private void select(int pos)
@@ -1091,10 +1112,14 @@ public class LibraryActivity extends ControllerActivity
         labels.add(getString(R.string.lib_remove)); actions.add(() -> { Library.remove(this, e.path); reload(); });
         labels.add(getString(R.string.delete_game_files)); actions.add(() -> GameRemoval.show(this, e, this::reload));
 
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(e.displayTitle())
-            .setItems(labels.toArray(new String[0]), (d, which) -> actions.get(which).run())
-            .show();
+        int[] groups=new int[labels.size()];
+        for(int i=0;i<labels.size();i++) {
+            String label=labels.get(i);groups[i]=1;
+            if(i<3)groups[i]=0;
+            else if(label.equals(getString(R.string.opt_import))||label.equals(getString(R.string.upd_game))||label.equals(getString(R.string.opt_cloud)))groups[i]=2;
+            else if(label.equals(getString(R.string.opt_report))||label.equals(getString(R.string.opt_send_scripts))||label.equals(getString(R.string.lib_remove))||label.equals(getString(R.string.delete_game_files)))groups[i]=3;
+        }
+        Ui.gameOptions(this,e.displayTitle(),labels,actions,groups);
     }
 
     private void rename(Library.Entry e)

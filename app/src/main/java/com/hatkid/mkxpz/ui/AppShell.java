@@ -13,7 +13,11 @@ public final class AppShell {
     private AppShell() { }
     public static View wrap(Activity a, View content) {
         int selected = a instanceof LibraryActivity ? 0 : a instanceof StoreActivity ? 1 : a instanceof SettingsActivity ? 2 : -1;
-        if (selected < 0) return content;
+        if (selected < 0) {
+            FrameLayout tool=new FrameLayout(a);tool.setBackgroundColor(Ui.BG);
+            int width=a.getResources().getConfiguration().screenWidthDp>=900?Ui.dp(a,860):ViewGroup.LayoutParams.MATCH_PARENT;
+            tool.addView(content,new FrameLayout.LayoutParams(width,-1,Gravity.CENTER_HORIZONTAL));return tool;
+        }
         boolean rail = a.getResources().getConfiguration().screenWidthDp >= 740;
         LinearLayout root = new LinearLayout(a);
         root.setOrientation(rail ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
@@ -28,7 +32,7 @@ public final class AppShell {
         });
         LinearLayout nav = new LinearLayout(a);
         nav.setOrientation(rail ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
-        nav.setGravity(Gravity.CENTER);
+        nav.setGravity(rail?Gravity.TOP|Gravity.CENTER_HORIZONTAL:Gravity.CENTER);
         int p=Ui.dp(a,8); nav.setPadding(p,p,p,p);
         nav.setBackgroundColor(Ui.SURFACE);
         if (rail) {

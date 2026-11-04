@@ -45,7 +45,9 @@ public final class GamePanel extends Presentation {
         android.widget.LinearLayout root=new android.widget.LinearLayout(a);root.setOrientation(1);
         android.widget.Button close=Ui.button(a,"Volver al juego",false);close.setOnClickListener(v->dialog.dismiss());root.addView(close);
         root.addView(view,new android.widget.LinearLayout.LayoutParams(-1,0,1f));dialog.setContentView(root);
-        dialog.setOnDismissListener(d->view.dispose());dialog.show();
+        dialog.setOnDismissListener(d->view.dispose());
+        // Touch panel must not pause SDL: actions are processed by the running game loop.
+        dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);dialog.show();
         dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT,WindowManager.LayoutParams.MATCH_PARENT);
         view.setTurbo(turbo,speed);view.setAutoFire(autoFire);return dialog;
     }

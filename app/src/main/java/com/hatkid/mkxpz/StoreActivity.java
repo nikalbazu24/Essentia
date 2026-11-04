@@ -94,6 +94,7 @@ public class StoreActivity extends ControllerActivity
         super.onCreate(savedInstanceState);
         mCovers = new CoverLoader(Ui.dp(this, 120));
         mTab = getIntent().getIntExtra(EXTRA_TAB, 0);
+        if(savedInstanceState!=null){mTab=savedInstanceState.getInt("tab",mTab);mFilter=savedInstanceState.getInt("filter",0);mSource=savedInstanceState.getInt("source",0);mShowFilters=savedInstanceState.getBoolean("filters",false);}
         mGames = Catalog.cached(this);
         showList();
         mPool.execute(() -> {
@@ -106,6 +107,10 @@ public class StoreActivity extends ControllerActivity
             });
         });
         loadPendingUpdates();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle out){
+        out.putInt("tab",mTab);out.putInt("filter",mFilter);out.putInt("source",mSource);out.putBoolean("filters",mShowFilters);super.onSaveInstanceState(out);
     }
 
     @Override

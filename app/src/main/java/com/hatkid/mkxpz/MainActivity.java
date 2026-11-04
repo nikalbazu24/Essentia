@@ -663,10 +663,12 @@ public class MainActivity extends SDLActivity
             case "through":
                 msg = getString(result.equals("1") ? R.string.act_through_on : R.string.act_through_off);
                 if (mPanel != null) mPanel.setToggle("through", result.equals("1"));
+                if(mPhoneCompanion!=null)mPhoneCompanion.setToggle("through",result.equals("1"));
                 break;
             case "noenc":
                 msg = getString(result.equals("1") ? R.string.act_noenc_on : R.string.act_noenc_off);
                 if (mPanel != null) mPanel.setToggle("noenc", result.equals("1"));
+                if(mPhoneCompanion!=null)mPhoneCompanion.setToggle("noenc",result.equals("1"));
                 break;
             case "heal": msg = getString(result.equals("ok") ? R.string.act_heal_ok : R.string.act_unsupported); break;
             case "candy": msg = result.equals("ok") ? "Añadidos 5 caramelos raros" : getString(R.string.act_unsupported); break;
@@ -685,6 +687,7 @@ public class MainActivity extends SDLActivity
                 else if (!result.equals("ok")) msg = getString(R.string.act_fail);
         }
         if (msg == null) return;
+        if(mPhoneCompanion!=null&&mPhoneDialog!=null&&mPhoneDialog.isShowing())mPhoneCompanion.showMessage(msg);
         if (mPanel != null && mPanel.isShowing()) mPanel.showMessage(msg);
         else android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show();
     }
@@ -1080,6 +1083,15 @@ public class MainActivity extends SDLActivity
     {
         int code = evt.getKeyCode();
         boolean down = evt.getAction() == KeyEvent.ACTION_DOWN;
+        if(mPhoneDialog!=null&&mPhoneDialog.isShowing()) {
+            if(code==KeyEvent.KEYCODE_BACK||code==KeyEvent.KEYCODE_BUTTON_B){if(!down)mPhoneDialog.dismiss();return true;}
+            if(code==KeyEvent.KEYCODE_BUTTON_A||code==KeyEvent.KEYCODE_DPAD_CENTER||code==KeyEvent.KEYCODE_ENTER||
+                code==KeyEvent.KEYCODE_DPAD_UP||code==KeyEvent.KEYCODE_DPAD_DOWN||code==KeyEvent.KEYCODE_DPAD_LEFT||code==KeyEvent.KEYCODE_DPAD_RIGHT) {
+                int mapped=code==KeyEvent.KEYCODE_BUTTON_A?KeyEvent.KEYCODE_DPAD_CENTER:code;
+                mPhoneDialog.dispatchKeyEvent(new KeyEvent(evt.getDownTime(),evt.getEventTime(),evt.getAction(),mapped,evt.getRepeatCount()));return true;
+            }
+            if(KeyEvent.isGamepadButton(code))return true;
+        }
 
         // Android Back (navigation bar, Thor's back key...) -> exit menu
         if (code == KeyEvent.KEYCODE_BACK) {

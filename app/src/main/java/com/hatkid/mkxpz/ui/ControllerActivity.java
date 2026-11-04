@@ -15,11 +15,13 @@ import android.view.WindowManager;
  */
 public abstract class ControllerActivity extends Activity
 {
+    private int mAppearanceStamp;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         Ui.applyTheme(this);
+        mAppearanceStamp=Ui.themeStamp();
         Window w = getWindow();
         w.getDecorView().setBackgroundColor(Ui.BG);
         w.setStatusBarColor(Ui.BG);
@@ -28,6 +30,11 @@ public abstract class ControllerActivity extends Activity
             w.getAttributes().layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
+    }
+
+    @Override protected void onResume() {
+        super.onResume();Ui.applyTheme(this);
+        if(!(this instanceof com.hatkid.mkxpz.LibraryActivity)&&mAppearanceStamp!=Ui.themeStamp())recreate();
     }
 
     @Override public void setContentView(View content) {
