@@ -107,6 +107,8 @@ public final class Library
     /** Adds a game (if new). Returns true when it was added. */
     public static synchronized boolean add(Context c, File dir)
     {
+        // A scan begun before deletion must not re-add a folder that has since disappeared.
+        if (!dir.isDirectory() || !Games.isGameFolder(dir)) return false;
         String path = dir.getAbsolutePath();
         List<Entry> list = load(c);
         for (Entry e : list) if (e.path.equals(path)) return false;

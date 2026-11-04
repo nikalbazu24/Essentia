@@ -491,4 +491,18 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="store_popular_rank">N.º %1$d por puntuación de reacciones en Eevee Expo · revisado %2$s</string>
     <string name="store_popular_source">Ver ranking de la comunidad</string>
     <string name="store_media_source">Fuente de las imágenes</string>
+    <string name="delete_game_files">Borrar juego y archivos…</string>
+    <string name="delete_first_title">¿Borrar este juego? · 1/2</string>
+    <string name="delete_first_message">Vas a borrar %1$s y toda su carpeta:\n\n%2$s\n\nSe eliminarán definitivamente todos los archivos y las partidas dentro de esa carpeta. Habrá una segunda confirmación antes de borrar nada.</string>
+    <string name="delete_separate_saves">Borrar también las partidas guardadas aparte en:\n%1$s</string>
+    <string name="delete_shared_saves">Las partidas externas se comparten o no se pueden atribuir con seguridad a este juego. Se conservarán.</string>
+    <string name="delete_continue">Continuar</string>
+    <string name="delete_final_title">Confirmación final · 2/2</string>
+    <string name="delete_final_message">¿Borrar definitivamente %1$s?\n\nCarpetas que se borrarán:\n%2$s\n\nEsta acción no se puede deshacer. Se eliminará todo su contenido, incluidas las partidas dentro de esas carpetas. Los respaldos en la nube y los archivos fuera de esas carpetas se conservarán.</string>
+    <string name="delete_permanently">Borrar definitivamente</string>
+    <string name="delete_busy">Cierra los juegos abiertos y espera a que terminen las actualizaciones o el borrado antes de intentarlo de nuevo.</string>
+    <string name="delete_working">Borrando los archivos seleccionados… Espera un momento.</string>
+    <string name="delete_done">Juego y archivos seleccionados borrados.</string>
+    <string name="delete_failed_title">No se pudo completar el borrado</string>
+    <string name="delete_failed">El borrado no se completó. Puede que algunos archivos ya se hayan eliminado. Se conservó la entrada en la biblioteca. Revisa los permisos y comprueba que la carpeta no se comparta con otros juegos ni sea una carpeta general del almacenamiento.</string>
 </resources>

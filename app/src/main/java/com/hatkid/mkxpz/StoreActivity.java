@@ -707,6 +707,16 @@ public class StoreActivity extends ControllerActivity
         addAction(actions, zip);
         if (first == null) first = zip;
 
+        if (mine != null) {
+            android.widget.Button delete = Ui.button(this, getString(R.string.delete_game_files), false);
+            delete.setTextColor(0xFFFF8A7A);
+            delete.setOnClickListener(v -> GameRemoval.show(this, mine, () -> {
+                loadPendingUpdates();
+                showDetail(g);
+            }));
+            addAction(actions, delete);
+        }
+
         TextView how = Ui.text(this, getString(mine == null ? R.string.store_how_install : R.string.store_how_update),
             12, Ui.TEXT_DIM, false);
         how.setPadding(0, Ui.dp(this, 10), 0, 0);

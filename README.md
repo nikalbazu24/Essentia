@@ -29,6 +29,7 @@ El APK más reciente está en **[Releases → dev](../../releases/tag/dev)**. Po
 - **Turbo y capturas:** turbo x2–x4 (Select + R1) y capturas en *Imágenes/Essentia* (Select + L1).
 - **RTP:** si un juego antiguo pide el RTP de RPG Maker, cópialo en `Essentia/RTP/XP` (o `VX`, `VXAce`).
 - **Actualizaciones:** Essentia avisa sola cuando hay una versión nueva y se actualiza desde la propia app.
+- **Borrar juegos:** desde Opciones puedes eliminar la carpeta de un juego con dos confirmaciones. Las partidas externas tienen una casilla adicional y se conservan por defecto.
 - **Tienda y comunidades:** descubre fan games desde Whack a Hack! y Eevee Expo, filtra las fichas por comunidad y consulta sus portadas, capturas y vídeos. Las descargas se abren en la página de sus creadores; los juegos que aún no se probaron en Essentia se indican como «Sin probar».
 - **Desde un frontend:** lanza la actividad `io.github.nikalbazu24.essentia/com.hatkid.mkxpz.LauncherActivity` con la ruta del juego, ya sea como dato (`file://` o `content://` del almacenamiento) o como extra de texto `path`. Puede ser la carpeta del juego o cualquier archivo dentro de ella, como `Game.ini`.
 
