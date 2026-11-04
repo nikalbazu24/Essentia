@@ -48,6 +48,7 @@ public class ReportActivity extends Activity
         String path = getIntent().getStringExtra(EXTRA_PATH);
         String error = getIntent().getStringExtra(EXTRA_ERROR);
         if (path == null) { finish(); return; }
+        Diagnostics.error(this,path,error);
         Library.Entry e = Library.find(this, path);
         String title = e != null ? e.displayTitle() : Games.readTitle(new File(path));
 

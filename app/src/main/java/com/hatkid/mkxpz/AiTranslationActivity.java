@@ -24,9 +24,11 @@ public class AiTranslationActivity extends ControllerActivity {
                 try{
                     String value=model.getText().toString().trim();
                     if(active.isChecked()&&!value.matches("[a-zA-Z0-9._-]{1,100}"))throw new Exception("Indica un modelo válido de Gemini API");
+                    if(active.isChecked()&&Games.isGameRunning(this))throw new Exception("Cierra los juegos antes de activar o cambiar la API");
                     if(!key.getText().toString().trim().isEmpty())AiTranslation.saveKey(this,key.getText().toString().trim());
                     if(active.isChecked()&&!AiTranslation.prefs(this).contains("key"))throw new Exception("Falta tu clave de API");
-                    AiTranslation.prefs(this).edit().putString("model",value).putBoolean("enabled",active.isChecked()).remove("last_error").commit();
+                    AiTranslation.prefs(this).edit().putString("model",value).remove("last_error").commit();
+                    AiTranslation.setEnabled(this,active.isChecked());
                     key.setText("");Toast.makeText(this,"Elección guardada. Abre de nuevo el juego para aplicarla.",Toast.LENGTH_LONG).show();
                 }catch(Exception e){new AlertDialog.Builder(this).setMessage(e.getMessage()).setPositiveButton("Aceptar",null).show();}
             };
@@ -36,6 +38,9 @@ public class AiTranslationActivity extends ControllerActivity {
             else apply.run();
         });
         Button remove=Ui.button(this,"Borrar mi clave y desactivar",false);list.addView(remove);
-        remove.setOnClickListener(v->{AiTranslation.prefs(this).edit().clear().commit();active.setChecked(false);key.setText("");Toast.makeText(this,"Clave retirada y API desactivada",Toast.LENGTH_SHORT).show();});
+        remove.setOnClickListener(v->{
+            try{AiTranslation.setEnabled(this,false);AiTranslation.prefs(this).edit().clear().commit();active.setChecked(false);key.setText("");Toast.makeText(this,"Clave retirada y API desactivada",Toast.LENGTH_SHORT).show();}
+            catch(Exception e){new AlertDialog.Builder(this).setMessage(e.getMessage()).setPositiveButton("Aceptar",null).show();}
+        });
     }
 }

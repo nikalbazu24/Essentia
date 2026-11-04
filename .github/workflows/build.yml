@@ -153,6 +153,7 @@ jobs:
           ruby tools/test_live_progress.rb
           ruby tools/test_help_backup.rb
           ruby tools/test_load_network.rb
+          ruby tools/test_diagnostics.rb
           ./gradlew --no-daemon testReleaseUnitTest -x externalNativeBuildRelease
 
       - name: Compilar el APK (versión optimizada)

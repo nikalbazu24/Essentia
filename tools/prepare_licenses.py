@@ -13,6 +13,10 @@ for group,artifact,version in [('org.apache.commons','commons-compress','1.28.0'
         for name in jar.namelist():
             if name.upper().startswith('META-INF/') and any(word in name.upper() for word in ['LICENSE','NOTICE','COPYING']):
                 chunks.append(name+'\n'+jar.read(name).decode('utf8'))
-    if not chunks:raise SystemExit('Missing license notices: '+artifact)
+    if not chunks:
+        if artifact=='xz' and (out/'xz.txt').is_file():
+            # XZ 1.12's JAR omits notices. The exact v1.12/COPYING is vendored.
+            continue
+        raise SystemExit('Missing license notices: '+artifact)
     (out/(artifact+'.txt')).write_text('\n\n'.join(chunks),encoding='utf8')
 print('Native and Java archive license notices prepared')

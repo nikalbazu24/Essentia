@@ -215,6 +215,8 @@ public class MainActivity extends SDLActivity
             android.system.Os.setenv("ESSENTIA_HELP_BACKUP_DIR", new java.io.File(helpRoot,
                 "antes-ayuda-" + System.currentTimeMillis()).getAbsolutePath(), true);
             android.system.Os.setenv("ESSENTIA_PROGRESS_FILE", GameProgress.file(this, GAME_PATH).getAbsolutePath(), true);
+            android.system.Os.setenv("ESSENTIA_DIAGNOSTICS_FILE", Diagnostics.enabled(this)
+                ? Diagnostics.file(this,GAME_PATH,"fps").getAbsolutePath() : "", true);
             android.system.Os.setenv("ESSENTIA_LIVE_FILE",
                 livePanel ? new java.io.File(getCacheDir(), "essentia_live.txt").getAbsolutePath() : "", true);
 
@@ -620,7 +622,7 @@ public class MainActivity extends SDLActivity
     private boolean mHelpConfirmed;
     public void gameAction(String command)
     {
-        if (!mHelpConfirmed && java.util.Arrays.asList("through","noenc","heal","money","candy").contains(command)) {
+        if (!mHelpConfirmed && java.util.Arrays.asList("through","noenc","heal","money","candy","testpokemon").contains(command)) {
             new AlertDialog.Builder(this).setTitle("Ayudas opcionales")
                 .setMessage("Pueden alterar la experiencia o no ser compatibles con este juego. Essentia conservará una copia de las partidas guardadas antes de aplicar la primera ayuda. No puede respaldar el progreso que todavía no guardaste.")
                 .setNegativeButton("Cancelar",null).setPositiveButton("Activar esta sesión",(d,w)->{
@@ -667,6 +669,7 @@ public class MainActivity extends SDLActivity
                 break;
             case "heal": msg = getString(result.equals("ok") ? R.string.act_heal_ok : R.string.act_unsupported); break;
             case "candy": msg = result.equals("ok") ? "Añadidos 5 caramelos raros" : getString(R.string.act_unsupported); break;
+            case "testpokemon": msg = result.equals("ok") ? "Añadido un Pikachu de prueba de nivel 5" : getString(R.string.act_unsupported); break;
             case "money": msg = getString(result.equals("ok") ? R.string.act_money_ok : R.string.act_unsupported); break;
             case "speed": break;
             case "updater":

@@ -16,8 +16,11 @@ public final class NetworkTrust {
         StringBuilder pem=new StringBuilder();
         for(TrustManager manager:factory.getTrustManagers())if(manager instanceof X509TrustManager){
             for(X509Certificate cert:((X509TrustManager)manager).getAcceptedIssuers()){
-                pem.append("-----BEGIN CERTIFICATE-----\n").append(Base64.encodeToString(cert.getEncoded(),Base64.NO_WRAP))
-                    .append("\n-----END CERTIFICATE-----\n");
+                pem.append("-----BEGIN CERTIFICATE-----\n");
+                String encoded=Base64.encodeToString(cert.getEncoded(),Base64.NO_WRAP);
+                for(int offset=0;offset<encoded.length();offset+=64)
+                    pem.append(encoded,offset,Math.min(offset+64,encoded.length())).append('\n');
+                pem.append("-----END CERTIFICATE-----\n");
             }
         }
         if(pem.length()==0)throw new IOException("Android no entregó certificados de confianza");

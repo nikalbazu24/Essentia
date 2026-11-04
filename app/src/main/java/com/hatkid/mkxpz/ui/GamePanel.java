@@ -20,6 +20,7 @@ import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextClock;
 import android.widget.TextView;
 
@@ -310,7 +311,14 @@ public final class GamePanel extends Presentation
         addTile(g, R.drawable.ic_p_heal, R.string.act_heal, false, v -> mActions.game("heal"));
         addTile(g, R.drawable.ic_p_money, R.string.act_money, false, v -> mActions.game("money"));
         addTile(g, R.drawable.ic_p_bag, R.string.act_candy, false, v -> mActions.game("candy"));
-        return g;
+        addTile(g, R.drawable.ic_p_party, R.string.act_testpokemon, false, v -> mActions.game("testpokemon"));
+        for (int i=0;i<g.getChildCount();i++) {
+            GridLayout.LayoutParams lp=(GridLayout.LayoutParams)g.getChildAt(i).getLayoutParams();
+            lp.height=Ui.dp(c,72);lp.rowSpec=GridLayout.spec(GridLayout.UNDEFINED);
+            g.getChildAt(i).setLayoutParams(lp);
+        }
+        ScrollView scroll=new ScrollView(c);scroll.addView(g,new ScrollView.LayoutParams(-1,-2));
+        return scroll;
     }
 
     private View buildTabs(Context c)

@@ -12,7 +12,7 @@ module EssentiaActions
   CMD = ENV['ESSENTIA_CMD_FILE'].to_s
   ACK = ENV['ESSENTIA_ACK_FILE'].to_s
   SHOTS = ENV['ESSENTIA_SHOTS_DIR'].to_s
-  MAP_COMMANDS = %w[party bag dex save heal money candy].freeze
+  MAP_COMMANDS = %w[party bag dex save heal money candy testpokemon].freeze
 
   @frame = 0
   @queue = []
@@ -53,7 +53,7 @@ module EssentiaActions
 
     def handle(line)
       cmd, arg = line.split(' ', 2)
-      if %w[through noenc heal money candy].include?(cmd) && !backup_before_help
+      if %w[through noenc heal money candy testpokemon].include?(cmd) && !backup_before_help
         return ack("#{cmd} fail")
       end
       case cmd
@@ -350,6 +350,18 @@ module EssentiaActions
         return bag.pbStoreItem(PBItems::RARECANDY, 5) ? true : :fail
       end
       :unsupported
+    end
+
+    def do_testpokemon
+      return :unsupported unless trainer && respond_to?(:pbAddPokemon, true)
+      species = nil
+      if defined?(GameData::Species)
+        species = :PIKACHU if (GameData::Species.try_get(:PIKACHU) rescue nil)
+      elsif defined?(PBSpecies::PIKACHU)
+        species = PBSpecies::PIKACHU
+      end
+      return :unsupported unless species
+      pbAddPokemon(species, 5) ? true : :fail
     end
 
     def do_money

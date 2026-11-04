@@ -6,13 +6,16 @@ Essentia es una app libre para Android que ejecuta fan games hechos con **RPG Ma
 
 ## Estado
 
-En desarrollo temprano. Plan por etapas:
+**2.0 beta para Android**, centrada en teléfono y AYN Thor. La versión de PC queda pospuesta.
 
-1. **Que arranque:** compilar automáticamente y abrir un fan game moderno (Essentials v20 o más nuevo). ✅
-2. **Que se abra desde afuera:** recibir la ruta del juego desde Díptico, ES-DE o Daijishō. ← *base lista, falta probar con cada frontend*
-3. **Que se juegue bien:** controles, pantalla completa, guardado, sonido y fluidez. ← *estamos aquí*
-4. **Que corran los antiguos:** compatibilidad con juegos de Essentials anteriores a la v20.
-5. **Para la comunidad:** lista de juegos probados e integración con frontends.
+Incluye controles por juego, guía inicial, panel inferior con equipo/notas/progreso compatible,
+instalación ZIP/RAR/7z con preparación y recuperación, restauración local con doble confirmación,
+avisos diarios optativos, revisión de traducciones y diagnóstico local. La IA con clave propia
+es opcional y está desactivada; no se suministran claves ni créditos.
+
+El [seguimiento de las 23 propuestas y sus límites](docs/2.0-beta.md) distingue lo implementado
+de las pruebas físicas pendientes. El objetivo de mejorar 15–20 % el rendimiento necesita
+mediciones reales; no se declara logrado por compilar o pasar pruebas automáticas.
 
 ## Descargar
 

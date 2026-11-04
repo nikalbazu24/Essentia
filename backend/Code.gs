@@ -111,7 +111,7 @@ function report_(r) {
   }
   sheet_().appendRow([new Date(), clip_(r.essentia, 20), clip_(r.device, 60), clip_(r.android, 10),
                       clip_(r.game, 100), clip_(r.gameVersion, 30), clip_(r.kind, 40), clip_(r.engine, 20),
-                      clip_(r.screen, 20), clip_(r.error, 2000), clip_(r.detail, 20000), link, id]);
+                      clip_(r.screen, 20), clip_(r.error, 2000), clip_(r.detail, 20000), link, id].map(cell_));
   return { ok: true, id: id };
 }
 
@@ -249,8 +249,8 @@ function extraSheet_(name, headers) {
   return sh;
 }
 function cell_(value) {
-  var text = String(value == null ? '' : value);
-  return /^[=+@-]/.test(text) ? "'" + text : text;
+  if(typeof value !== 'string')return value == null ? '' : value;
+  return /^[\s\u200b\uFEFF]*[=+@-]/.test(value) ? "'" + value : value;
 }
 function suggestion_(r) {
   var id = Utilities.getUuid().slice(0, 8);

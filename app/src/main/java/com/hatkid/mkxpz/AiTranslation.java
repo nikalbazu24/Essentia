@@ -16,7 +16,21 @@ public final class AiTranslation {
     private static final String PREFS="optional_ai",ALIAS="essentia_translation_key";
     private AiTranslation(){}
     static SharedPreferences prefs(Context c){return c.getSharedPreferences(PREFS,0);}
-    public static boolean enabled(Context c){return Build.VERSION.SDK_INT>=23&&prefs(c).getBoolean("enabled",false);}
+    public static boolean enabled(Context c){
+        if(Build.VERSION.SDK_INT<23||!prefs(c).getBoolean("enabled",false))return false;
+        // SharedPreferences caches do not synchronize across the library/game processes.
+        // The local kill switch must therefore also be checked directly on disk.
+        try(InputStream in=new FileInputStream(new File(c.getFilesDir(),"optional-ai.flag"))){return in.read()=='1';}
+        catch(IOException e){return false;}
+    }
+    public static void setEnabled(Context c,boolean enabled)throws IOException{
+        File dest=new File(c.getFilesDir(),"optional-ai.flag"),temp=new File(c.getFilesDir(),"optional-ai-"+java.util.UUID.randomUUID()+".tmp");
+        try{
+            try(FileOutputStream out=new FileOutputStream(temp)){out.write(enabled?'1':'0');out.getFD().sync();}
+            if(!temp.renameTo(dest))throw new IOException("No se pudo guardar la elección de IA");
+            prefs(c).edit().putBoolean("enabled",enabled).commit();
+        }finally{temp.delete();}
+    }
     public static void saveKey(Context c,String key)throws Exception{
         if(Build.VERSION.SDK_INT<23)throw new IOException("Esta función necesita Android 6 o posterior");
         KeyStore store=KeyStore.getInstance("AndroidKeyStore");store.load(null);
@@ -73,7 +87,8 @@ public final class AiTranslation {
             return result;
         }catch(Exception e){
             // Stop after a failure: never loop through a paid API without user intervention.
-            prefs(c).edit().putBoolean("enabled",false).putString("last_error","La traducción IA se detuvo. Revisa conexión, modelo, clave o cuota antes de activarla otra vez.").commit();
+            try{setEnabled(c,false);}catch(IOException ignored){prefs(c).edit().putBoolean("enabled",false).commit();}
+            prefs(c).edit().putString("last_error","La traducción IA se detuvo. Revisa conexión, modelo, clave o cuota antes de activarla otra vez.").commit();
             throw e;
         }finally{con.disconnect();}
     }

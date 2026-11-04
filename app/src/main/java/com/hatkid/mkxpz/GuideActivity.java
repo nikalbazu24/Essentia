@@ -29,6 +29,27 @@ public class GuideActivity extends ControllerActivity {
         button("‹ Volver", this::finish);
         text("Essentia by Díptico", 27);
         text("2.0 beta · Tu biblioteca de fangames en Android", 17);
+        if (path != null && game != null) {
+            text(title,23);
+            button("Controles de este juego", () -> startActivity(scoped(ControlsActivity.class)));
+            button("Tienda y actualizaciones", () -> startActivity(new Intent(this,StoreActivity.class)
+                .putExtra(StoreActivity.EXTRA_TAB,1).putExtra(StoreActivity.EXTRA_GAME,path)));
+            text(GameProgress.summary(this,path),16);
+            Catalog.Game catalog = Catalog.match(Catalog.cached(this),title,new File(path));
+            if (catalog != null && !Catalog.webUrl(catalog.page).isEmpty())
+                button("Página del creador y contenido del juego", () -> open(catalog.page));
+            button("Restaurar respaldo local", this::chooseBackup);
+            button("Revisar y corregir traducciones", () -> startActivity(scoped(TranslationReviewActivity.class)));
+            button("Diagnóstico y compartir informe", () -> Diagnostics.show(this,path));
+            text("Mis notas · Se guardan solo en este dispositivo",18);
+            notes = new EditText(this); notes.setTextColor(Ui.TEXT); notes.setMinLines(4);
+            notes.setHint("Objetivos, lugares y recordatorios…"); notes.setHintTextColor(Ui.TEXT_DIM);
+            notes.setText(getSharedPreferences("essentia_notes",MODE_PRIVATE).getString(path,""));
+            list.addView(notes);
+            button("Ver la guía de Essentia", () -> startActivity(new Intent(this,GuideActivity.class)));
+            return;
+        }
+
         text("1 · Prepara el juego", 21);
         text("Descarga la versión completa del creador. Essentia ejecuta juegos RPG Maker XP, VX y VX Ace; no ejecuta ROMs de GBA/NDS ni juegos Unity o EXE de Windows. En la tienda puedes visitar las páginas y ver la compatibilidad conocida.",16);
         text("2 · Instala y abre",21);
@@ -42,25 +63,11 @@ public class GuideActivity extends ControllerActivity {
         button("Abrir tienda y compatibilidad", () -> startActivity(new Intent(this, StoreActivity.class)));
         button("Controles y prueba del mando", () -> startActivity(scoped(ControlsActivity.class)));
         button("Recursos RPG Maker (RTP)", () -> startActivity(new Intent(this, RtpActivity.class)));
-        button("Traducción IA opcional (desactivada)", () -> startActivity(new Intent(this, AiTranslationActivity.class)));
+        button(AiTranslation.enabled(this)?"Traducción IA opcional (activada)":"Traducción IA opcional (desactivada)", () -> startActivity(new Intent(this, AiTranslationActivity.class)));
         button("Avisos diarios de actualizaciones", () -> DailyUpdates.configure(this));
         button("Comunidad beta y sugerencias", () -> open("https://github.com/nikalbazu24/Essentia/issues"));
-        if (path != null && game != null) {
-            text(title,23);
-            text(GameProgress.summary(this,path),16);
-            Catalog.Game catalog = Catalog.match(Catalog.cached(this),title,new File(path));
-            if (catalog != null && !Catalog.webUrl(catalog.page).isEmpty())
-                button("Página del creador y contenido del juego", () -> open(catalog.page));
-            button("Restaurar respaldo local", this::chooseBackup);
-            button("Revisar y corregir traducciones", () -> startActivity(scoped(TranslationReviewActivity.class)));
-            button("Diagnóstico y compartir informe", () -> Diagnostics.show(this,path));
-            text("Mis notas · Se guardan solo en este dispositivo",18);
-            notes = new EditText(this); notes.setTextColor(Ui.TEXT); notes.setMinLines(4);
-            notes.setHint("Objetivos, lugares y recordatorios…"); notes.setHintTextColor(Ui.TEXT_DIM);
-            notes.setText(getSharedPreferences("essentia_notes",MODE_PRIVATE).getString(path,""));
-            list.addView(notes);
-        }
     }
+
     private Intent scoped(Class<?> target) {
         Intent i = new Intent(this,target);
         if (path != null) i.putExtra(MainActivity.EXTRA_GAME_PATH,path);

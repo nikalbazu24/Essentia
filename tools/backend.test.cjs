@@ -48,6 +48,11 @@ test('invalid hours, states and identifiers are rejected',()=>{
   const valid={game:'demo',version:'1',engine:'auto',state:'jugable',hours:1,note:''};
   for(const invalid of [{game:'../../private'},{state:'verified'},{hours:Infinity},{hours:-1}])assert.throws(()=>c.compatibilitySubmit_({...valid,...invalid}));
 });
+test('error reports also escape formulas and preserve date values',()=>{
+  const {context:c,reports}=backend();
+  c.report_({game:'Demo',error:'  =IMPORTDATA("bad")',detail:'=HYPERLINK("bad")'});
+  const row=reports.rows[0];assert.equal(row[9][0],"'");assert.equal(row[10][0],"'");assert.ok(row[0] instanceof Date);
+});
 test('migration is repeatable and preserves original reports',()=>{
   const {context:c,sheets,reports}=backend();reports.rows.push(new Array(13).fill('header'));
   let row=new Array(13).fill('');row[0]='fecha';row[1]='1.0';row[4]='Demo';row[6]='Sugerencia para la tienda';row[10]='https://example.org';row[12]='suggestion-1';reports.rows.push(row);

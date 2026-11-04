@@ -17,4 +17,7 @@
     <path android:fillColor="#d9c7ff" android:pathData="M50.04,54.00H52.68V56.64H50.04Z"/>
     <path android:fillColor="#ffe066" android:pathData="M67.64,34.20H71.16V37.72H67.64Z"/>
     <path android:fillColor="#ffe066" android:pathData="M72.92,28.92H75.56V31.56H72.92Z"/>
+    <!-- Android 2.0: the essence flask also carries a small game controller. -->
+    <path android:fillColor="#f3eefe" android:pathData="M44,63H47V60H50V63H53V66H50V69H47V66H44Z"/>
+    <path android:fillColor="#ffe066" android:pathData="M58,62H61V65H58Z M62,66H65V69H62Z"/>
 </vector>

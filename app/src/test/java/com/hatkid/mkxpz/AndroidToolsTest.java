@@ -51,6 +51,14 @@ public class AndroidToolsTest {
         Saves.dirFor(a,folder,"Demo");
         assertArrayEquals(new byte[]{1,2,3},java.nio.file.Files.readAllBytes(existing.toPath()));
     }
+    @Test public void diskKillSwitchWinsOverStalePreferences()throws Exception{
+        Activity a=controls(null);
+        AiTranslation.setEnabled(a,true);assertTrue(AiTranslation.enabled(a));
+        AiTranslation.setEnabled(a,false);
+        AiTranslation.prefs(a).edit().putBoolean("enabled",true).commit();
+        assertFalse(AiTranslation.enabled(a));
+        AiTranslation.prefs(a).edit().clear().commit();
+    }
     @Test public void importingSaveKeepsPreviousBytes()throws Exception{
         Activity a=controls(null);java.io.File base=new java.io.File(a.getCacheDir(),"import-"+java.util.UUID.randomUUID());assertTrue(base.mkdir());
         java.io.File source=new java.io.File(base,"source"),target=new java.io.File(base,"target");assertTrue(source.mkdir());assertTrue(target.mkdir());

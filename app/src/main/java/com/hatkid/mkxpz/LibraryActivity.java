@@ -125,15 +125,7 @@ public class LibraryActivity extends ControllerActivity
             showIntro();
         }
         applyViewMode();
-        if (savedInstanceState == null && !getPreferences(MODE_PRIVATE).getBoolean("guide_v2", false)) {
-            mRoot.postDelayed(() -> {
-                if (!isFinishing()) {
-                    getPreferences(MODE_PRIVATE).edit().putBoolean("guide_v2", true).apply();
-                    getSharedPreferences(EssentiaSettings.PREFS,MODE_PRIVATE).edit().putInt("whats_new_tour",5).apply();
-                    startActivity(new Intent(this, GuideActivity.class));
-                }
-            }, 2600);
-        }
+
 
         if (!Games.hasAllFilesAccess()) {
             Games.askAllFilesAccess(this, REQ_ALL_FILES, this::finish);
@@ -150,10 +142,21 @@ public class LibraryActivity extends ControllerActivity
         }
     }
 
+    private boolean mResumed;
+    private void showGuideIfNeeded() {
+        if (!mResumed || isFinishing() || isDestroyed() || !Games.hasAllFilesAccess()
+            || getPreferences(MODE_PRIVATE).getBoolean("guide_v2",false)) return;
+        getPreferences(MODE_PRIVATE).edit().putBoolean("guide_v2",true).apply();
+        getSharedPreferences(EssentiaSettings.PREFS,MODE_PRIVATE).edit().putInt("whats_new_tour",5).apply();
+        startActivity(new Intent(this,GuideActivity.class));
+    }
+
     @Override
     protected void onResume()
     {
         super.onResume();
+        mResumed=true;
+        mRoot.postDelayed(this::showGuideIfNeeded,2600);
         if (mThemeStamp != Ui.themeStamp()) { recreate(); return; }
         MusicPlayer.resume(this);
         UpdateService.setListener(() -> runOnUiThread(this::refreshUpdates));
@@ -165,6 +168,7 @@ public class LibraryActivity extends ControllerActivity
     @Override
     protected void onPause()
     {
+        mResumed=false;
         super.onPause();
         MusicPlayer.pause();
         UpdateService.setListener(null);

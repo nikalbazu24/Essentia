@@ -512,4 +512,5 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="wn_beta2_panel_text">Controles independientes por juego, carrusel táctil en la pantalla inferior y lectura de equipo, medallas y Pokédex cuando el juego es compatible. Toca las notas del panel para editarlas.</string>
     <string name="wn_beta2_saves_title">Recuperación y pruebas</string>
     <string name="wn_beta2_saves_text">Instalación de ZIP, RAR y 7z con preparación y recuperación; restauración de respaldos locales con doble confirmación. Los avisos diarios y la traducción IA son opcionales y empiezan desactivados. Sigue siendo una beta: reporta errores desde las herramientas de cada juego.</string>
+    <string name="act_testpokemon">Pikachu de prueba · Nv. 5</string>
 </resources>
