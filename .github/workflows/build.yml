@@ -152,10 +152,12 @@ jobs:
           find app/src/main/assets/essentia_preload -name '*.rb' -exec ruby -c {} \;
           ruby tools/test_live_progress.rb
           ruby tools/test_help_backup.rb
+          ruby tools/test_load_network.rb
           ./gradlew --no-daemon testReleaseUnitTest -x externalNativeBuildRelease
 
       - name: Compilar el APK (versión optimizada)
         run: |
+          python3 tools/prepare_licenses.py
           if ./gradlew --no-daemon assembleRelease > "$RUNNER_TEMP/gradle.log" 2>&1; then
             tail -5 "$RUNNER_TEMP/gradle.log"
             if [ -d app/jni/ruby18-out ]; then echo "Motor clásico (Ruby 1.8): incluido."; fi
@@ -183,6 +185,8 @@ jobs:
           cp app/build/outputs/apk/release/*.apk essentia.apk
           python3 tools/release_manifest.py app/build/outputs/apk/release/output-metadata.json version.json
           cat version.json
+          python3 tools/verify_apk.py essentia.apk version.json
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose essentia.apk
 
       - name: Guardar el APK como artefacto
         uses: actions/upload-artifact@v4

@@ -6,6 +6,8 @@
 //
 
 #include <stdio.h>
+#include <memory>
+#include <exception>
 
 #include "util/json5pp.hpp"
 #include "binding-util.h"
@@ -74,15 +76,41 @@ VALUE formResponse(mkxp_net::HTTPResponse &res) {
     return ret;
 }
 
-void* httpGetInternal(void *req) {
-    VALUE ret;
-    
-    GUARD_EXC(
-              mkxp_net::HTTPResponse res = ((mkxp_net::HTTPRequest*)req)->get();
-              ret = formResponse(res);
-              );
-    
-    return (void*)ret;
+struct EssentiaHTTPWork {
+    mkxp_net::HTTPRequest *request;
+    mkxp_net::StringMap *params = nullptr;
+    std::string body, contentType;
+    int method = 0;
+    std::unique_ptr<mkxp_net::HTTPResponse> response;
+    std::string error;
+    Exception::Type errorType = Exception::MKXPError;
+    explicit EssentiaHTTPWork(mkxp_net::HTTPRequest *value) : request(value) {}
+};
+
+static void* essentiaHTTPPerform(void *opaque) {
+    EssentiaHTTPWork &work = *static_cast<EssentiaHTTPWork*>(opaque);
+    try {
+        if (work.method == 1)
+            work.response.reset(new mkxp_net::HTTPResponse(work.request->post(*work.params)));
+        else if (work.method == 2)
+            work.response.reset(new mkxp_net::HTTPResponse(work.request->post(work.body.c_str(), work.contentType.c_str())));
+        else
+            work.response.reset(new mkxp_net::HTTPResponse(work.request->get()));
+    } catch (const Exception &e) { work.error = e.msg; work.errorType = e.type; }
+      catch (const std::exception &e) { work.error = e.what(); }
+      catch (...) { work.error = "Network request failed"; }
+    return nullptr;
+}
+
+static VALUE essentiaHTTPExecute(EssentiaHTTPWork &work) {
+#if RAPI_MAJOR >= 2
+    rb_thread_call_without_gvl(essentiaHTTPPerform, &work, 0, 0);
+#else
+    essentiaHTTPPerform(&work);
+#endif
+    if (!work.error.empty()) raiseRbExc(Exception(work.errorType, "%s", work.error.c_str()));
+    if (!work.response) raiseRbExc(Exception(Exception::MKXPError,"Empty network response"));
+    return formResponse(*work.response); // Ruby APIs are called only after regaining the GVL.
 }
 
 RB_METHOD(httpGet) {
@@ -99,30 +127,8 @@ RB_METHOD(httpGet) {
         auto headers = hash2StringMap(rheaders);
         req.headers().insert(headers.begin(), headers.end());
     }
-#if RAPI_MAJOR >= 2
-    return (VALUE)rb_thread_call_without_gvl(httpGetInternal, &req, 0, 0);
-#else
-    return (VALUE)httpGetInternal(&req);
-#endif
-}
-
-typedef struct {
-    mkxp_net::HTTPRequest *req;
-    mkxp_net::StringMap *postData;
-} httpPostInternalArgs;
-
-void* httpPostInternal(void *args) {
-    VALUE ret;
-    
-    mkxp_net::HTTPRequest *req = ((httpPostInternalArgs*)args)->req;
-    mkxp_net::StringMap *postData = ((httpPostInternalArgs*)args)->postData;
-    
-    GUARD_EXC(
-              mkxp_net::HTTPResponse res = req->post(*postData);
-              ret = formResponse(res);
-              );
-    
-    return (void*)ret;
+    EssentiaHTTPWork work(&req);
+    return essentiaHTTPExecute(work);
 }
 
 RB_METHOD(httpPost) {
@@ -141,33 +147,9 @@ RB_METHOD(httpPost) {
     }
     
     mkxp_net::StringMap postData = hash2StringMap(postDataHash);
-    httpPostInternalArgs args {&req, &postData};
-#if RAPI_MAJOR >= 2
-    return (VALUE)rb_thread_call_without_gvl(httpPostInternal, &args, 0, 0);
-#else
-    return (VALUE)httpPostInternal(&args);
-#endif
-}
-
-typedef struct {
-    mkxp_net::HTTPRequest *req;
-    const char *body;
-    const char *ctype;
-} httpPostBodyInternalArgs;
-
-void* httpPostBodyInternal(void *args) {
-    VALUE ret;
-    
-    mkxp_net::HTTPRequest *req = ((httpPostBodyInternalArgs*)args)->req;
-    const char *reqbody = ((httpPostBodyInternalArgs*)args)->body;
-    const char *reqctype = ((httpPostBodyInternalArgs*)args)->ctype;
-    
-    GUARD_EXC(
-              mkxp_net::HTTPResponse res = req->post(reqbody, reqctype);
-              ret = formResponse(res);
-              );
-    
-    return (void*)ret;
+    EssentiaHTTPWork work(&req);
+    work.method = 1; work.params = &postData;
+    return essentiaHTTPExecute(work);
 }
 
 RB_METHOD(httpPostBody) {
@@ -186,12 +168,11 @@ RB_METHOD(httpPostBody) {
         req.headers().insert(headers.begin(), headers.end());
     }
     
-    httpPostBodyInternalArgs args {&req, RSTRING_PTR(body), RSTRING_PTR(ctype)};
-#if RAPI_MAJOR >= 2
-    return (VALUE)rb_thread_call_without_gvl(httpPostBodyInternal, &args, 0, 0);
-#else
-    return (VALUE)httpPostBodyInternal(&args);
-#endif
+    EssentiaHTTPWork work(&req);
+    work.method = 2;
+    work.body.assign(RSTRING_PTR(body), RSTRING_LEN(body));
+    work.contentType.assign(RSTRING_PTR(ctype), RSTRING_LEN(ctype));
+    return essentiaHTTPExecute(work);
 }
 
 VALUE json2rb(json5pp::value const &v) {

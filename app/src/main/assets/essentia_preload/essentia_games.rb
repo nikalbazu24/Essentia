@@ -100,11 +100,32 @@ module EssentiaGames
     rescue Exception
     end
 
+    # Some games synchronously check the internet before showing their load menu.
+    # Leave automatic version checks to Essentia; manual online features stay intact.
+    def tame_version_check
+      return if @version_wrapping
+      current = Object.instance_method(:pbCheckVersionOnLoad) rescue nil
+      return unless current
+      return if @version_check && current == @version_check
+      @version_wrapping = true
+      Object.send(:define_method, :pbCheckVersionOnLoad) do |*args|
+        ack = ENV['ESSENTIA_ACK_FILE'].to_s
+        File.open(ack, 'ab') { |f| f.write("updater 1\n") } unless ack.empty?
+        nil
+      end
+      Object.send(:private, :pbCheckVersionOnLoad)
+      @version_check = Object.instance_method(:pbCheckVersionOnLoad)
+    rescue Exception
+    ensure
+      @version_wrapping = false
+    end
+
     def tick
       @frame += 1
       return unless @frame <= 2 || (@frame % 60).zero?
       tame_resizer
       keep_snapshot
+      tame_version_check
     end
   end
 end
@@ -133,6 +154,7 @@ class << Object
   def method_added(name)
     essentia_games_method_added(name) if respond_to?(:essentia_games_method_added, true)
     EssentiaGames.tame_resizer if name.to_s == 'pbConfigureWindowedScreen'
+    EssentiaGames.tame_version_check if name.to_s == 'pbCheckVersionOnLoad'
   end
 end
 

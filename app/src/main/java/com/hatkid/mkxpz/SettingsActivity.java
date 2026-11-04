@@ -485,6 +485,9 @@ public class SettingsActivity extends ControllerActivity
 
     private void buildAbout()
     {
+        Button licenses = Ui.button(this,"Créditos y licencias",false);
+        licenses.setOnClickListener(v -> Licenses.show(this));
+        mList.addView(licenses,wrap());
         Button guide = Ui.button(this, "Essentia by Díptico · Guía y herramientas", false);
         guide.setOnClickListener(v -> startActivity(new Intent(this, GuideActivity.class)));
         mList.addView(guide, wrap());

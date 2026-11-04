@@ -199,6 +199,12 @@ public class MainActivity extends SDLActivity
             boolean autoEngine = in != null && in.getBooleanExtra(EXTRA_AUTO_ENGINE, false);
             android.system.Os.setenv("ESSENTIA_AUTO_FALLBACK", autoEngine ? fallback.getAbsolutePath() : "", true);
 
+            try {
+                String trust = NetworkTrust.prepare(this).getAbsolutePath();
+                android.system.Os.setenv("ESSENTIA_CA_FILE", trust, true);
+                android.system.Os.setenv("SSL_CERT_FILE", trust, true);
+            } catch (Exception e) { Log.w(TAG,"No se pudo preparar la conexión segura"); }
+
             // Live map for the second screen (written by essentia_live.rb)
             //noinspection ResultOfMethodCallIgnored
             new java.io.File(getCacheDir(), "essentia_live.txt").delete();
