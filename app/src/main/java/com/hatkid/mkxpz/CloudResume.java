@@ -10,12 +10,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /** Offers a newer cloud snapshot without silently overwriting a local game. */
 public final class CloudResume {
     private CloudResume(){}
+    private static final java.util.concurrent.atomic.AtomicInteger GENERATION=new java.util.concurrent.atomic.AtomicInteger();
     public static void before(Activity a,File game,Runnable play){
+        final int generation=GENERATION.incrementAndGet();
+        Runnable guardedPlay=()->{if(generation==GENERATION.get()&&!a.isFinishing()&&!a.isDestroyed())play.run();};
         if(!EssentiaSettings.flag(a,EssentiaSettings.CLOUD_BACKUP,false)||!Cloud.backupsReady(a)||Games.isGameRunning(a)){
-            play.run();return;
+            guardedPlay.run();return;
         }
         AtomicBoolean completed=new AtomicBoolean();Handler ui=new Handler(Looper.getMainLooper());
-        Runnable fallback=()->{if(completed.compareAndSet(false,true)&&!a.isFinishing()&&!a.isDestroyed())play.run();};
+        Runnable fallback=()->{if(completed.compareAndSet(false,true)&&!a.isFinishing()&&!a.isDestroyed())guardedPlay.run();};
         ui.postDelayed(fallback,8500);
         new Thread(()->{
             try{
@@ -30,16 +33,16 @@ public final class CloudResume {
                 long remote=format.parse(id).getTime();
                 if(remote<=latest+2000){ui.post(fallback);return;}
                 ui.post(()->{
-                    if(!completed.compareAndSet(false,true)||a.isFinishing()||a.isDestroyed())return;
+                    if(!completed.compareAndSet(false,true)||generation!=GENERATION.get()||a.isFinishing()||a.isDestroyed())return;
                     ui.removeCallbacks(fallback);
                     new AlertDialog.Builder(a).setTitle("Hay una copia más reciente en la nube")
                         .setMessage(title+"\n"+CloudBackup.readable(id)+"\n\nPuede venir de tu otro dispositivo Android. La fecha corresponde a la subida; revisa cuál partida quieres usar. No se reemplazará nada sin tu confirmación.")
-                        .setNegativeButton("Usar partida local",(d,w)->play.run())
-                        .setOnCancelListener(d->play.run())
+                        .setNegativeButton("Usar partida local",(d,w)->guardedPlay.run())
+                        .setOnCancelListener(d->guardedPlay.run())
                         .setPositiveButton("Revisar restauración",(d,w)->new AlertDialog.Builder(a)
                             .setTitle("¿Restaurar antes de jugar?").setMessage("Se conservará una copia de tu partida local antes de traer la de la nube.")
-                            .setNegativeButton("Usar local",(dd,ww)->play.run()).setOnCancelListener(dd->play.run())
-                            .setPositiveButton("Restaurar y jugar",(dd,ww)->restore(a,path,id,play)).show()).show();
+                            .setNegativeButton("Usar local",(dd,ww)->guardedPlay.run()).setOnCancelListener(dd->guardedPlay.run())
+                            .setPositiveButton("Restaurar y jugar",(dd,ww)->restore(a,path,id,guardedPlay)).show()).show();
                 });
             }catch(Exception ignored){ui.post(fallback);}
         },"EssentiaCloudCheck").start();

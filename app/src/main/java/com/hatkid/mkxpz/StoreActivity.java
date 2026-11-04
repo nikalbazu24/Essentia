@@ -613,11 +613,6 @@ public class StoreActivity extends ControllerActivity
             info.addView(logo, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 80)));
             loadImage(g.logo, logo);
         }
-        TextView community = Ui.text(this, Community.summary(this,g.id), 14, Ui.TEXT_DIM, false);
-        info.addView(community);
-        android.widget.Button contribute = Ui.button(this, "Aportar mi prueba de compatibilidad", false);
-        contribute.setOnClickListener(v -> Community.contribute(this,g));
-        info.addView(contribute);
         TextView title = Ui.text(this, g.title, 26, Ui.TEXT, true);
         info.addView(title);
         if (!g.author.isEmpty()) info.addView(Ui.text(this, getString(R.string.store_by, g.author), 14, Ui.TEXT_DIM, false));
@@ -636,6 +631,12 @@ public class StoreActivity extends ControllerActivity
         chipScroll.setHorizontalScrollBarEnabled(false);
         chipScroll.addView(chips);
         info.addView(chipScroll);
+        TextView compatibilitySummary = Ui.text(this, Community.summary(this,g.id), 14, Ui.TEXT_DIM, false);
+        info.addView(compatibilitySummary);
+        android.widget.Button contribute = Ui.button(this, "Aportar mi prueba de compatibilidad", false);
+        contribute.setOnClickListener(v -> Community.contribute(this,g));
+        info.addView(contribute);
+
 
         if (!g.description.isEmpty()) {
             TextView d = Ui.text(this, g.description, 15, Ui.TEXT, false);

@@ -98,7 +98,7 @@ public class RtpActivity extends ControllerActivity {
                 }
             }catch(Exception ex){result="No se pudo importar: "+ex.getMessage();}
             finally{zip.delete();if(stage!=null)erase(stage);}
-            String message=result;runOnUiThread(()->{working=false;if(!isFinishing())message(message);});
+            String message=result;runOnUiThread(()->{working=false;if(!isFinishing()&&!isDestroyed())message(message);});
         },"EssentiaRTP").start();
     }
     private static void erase(File f){File[] children=f.listFiles();if(children!=null)for(File c:children)erase(c);f.delete();}

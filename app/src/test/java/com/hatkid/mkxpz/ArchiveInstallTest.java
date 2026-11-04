@@ -27,6 +27,12 @@ public class ArchiveInstallTest {
         try{ArchiveInstall.install(zip("Game.ini","../escape.txt"),game,Collections.emptyList(),progress);fail();}catch(IOException expected){}
         assertEquals(0,game.list().length);assertFalse(new File(temp.getRoot(),"escape.txt").exists());
     }
+    @Test public void cancellationAfterFirstReplacementRollsBack()throws Exception{
+        File game=temp.newFolder("game");File ini=new File(game,"Game.ini");Files.write(ini.toPath(),new byte[]{5});
+        GameUpdater.Progress cancel=new GameUpdater.Progress(){public void update(int s,float f,String d){}public boolean cancelled(){return new File(game,".essentia-recovery").exists()&&ini.length()>1;}};
+        try{ArchiveInstall.install(zip("Game.ini","New.txt"),game,Collections.emptyList(),cancel);fail();}catch(IOException expected){}
+        assertArrayEquals(new byte[]{5},Files.readAllBytes(ini.toPath()));assertFalse(new File(game,"New.txt").exists());assertFalse(new File(game,".essentia-recovery").exists());
+    }
     @Test public void cancellationLeavesOldGameUntouched()throws Exception{
         File game=temp.newFolder("game");Files.write(new File(game,"Game.ini").toPath(),new byte[]{5});
         GameUpdater.Progress cancel=new GameUpdater.Progress(){public void update(int s,float f,String d){}public boolean cancelled(){return true;}};

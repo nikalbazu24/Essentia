@@ -129,6 +129,7 @@ public class LibraryActivity extends ControllerActivity
             mRoot.postDelayed(() -> {
                 if (!isFinishing()) {
                     getPreferences(MODE_PRIVATE).edit().putBoolean("guide_v2", true).apply();
+                    getSharedPreferences(EssentiaSettings.PREFS,MODE_PRIVATE).edit().putInt("whats_new_tour",5).apply();
                     startActivity(new Intent(this, GuideActivity.class));
                 }
             }, 2600);

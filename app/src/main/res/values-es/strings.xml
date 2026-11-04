@@ -505,4 +505,11 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="delete_done">Juego y archivos seleccionados borrados.</string>
     <string name="delete_failed_title">No se pudo completar el borrado</string>
     <string name="delete_failed">El borrado no se completó. Puede que algunos archivos ya se hayan eliminado. Se conservó la entrada en la biblioteca. Revisa los permisos y comprueba que la carpeta no se comparta con otros juegos ni sea una carpeta general del almacenamiento.</string>
+    <string name="act_candy">5 caramelos raros</string>
+    <string name="wn_beta2_title">Essentia by Díptico · 2.0 beta</string>
+    <string name="wn_beta2_text">Una nueva etapa para teléfono y Thor: guía inicial, herramientas por juego y tienda con páginas y material del creador. La versión de PC queda para más adelante.</string>
+    <string name="wn_beta2_panel_title">Tu equipo, tus notas y tus controles</string>
+    <string name="wn_beta2_panel_text">Controles independientes por juego, carrusel táctil en la pantalla inferior y lectura de equipo, medallas y Pokédex cuando el juego es compatible. Toca las notas del panel para editarlas.</string>
+    <string name="wn_beta2_saves_title">Recuperación y pruebas</string>
+    <string name="wn_beta2_saves_text">Instalación de ZIP, RAR y 7z con preparación y recuperación; restauración de respaldos locales con doble confirmación. Los avisos diarios y la traducción IA son opcionales y empiezan desactivados. Sigue siendo una beta: reporta errores desde las herramientas de cada juego.</string>
 </resources>

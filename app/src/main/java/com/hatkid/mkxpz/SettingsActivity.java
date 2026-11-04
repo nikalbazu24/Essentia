@@ -386,6 +386,9 @@ public class SettingsActivity extends ControllerActivity
     private void buildRtp()
     {
         section(R.string.set_rtp_title, 0);
+        Button install = Ui.button(this, "Importar recursos RTP desde ZIP", false);
+        install.setOnClickListener(v -> startActivity(new Intent(this,RtpActivity.class)));
+        card(install);
         java.io.File root = EssentiaSettings.rtpRoot();
         TextView t = Ui.text(this, getString(R.string.set_rtp_desc, root.getAbsolutePath()), 14, Ui.TEXT_DIM, false);
         t.setPadding(Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4));

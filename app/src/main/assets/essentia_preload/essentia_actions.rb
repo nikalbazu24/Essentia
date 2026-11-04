@@ -12,7 +12,7 @@ module EssentiaActions
   CMD = ENV['ESSENTIA_CMD_FILE'].to_s
   ACK = ENV['ESSENTIA_ACK_FILE'].to_s
   SHOTS = ENV['ESSENTIA_SHOTS_DIR'].to_s
-  MAP_COMMANDS = %w[party bag dex save heal money].freeze
+  MAP_COMMANDS = %w[party bag dex save heal money candy].freeze
 
   @frame = 0
   @queue = []
@@ -53,6 +53,9 @@ module EssentiaActions
 
     def handle(line)
       cmd, arg = line.split(' ', 2)
+      if %w[through noenc heal money candy].include?(cmd) && !backup_before_help
+        return ack("#{cmd} fail")
+      end
       case cmd
       when 'speed' then set_speed(arg.to_i)
       when 'shot' then screenshot
@@ -301,6 +304,52 @@ module EssentiaActions
       return :unsupported unless t && t.respond_to?(:party)
       t.party.each { |pk| pk.heal if pk && pk.respond_to?(:heal) }
       true
+    end
+
+    # A new, complete directory is exposed to restoration only after every copy.
+    def backup_before_help
+      return true if @help_backup_done
+      source = ENV['ESSENTIA_DATA_DIR'].to_s
+      dest = ENV['ESSENTIA_HELP_BACKUP_DIR'].to_s
+      return false if source.empty? || dest.empty? || !File.directory?(source)
+      stage = dest + '.preparando'
+      Dir.mkdir(stage) unless File.directory?(stage)
+      total = 0
+      Dir.entries(source).each do |name|
+        low = name.downcase
+        next unless low =~ /\.(rxdata|rvdata|rvdata2|sav)$/
+        next if low =~ /^(scripts|map|tilesets|system\.|actors|classes|skills|items|weapons|armors|enemies|troops|states|animations|commonevents|pluginscripts)/
+        file = File.join(source, name)
+        next unless File.file?(file)
+        return false if File.symlink?(file)
+        total += File.size(file)
+        return false if total > 20 * 1024 * 1024
+        File.open(file, 'rb') do |input|
+          File.open(File.join(stage, name), 'wb') do |output|
+            while (bytes = input.read(65536))
+              output.write(bytes)
+            end
+          end
+        end
+      end
+      File.rename(stage, dest)
+      @help_backup_done = true
+      true
+    rescue Exception
+      false
+    end
+
+    def do_candy
+      bag = $bag || $PokemonBag
+      return :unsupported unless bag
+      if bag.respond_to?(:add) && defined?(GameData::Item)
+        item = GameData::Item.try_get(:RARECANDY) rescue nil
+        return :unsupported unless item
+        return bag.add(:RARECANDY, 5) ? true : :fail
+      elsif bag.respond_to?(:pbStoreItem) && defined?(PBItems::RARECANDY)
+        return bag.pbStoreItem(PBItems::RARECANDY, 5) ? true : :fail
+      end
+      :unsupported
     end
 
     def do_money

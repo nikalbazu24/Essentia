@@ -203,6 +203,11 @@ public class MainActivity extends SDLActivity
             //noinspection ResultOfMethodCallIgnored
             new java.io.File(getCacheDir(), "essentia_live.txt").delete();
             boolean livePanel = EssentiaSettings.GAME2_PANEL.equals(EssentiaSettings.gameSecondScreen(this));
+            java.io.File helpRoot = new java.io.File(android.os.Environment.getExternalStorageDirectory(),
+                "Essentia/Respaldos/" + Saves.safeName(getIntent().getStringExtra(EXTRA_TITLE)));
+            helpRoot.mkdirs();
+            android.system.Os.setenv("ESSENTIA_HELP_BACKUP_DIR", new java.io.File(helpRoot,
+                "antes-ayuda-" + System.currentTimeMillis()).getAbsolutePath(), true);
             android.system.Os.setenv("ESSENTIA_PROGRESS_FILE", GameProgress.file(this, GAME_PATH).getAbsolutePath(), true);
             android.system.Os.setenv("ESSENTIA_LIVE_FILE",
                 livePanel ? new java.io.File(getCacheDir(), "essentia_live.txt").getAbsolutePath() : "", true);
@@ -606,8 +611,17 @@ public class MainActivity extends SDLActivity
     }
 
     /** Sends a quick action to the game (screenshot, team, bag, save...). */
+    private boolean mHelpConfirmed;
     public void gameAction(String command)
     {
+        if (!mHelpConfirmed && java.util.Arrays.asList("through","noenc","heal","money","candy").contains(command)) {
+            new AlertDialog.Builder(this).setTitle("Ayudas opcionales")
+                .setMessage("Pueden alterar la experiencia o no ser compatibles con este juego. Essentia conservará una copia de las partidas guardadas antes de aplicar la primera ayuda. No puede respaldar el progreso que todavía no guardaste.")
+                .setNegativeButton("Cancelar",null).setPositiveButton("Activar esta sesión",(d,w)->{
+                    mHelpConfirmed=true;GameLink.send(this,command);
+                }).show();
+            return;
+        }
         GameLink.send(this, command);
     }
 
@@ -646,6 +660,7 @@ public class MainActivity extends SDLActivity
                 if (mPanel != null) mPanel.setToggle("noenc", result.equals("1"));
                 break;
             case "heal": msg = getString(result.equals("ok") ? R.string.act_heal_ok : R.string.act_unsupported); break;
+            case "candy": msg = result.equals("ok") ? "Añadidos 5 caramelos raros" : getString(R.string.act_unsupported); break;
             case "money": msg = getString(result.equals("ok") ? R.string.act_money_ok : R.string.act_unsupported); break;
             case "speed": break;
             case "updater":

@@ -28,6 +28,7 @@ public class TranslationReviewActivity extends ControllerActivity {
         find.setOnClickListener(v->{
             if(Games.isGameRunning(this)){new AlertDialog.Builder(this).setMessage("Cierra el juego antes de revisar traducciones").setPositiveButton("Aceptar",null).show();return;}
             results.removeAllViews();
+            String query=search.getText().toString().toLowerCase(Locale.ROOT);
             new Thread(()->{
                 Map<String,String> rows=new LinkedHashMap<>();String error=null;
                 try{
@@ -35,8 +36,8 @@ public class TranslationReviewActivity extends ControllerActivity {
                         String[] pair=line.split("\t",2);if(pair.length==2)rows.put(Translator.unesc(pair[0]),Translator.unesc(pair[1]));
                     }
                 }catch(Exception ex){error="No se pudo abrir el archivo de traducciones";}
-                String problem=error,query=search.getText().toString().toLowerCase(Locale.ROOT);
-                runOnUiThread(()->{if(isFinishing())return;
+                String problem=error;
+                runOnUiThread(()->{if(isFinishing()||isDestroyed())return;
                     if(problem!=null){results.addView(Ui.text(this,problem,16,Ui.TEXT,false));return;}
                     int count=0;
                     for(Map.Entry<String,String> row:rows.entrySet())if((row.getKey()+" "+row.getValue()).toLowerCase(Locale.ROOT).contains(query)){

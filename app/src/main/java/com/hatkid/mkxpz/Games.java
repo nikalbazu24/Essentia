@@ -82,6 +82,11 @@ public final class Games
 
     private static void startGameNow(Activity a, File gameDir, boolean newTask)
     {
+        synchronized (UpdateService.class) { startGameLocked(a,gameDir,newTask); }
+    }
+
+    private static void startGameLocked(Activity a, File gameDir, boolean newTask)
+    {
         if (GameRemoval.busy()) {
             android.widget.Toast.makeText(a, R.string.delete_busy, android.widget.Toast.LENGTH_LONG).show();
             return;

@@ -81,6 +81,9 @@ public final class GamePanel extends Presentation
     private final TextView[] mTabs = new TextView[3];
     private final Map<String, Tile> mToggles = new HashMap<>();
     private String mLastLine = null;
+    private volatile boolean mStopped;
+    private volatile boolean mReadPending;
+    private final java.util.concurrent.ExecutorService mReader = java.util.concurrent.Executors.newSingleThreadExecutor();
     private String mLoadedImage = null;
     private long mStart;
     private boolean mTurbo = false;
@@ -88,7 +91,11 @@ public final class GamePanel extends Presentation
 
     private final Runnable mPoll = new Runnable() {
         @Override public void run() {
-            readLive();
+            if (mStopped) return;
+            if (!mReadPending) {
+                mReadPending = true;
+                mReader.execute(() -> { try { readLive(); } finally { mReadPending = false; } });
+            }
             if (mNotes != null) {
                 String notes=getContext().getSharedPreferences("essentia_notes",Context.MODE_PRIVATE).getString(mGameDir.getAbsolutePath(),"");
                 mNotes.setText(notes.isEmpty()?"Toca aquí para escribir notas":"Notas · "+notes);
@@ -302,6 +309,7 @@ public final class GamePanel extends Presentation
             v -> mActions.game("noenc")));
         addTile(g, R.drawable.ic_p_heal, R.string.act_heal, false, v -> mActions.game("heal"));
         addTile(g, R.drawable.ic_p_money, R.string.act_money, false, v -> mActions.game("money"));
+        addTile(g, R.drawable.ic_p_bag, R.string.act_candy, false, v -> mActions.game("candy"));
         return g;
     }
 
@@ -463,6 +471,8 @@ public final class GamePanel extends Presentation
     protected void onStop()
     {
         super.onStop();
+        mStopped = true;
+        mReader.shutdownNow();
         mHandler.removeCallbacks(mPoll);
         mHandler.removeCallbacks(mHideMessage);
     }
@@ -477,7 +487,7 @@ public final class GamePanel extends Presentation
         try {
             if (!mLiveFile.isFile()) {
                 if (System.currentTimeMillis() - mStart > 20000)
-                    mMap.setEmptyText(getContext().getString(R.string.panel_map_none));
+                    mHandler.post(() -> { if (!mStopped) mMap.setEmptyText(getContext().getString(R.string.panel_map_none)); });
                 return;
             }
             if (mLiveFile.length() > 16384) return;
@@ -493,6 +503,12 @@ public final class GamePanel extends Presentation
         } catch (Exception e) {
             return;
         }
+        final String result = line;
+        mHandler.post(() -> { if (!mStopped) applyLive(result); });
+    }
+
+    private void applyLive(String line)
+    {
         if (line.equals(mLastLine)) return;
         mLastLine = line;
 
@@ -511,6 +527,7 @@ public final class GamePanel extends Presentation
         String image = f[8].trim();
         int sx = parse(f[6]), sy = parse(f[7]);
         if (image.isEmpty() || sx < 0) {
+            mLoadedImage = null;
             mMap.setMap(null);
             mMap.setEmptyText(getContext().getString(R.string.panel_map_none));
             return;
@@ -521,7 +538,7 @@ public final class GamePanel extends Presentation
             new Thread(() -> {
                 Bitmap bmp = loadImage(image);
                 mHandler.post(() -> {
-                    if (mMap != null) {
+                    if (!mStopped && image.equals(mLoadedImage) && mMap != null) {
                         mMap.setMap(bmp);
                         if (bmp == null) mMap.setEmptyText(getContext().getString(R.string.panel_map_none));
                     }

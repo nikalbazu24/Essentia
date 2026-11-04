@@ -88,7 +88,7 @@ public class GuideActivity extends ControllerActivity {
             scan(root,root,folders,0);
             Collections.sort(folders,(a,b)->Long.compare(b.lastModified(),a.lastModified()));
             runOnUiThread(()->{
-                working=false;if(isFinishing())return;
+                working=false;if(isFinishing()||isDestroyed())return;
                 if(folders.isEmpty()){message("No hay respaldos locales para este juego");return;}
                 String[] labels=new String[folders.size()];
                 for(int i=0;i<labels.length;i++)labels[i]=folders.get(i).getAbsolutePath().substring(root.getAbsolutePath().length()+1);
@@ -98,7 +98,7 @@ public class GuideActivity extends ControllerActivity {
         },"EssentiaBackupList").start();
     }
     private void scan(File root,File f,List<File> out,int depth) {
-        if(depth>3||out.size()>=250)return;
+        if(depth>3||out.size()>=250||f.getName().endsWith(".preparando"))return;
         try {
             if(!f.getCanonicalFile().equals(f.getAbsoluteFile()))return;
             String relative=f.getAbsolutePath().substring(root.getAbsolutePath().length());
@@ -132,7 +132,7 @@ public class GuideActivity extends ControllerActivity {
                     result="Restauradas "+n+" partidas. Tu partida anterior se conservó en Respaldos.";
                 }
             }catch(Exception e){result="No se pudo restaurar: "+e.getMessage();}
-            String message=result;runOnUiThread(()->{working=false;if(!isFinishing())message(message);});
+            String message=result;runOnUiThread(()->{working=false;if(!isFinishing()&&!isDestroyed())message(message);});
         },"EssentiaRestore").start();
     }
     private void message(String s){new AlertDialog.Builder(this).setMessage(s).setPositiveButton("Aceptar",null).show();}
