@@ -58,8 +58,15 @@ jobs:
           sudo apt-get install -y autoconf automake libtool bison gperf pkg-config wget
 
       - name: Instalar Android NDK
+        timeout-minutes: 12
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}" > /dev/null
+          ndk_compiler="$ANDROID_HOME/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+          for attempt in 1 2; do
+            if [ -x "$ndk_compiler" ]; then break; fi
+            echo "Preparando Android NDK (intento $attempt de 2)"
+            if yes | timeout 300 "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}"; then break; fi
+          done
+          test -x "$ndk_compiler"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
           # OpenSSL busca el compilador de Android en el PATH
