@@ -26,14 +26,15 @@ def validate():
     if online != (ROOT / 'app/src/main/assets/essentia_catalog.json').read_bytes():
         raise ValueError('Online and bundled catalogs differ; update both copies.')
     catalog = json.loads(online)
-    if catalog.get('version') != 2:
-        raise ValueError('The media catalog must declare version 2.')
+    if catalog.get('version') != 3:
+        raise ValueError('The media catalog must declare version 3.')
     datetime.date.fromisoformat(catalog['updated'])
     games = catalog['games']
     if not games:
         raise ValueError('The catalog cannot be empty.')
     ids = set()
     media_count = 0
+    ranks = set()
     for game in games:
         identifier = game['id']
         if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', identifier) or identifier in ids:
@@ -43,19 +44,29 @@ def validate():
             raise ValueError(f'{identifier}: missing title or invalid compatibility status')
         if game.get('maker') not in ('RPG Maker XP', 'RPG Maker VX', 'RPG Maker VX Ace', 'VX', 'VX Ace'):
             raise ValueError(f'{identifier}: not an RPG Maker game')
-        for field in ('page', 'download', 'source_page', 'cover', 'logo', 'trailer'):
+        for field in ('page', 'download', 'source_page', 'media_page', 'cover', 'logo', 'trailer'):
             if game.get(field):
                 check_web_url(game[field])
         source = game.get('source_page', '')
         if source and check_web_url(source).hostname.removeprefix('www.') not in SOURCES:
             raise ValueError(f'{identifier}: unknown community source')
+        rank = game.get('community_rank')
+        if rank is not None:
+            if type(rank) is not int or rank not in range(1, 6) or rank in ranks:
+                raise ValueError(f'{identifier}: invalid or repeated community rank')
+            ranks.add(rank)
+            if not source or check_web_url(source).hostname.removeprefix('www.') != 'eeveeexpo.com':
+                raise ValueError(f'{identifier}: popularity ranking requires an Eevee Expo game page')
+            if game.get('popularity_page') != 'https://eeveeexpo.com/completed-games/?order=first_post_reaction_score&direction=desc':
+                raise ValueError(f'{identifier}: ranking must link to the actual community ordering')
+            datetime.date.fromisoformat(game['popularity_checked'])
         screens = game.get('screens', [])
         if not isinstance(screens, list) or len(screens) > 12 or len(set(screens)) != len(screens):
             raise ValueError(f'{identifier}: invalid screenshot gallery')
         for screenshot in screens:
             check_web_url(screenshot)
         if any(game.get(field) for field in ('cover', 'logo', 'screens', 'trailer')):
-            if not source or not game.get('media_credit', '').strip():
+            if not (source or game.get('media_page')) or not game.get('media_credit', '').strip():
                 raise ValueError(f'{identifier}: media require a source page and creator credit')
             media_count += 1
     print(f'Catalog OK: {len(ids)} unique RPG Maker games, {media_count} credited media listings; offline copy matches.')

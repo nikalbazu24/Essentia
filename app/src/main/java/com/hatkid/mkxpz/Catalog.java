@@ -35,9 +35,11 @@ import java.util.Map;
  */
 public final class Catalog
 {
-    private static final int CATALOG_VERSION = 2;
+    private static final int CATALOG_VERSION = 3;
     public static final String URL =
         "https://raw.githubusercontent.com/nikalbazu24/Essentia/main/catalog/catalog.json";
+    public static final String POPULARITY_URL =
+        "https://eeveeexpo.com/completed-games/?order=first_post_reaction_score&direction=desc";
     private static final long REFRESH_MS = 6L * 60 * 60 * 1000;
     /** All the library is checked for updates at most this often (when the library opens). */
     public static final long CHECK_ALL_MS = 12L * 60 * 60 * 1000;
@@ -108,7 +110,12 @@ public final class Catalog
         public String logo = "";
         public String sourcePage = "";
         public String mediaCredit = "";
+        public String mediaPage = "";
         public String trailer = "";
+        /** Dated community ranking, independent of Essentia compatibility. */
+        public int communityRank;
+        public String popularityPage = "";
+        public String popularityChecked = "";
         public final List<String> screens = new ArrayList<>();
         public String size = "";
         /** Updated with PokéUpdater from inside the game folder. */
@@ -208,7 +215,17 @@ public final class Catalog
             g.sourcePage = webUrl(o.optString("source_page", ""));
             if (sourceFor(g.sourcePage) == null) g.sourcePage = "";
             g.mediaCredit = o.optString("media_credit", "");
+            g.mediaPage = webUrl(o.optString("media_page", ""));
             g.trailer = webUrl(o.optString("trailer", ""));
+            int rank = o.optInt("community_rank", 0);
+            String checked = o.optString("popularity_checked", "");
+            if (rank >= 1 && rank <= 5 && sourceFor(g.sourcePage) == SOURCES[1]
+                && POPULARITY_URL.equals(o.optString("popularity_page", ""))
+                && checked.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                g.communityRank = rank;
+                g.popularityPage = POPULARITY_URL;
+                g.popularityChecked = checked;
+            }
             List<String> screens = new ArrayList<>();
             list(o.optJSONArray("screens"), screens);
             for (String screen : screens) {

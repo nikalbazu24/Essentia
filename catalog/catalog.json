@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "updated": "2026-11-04",
   "games": [
     {
@@ -97,7 +97,19 @@
       "status": "sin_probar",
       "color": "#3A9A6B",
       "page": "https://p-insurgence.com",
-      "description": "Fan game en inglés hecho con RPG Maker XP y Pokémon Essentials, con megaevoluciones y Pokémon Delta."
+      "description": "Fan game en inglés hecho con RPG Maker XP y Pokémon Essentials, con megaevoluciones y Pokémon Delta.",
+      "source_page": "https://whackahack.com/juegos/pokemon-insurgence/",
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-insurgence-cover.png",
+      "cover": "https://whackahack.com/uploads/images/ab0ecb905ded6b33d518d2d2edd0879a.png",
+      "screens": [
+        "https://whackahack.com/uploads/images/ab0ecb905ded6b33d518d2d2edd0879a.png",
+        "https://whackahack.com/uploads/images/22066502c6db91a0d0349a40e98b2231.png",
+        "https://whackahack.com/uploads/images/66da8b5a4305949add171a57ceb61159.png",
+        "https://whackahack.com/uploads/images/9d0b908c5f69fa6424fcdf454f0a4186.png",
+        "https://whackahack.com/uploads/images/b6e88fcddc76edef6bbbdb5d6b73bc97.png"
+      ],
+      "trailer": "https://www.youtube.com/watch?v=PwiP8eX5edQ",
+      "media_credit": "1ofthe4rocketbros y Deukhoofd · Whack a Hack!"
     },
     {
       "id": "pokemon-reborn",
@@ -182,8 +194,22 @@
       "maker": "RPG Maker XP",
       "status": "con_fallas",
       "color": "#5D8F3A",
-      "description": "Fan game hecho con Pokémon Essentials.",
-      "note": "El error de inicio (\"Dark Maps\") se corrigió en la compilación 43."
+      "description": "Remake de Johto con mundo abierto, líderes que se adaptan al progreso, nuevas megaevoluciones y mecánicas modernizadas.",
+      "note": "El error de inicio (\"Dark Maps\") se corrigió en la compilación 43.",
+      "author": "ClaraDragon, Horo, Angeleiro, KidFates, SrGio y StevenMix",
+      "page": "https://pokemonperseida.blogspot.com/p/gs-vitro-descarga.html",
+      "media_page": "https://pokeliberty.net/fangames/pokemon-gs-vitro-140",
+      "logo": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh_hEiKCSVAbGrindetHmY2q4DUMIQI_D7nuv4MuXXiakQQiOW9xmtK2BPKYVzwCwz4m0XsYkrpJftU3zUSFed-V-fNrF83jfr5UYZMsR68D7vDHvSmMd_yjfX1_W_ikUR5K3hmgs_yCA4qpRwvZphHvYr7sm7rNtc1mgpJNQ3_j6Cb3CWTZYrpAjWTvlk/s1200-rw/LOGO%20VITRO.png",
+      "cover": "https://pbs.twimg.com/media/GLiwxo1XwAAoYmv?format=png",
+      "screens": [
+        "https://cdn.pokeliberty.net/libertyweb/resource_description_images/86f51762-562d-4a0d-b054-f8e5ff2d38b9",
+        "https://pbs.twimg.com/media/GLiwxo1XwAAoYmv?format=png",
+        "https://pbs.twimg.com/media/GMuVd7JXcAAIlDS?format=png",
+        "https://pbs.twimg.com/media/GO-1wG7XcAAjWEq?format=png",
+        "https://pbs.twimg.com/media/GTe-jV3W8AAEnfk?format=png&name=small",
+        "https://pbs.twimg.com/media/GRGXBuuXcAELqxS?format=png&name=small"
+      ],
+      "media_credit": "Equipo GS Vitro · Perseida Project y PokéLiberty"
     },
     {
       "id": "pokemon-consonancia",
@@ -288,6 +314,194 @@
       "media_credit": "5PastPoliwag · imágenes de su publicación en Eevee Expo",
       "description": "Aventura en inglés con dos regiones de mundo abierto, opciones de dificultad y una banda sonora original. El creador publica sus capturas y enlaces de descarga en Eevee Expo.",
       "note": "Hecho con Pokémon Essentials 18.1. Compatibilidad con Essentia todavía sin probar."
+    },
+    {
+      "id": "pokemon-realidea-system",
+      "title": "Pokémon Realidea System",
+      "author": "ele-nya / PhionGames",
+      "lang": [
+        "es",
+        "en"
+      ],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "description": "Aventura en Esoteria centrada en los vínculos entre entrenadores y Pokémon, con nuevos personajes, Fakémon y una historia propia.",
+      "page": "https://phiongames.blogspot.com/2023/10/descargar-pokemon-realidea-system.html",
+      "aliases": [
+        "Pokemon Realidea Sistem",
+        "Pokémon Realidea"
+      ],
+      "media_page": "https://phiongames.blogspot.com/2023/10/imagenes-de-pokemon-realidea-system.html",
+      "cover": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjrc17No1hVXUlVt3Ul-HYFlJW5y1a7cicF4meJ1fdvkeFMS34zgIodyPEIlgZZPevGc7cqUn7p9jmglMf0By1Fr_qCWQCYO6819Eb1K6b8voSZQzFlrx9w76WlURVBMoy0qu0xUfSMrE8foYVsKzMivrW_a3vNFHqt6aN58xRTW93w8JmKQbLE64WzUCZu/s16000/realiscans.png",
+      "screens": [
+        "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjrc17No1hVXUlVt3Ul-HYFlJW5y1a7cicF4meJ1fdvkeFMS34zgIodyPEIlgZZPevGc7cqUn7p9jmglMf0By1Fr_qCWQCYO6819Eb1K6b8voSZQzFlrx9w76WlURVBMoy0qu0xUfSMrE8foYVsKzMivrW_a3vNFHqt6aN58xRTW93w8JmKQbLE64WzUCZu/s16000/realiscans.png"
+      ],
+      "color": "#7561B5",
+      "media_credit": "ele-nya / PhionGames · galería oficial",
+      "note": "Añadido desde las sugerencias de la tienda. Sin probar en Essentia."
+    },
+    {
+      "id": "pokemon-azabache",
+      "title": "Pokémon Azabache",
+      "author": "Lucifer_666_04 / equipo Azabache",
+      "lang": [
+        "es"
+      ],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "description": "Investiga las Poké-Anomalías de Léter junto al profesor Acebuche y su hija. Incluye Fakémon, formas regionales y varias dificultades.",
+      "page": "https://pokemonazabacheoficial.blogspot.com/2026/08/pokemon-azabache.html",
+      "media_page": "https://x.com/PokemonAzabache",
+      "logo": "https://blogger.googleusercontent.com/img/a/AVvXsEgliVPmEZg9OMmfxHK-RPfNTPgnbW1w3WiTEQDvXm4c848pQZxVGnnZFUruWA6C0EgfDmExcqqe_0m1y-1luJrZPSNlhA-B4R3cHQmrt8GrXRJnEU6TBEQbMUomUGCIoQdrFSLpRu-LLxj5UyRwhiUgtkbi1K__8isvB0s1JKUsHYiIH5GS7T3y4y63o25U",
+      "cover": "https://pbs.twimg.com/media/HWDN1LEW4AA19tA?format=webp&name=large",
+      "screens": [
+        "https://pbs.twimg.com/media/HWDN1LEW4AA19tA?format=webp&name=large",
+        "https://pbs.twimg.com/media/HWDN2fHW0AABK9H?format=webp&name=large",
+        "https://pbs.twimg.com/media/HWDN3cmXoAAiu3a?format=webp&name=large"
+      ],
+      "color": "#8151A0",
+      "media_credit": "Equipo Pokémon Azabache · blog y cuenta oficiales",
+      "note": "Sugerido en la tienda. El proyecto sigue en desarrollo; sin probar en Essentia."
+    },
+    {
+      "id": "pokemon-cronicas-de-cintia",
+      "title": "Pokémon Crónicas de Cintia",
+      "author": "Davor",
+      "lang": [
+        "es"
+      ],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "description": "Una joven Cintia viaja por Hoenn junto a Riolu antes de convertirse en campeona. Reinterpreta rutas, personajes y encuentros de la región.",
+      "page": "https://x.com/DavorPkmn",
+      "source_page": "https://whackahack.com/juegos/pokemon-cronicas-de-cintia/",
+      "aliases": [
+        "Pokémon Crónicas de Cynthia",
+        "Pokemon cronicas de cyntia"
+      ],
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-cronicas-de-cintia-cover.jpg",
+      "cover": "https://whackahack.com/uploads/images/4968d7f12f76cbd65604b44ba77d91f7.png",
+      "screens": [
+        "https://whackahack.com/uploads/images/4968d7f12f76cbd65604b44ba77d91f7.png"
+      ],
+      "color": "#C9A557",
+      "media_credit": "Davor · Whack a Hack!",
+      "note": "Sugerido en la tienda. Beta en desarrollo; sin probar en Essentia."
+    },
+    {
+      "id": "pokemon-unbreakable-ties",
+      "title": "Pokémon Unbreakable Ties",
+      "author": "SSamurai_98",
+      "lang": [
+        "es"
+      ],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "description": "Tres amigos recorren Akebia mientras investigan a la Familia Real y el misterio de los Pokémon Eón. Historia por arcos, misiones y Pokémon acompañantes.",
+      "page": "https://twitter.com/PkmnUnbreakTies",
+      "source_page": "https://whackahack.com/juegos/pokemon-unbreakable-ties/",
+      "aliases": [
+        "Pokemon unbreakeable ties"
+      ],
+      "logo": "https://whackahack.com/uploads/images/games/pokemon-unbreakable-ties-cover.jpg",
+      "cover": "https://whackahack.com/foro/attachments/2024-06-13-20_49_45-7278-png.17641/",
+      "screens": [
+        "https://whackahack.com/foro/attachments/2024-06-13-20_49_45-7278-png.17641/",
+        "https://whackahack.com/foro/attachments/2024-06-16-12_34_54-495-png.17642/",
+        "https://whackahack.com/foro/attachments/2024-06-30-02_15_38-741-png.17643/",
+        "https://whackahack.com/foro/attachments/2024-07-27-00_09_19-663-png.17645/",
+        "https://whackahack.com/foro/attachments/2024-07-27-18_23_44-049-png.17646/",
+        "https://whackahack.com/foro/attachments/2024-07-28-23_19_35-140-png.17647/",
+        "https://whackahack.com/foro/attachments/2024-07-30-17_29_36-159-png.17650/",
+        "https://whackahack.com/foro/attachments/2024-07-30-17_34_05-254-png.17651/"
+      ],
+      "trailer": "https://www.youtube.com/watch?v=F82_sF2DA-M",
+      "color": "#37A999",
+      "media_credit": "SSamurai_98 · Whack a Hack!",
+      "note": "Sugerido en la tienda. Beta en desarrollo; sin probar en Essentia."
+    },
+    {
+      "id": "pokemon-infinity",
+      "title": "Pokémon Infinity",
+      "author": "Atomic Reactor y equipo Infinity",
+      "lang": [
+        "en"
+      ],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "description": "Explora Egho después de despertar sin recuerdos. Una aventura con formas regionales, Fakémon y misterios que descubrir.",
+      "page": "https://eeveeexpo.com/infinity/",
+      "source_page": "https://eeveeexpo.com/infinity/",
+      "logo": "https://i.imgur.com/7DRXXBq.gif",
+      "cover": "https://i.imgur.com/7DRXXBq.gif",
+      "screens": [
+        "https://i.imgur.com/OzOxhHe_d.webp?maxwidth=760&fidelity=grand",
+        "https://i.imgur.com/La7yOHq_d.webp?maxwidth=760&fidelity=grand"
+      ],
+      "color": "#A471C6",
+      "media_credit": "Equipo Pokémon Infinity · Eevee Expo",
+      "community_rank": 1,
+      "popularity_page": "https://eeveeexpo.com/completed-games/?order=first_post_reaction_score&direction=desc",
+      "popularity_checked": "2026-11-04"
+    },
+    {
+      "id": "pokemon-bushido",
+      "title": "Pokémon Bushido",
+      "author": "LuxDiablo, Thundaga, Tristantine the Great y HauntedArtStudio",
+      "lang": [
+        "en"
+      ],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "description": "Aventura en Aisho inspirada en el mundo samurái, con combate y exploración a través de una región propia.",
+      "page": "https://eeveeexpo.com/bushido/",
+      "source_page": "https://eeveeexpo.com/bushido/",
+      "essentials": "18.1",
+      "logo": "https://i.imgur.com/NLihHbc.gif",
+      "cover": "https://i.imgur.com/NLihHbc.gif",
+      "screens": [
+        "https://i.imgur.com/vqBmLyx.png",
+        "https://i.imgur.com/8PUzWpZ.png",
+        "https://i.imgur.com/Qcskb0T.png",
+        "https://i.imgur.com/zwpsDPN.png",
+        "https://i.imgur.com/XnADmMI.png",
+        "https://i.imgur.com/Tsf759c.png"
+      ],
+      "color": "#BD4E4E",
+      "media_credit": "Equipo Pokémon Bushido · Eevee Expo",
+      "community_rank": 2,
+      "popularity_page": "https://eeveeexpo.com/completed-games/?order=first_post_reaction_score&direction=desc",
+      "popularity_checked": "2026-11-04"
+    },
+    {
+      "id": "pokemon-solar-eclipse",
+      "title": "Pokémon Solar Eclipse",
+      "author": "Peti y equipo Solar Eclipse",
+      "lang": [
+        "en"
+      ],
+      "maker": "RPG Maker XP",
+      "status": "sin_probar",
+      "description": "Recorre Solaria como aspirante al título de Monarca Solar. Dificultad configurable, funciones sociales y herramientas para explorar y entrenar.",
+      "page": "https://eeveeexpo.com/threads/9048/",
+      "source_page": "https://eeveeexpo.com/threads/9048/",
+      "essentials": "19.1",
+      "logo": "https://i.postimg.cc/SNPkm3h7/undefined-Imgur.gif",
+      "cover": "https://i.postimg.cc/SNPkm3h7/undefined-Imgur.gif",
+      "screens": [
+        "https://i.postimg.cc/xT89DYWH/difficulty.png",
+        "https://i.postimg.cc/VLhmzp87/trainer-Club.png",
+        "https://i.postimg.cc/ncWpngJ2/photo-Mode.png",
+        "https://i.postimg.cc/BQbJ9sdM/game-Corner.png",
+        "https://i.postimg.cc/zXvqZ59F/fight-Scene.png",
+        "https://i.postimg.cc/BQbJ9sdP/dexnav.png",
+        "https://i.postimg.cc/J4FMRvLp/stat-Screen.png"
+      ],
+      "color": "#D89135",
+      "media_credit": "Peti y equipo Solar Eclipse · Eevee Expo",
+      "community_rank": 3,
+      "popularity_page": "https://eeveeexpo.com/completed-games/?order=first_post_reaction_score&direction=desc",
+      "popularity_checked": "2026-11-04"
     }
   ]
 }

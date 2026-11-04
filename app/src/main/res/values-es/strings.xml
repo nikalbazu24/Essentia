@@ -419,7 +419,7 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="store_f_es">En español</string>
     <string name="store_f_tested">Probados en Essentia</string>
     <string name="store_empty">Todavía no hay juegos aquí.</string>
-    <string name="store_sources_all">Todas las fuentes</string>
+    <string name="store_sources_all">Todas</string>
     <string name="store_communities">Descubrir más fan games</string>
     <string name="store_communities_hint">Explora cada comunidad en tu navegador. Essentia ejecuta juegos de RPG Maker XP, VX y VX Ace; los ROM hacks necesitan otro emulador. Aparecer en la lista no significa que el juego se haya probado en Essentia.</string>
     <string name="store_browse_source">Explorar %1$s ↗</string>
@@ -484,4 +484,11 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="wn_allupd_text">Essentia busca versiones nuevas de cada juego de tu biblioteca y las marca con «Nueva». En Tienda › Mis juegos puedes actualizarlos todos de una vez, sin perder partidas.</string>
     <string name="wn_oldfix_title">Juegos antiguos, arreglados</string>
     <string name="wn_oldfix_text">Los controles ya funcionan en juegos hechos con Essentials 17 y 18 (como Pokémon Cristal e Iberia), que además abren directo con el motor clásico.</string>
+    <string name="store_filter_games">Mostrar juegos</string>
+    <string name="store_filter_source">Comunidad</string>
+    <string name="store_f_popular">Populares</string>
+    <string name="store_popular_hint">Selección de los primeros juegos completos por puntuación de reacciones en Eevee Expo. La popularidad no confirma compatibilidad con Essentia.</string>
+    <string name="store_popular_rank">N.º %1$d por puntuación de reacciones en Eevee Expo · revisado %2$s</string>
+    <string name="store_popular_source">Ver ranking de la comunidad</string>
+    <string name="store_media_source">Fuente de las imágenes</string>
 </resources>

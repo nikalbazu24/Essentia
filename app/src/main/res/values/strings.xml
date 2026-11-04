@@ -422,7 +422,7 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="store_f_es">In Spanish</string>
     <string name="store_f_tested">Tested in Essentia</string>
     <string name="store_empty">No games here yet.</string>
-    <string name="store_sources_all">All sources</string>
+    <string name="store_sources_all">All</string>
     <string name="store_communities">Discover more fan games</string>
     <string name="store_communities_hint">Browse each community in your browser. Essentia runs RPG Maker XP, VX and VX Ace games; ROM hacks need another emulator. Being listed does not mean a game has been tested in Essentia.</string>
     <string name="store_browse_source">Browse %1$s ↗</string>
@@ -487,4 +487,11 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="wn_allupd_text">Essentia looks for new versions of every game in your library and marks them with “New”. In Store › My games you can update them all at once, keeping your saves.</string>
     <string name="wn_oldfix_title">Old games, fixed</string>
     <string name="wn_oldfix_text">Controls now work in games made with Essentials 17 and 18 (like Pokémon Cristal and Iberia), which also start with the classic engine directly.</string>
+    <string name="store_filter_games">Show games</string>
+    <string name="store_filter_source">Community</string>
+    <string name="store_f_popular">Popular</string>
+    <string name="store_popular_hint">Selected from the first completed games by first-post reaction score on Eevee Expo. Popularity does not confirm Essentia compatibility.</string>
+    <string name="store_popular_rank">No. %1$d by first-post reaction score on Eevee Expo · checked %2$s</string>
+    <string name="store_popular_source">View community ranking</string>
+    <string name="store_media_source">Media source</string>
 </resources>
