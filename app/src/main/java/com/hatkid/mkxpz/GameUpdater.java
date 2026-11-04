@@ -147,7 +147,11 @@ public final class GameUpdater
             ? c.get("PASTEBIN_URL") : c.get("VERSION_PASTEBIN");
         if (url == null || url.isEmpty()) throw new IOException("no version link");
 
-        String text = new String(readAll(open(url, null).getInputStream()), StandardCharsets.UTF_8);
+        HttpURLConnection connection = open(url, null);
+        String text;
+        try (InputStream in = connection.getInputStream()) {
+            text = new String(SaveTransaction.read(in, 1024 * 1024), StandardCharsets.UTF_8);
+        } finally { connection.disconnect(); }
         for (String line : text.split("\n")) {
             line = line.trim();
             if (!line.contains("=")) continue;
@@ -164,9 +168,14 @@ public final class GameUpdater
 
     static String host(String url)
     {
-        if (url.contains("mega.nz")) return "MEGA";
-        if (url.contains("dropbox.com")) return "Dropbox";
-        if (url.contains("github.com")) return "GitHub";
+        try {
+            URL parsed = new URL(url);
+            if (!"https".equalsIgnoreCase(parsed.getProtocol()) || parsed.getUserInfo() != null) return null;
+            String h = parsed.getHost().toLowerCase(Locale.ROOT);
+            if (h.equals("mega.nz") || h.equals("mega.co.nz")) return "MEGA";
+            if (h.equals("dropbox.com") || h.endsWith(".dropbox.com")) return "Dropbox";
+            if (h.equals("github.com")) return "GitHub";
+        } catch (Exception ignored) { }
         return null;
     }
 

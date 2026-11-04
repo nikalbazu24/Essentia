@@ -79,6 +79,7 @@ public final class CloudBackup
         JSONArray arr = new JSONArray();
         long total = 0;
         for (File f : files) {
+            SaveTransaction.child(f.getParentFile(), f.getName());
             total += f.length();
             if (total > MAX_BYTES) throw new java.io.IOException("Las partidas superan 20 MB; no se subió una copia incompleta");
             JSONObject o = new JSONObject();

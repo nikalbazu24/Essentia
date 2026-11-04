@@ -33,7 +33,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_hatkid_mkxpz_NativeArchive_next(JNIEnv *en
     (void)cls;struct reader *r=(struct reader*)(intptr_t)handle;
     for(;;){
         int status=archive_read_next_header(r->archive,&r->entry);
-        if(status==ARCHIVE_EOF)return NULL;
+        if(status==ARCHIVE_EOF){
+            if(r->count==0)error(env,"El RAR esta vacio o incompleto");
+            return NULL;
+        }
         if(status!=ARCHIVE_OK){error(env,archive_error_string(r->archive));return NULL;}
         if(++r->count>100000){error(env,"Demasiados archivos en el RAR");return NULL;}
         if(archive_entry_is_encrypted(r->entry)||archive_entry_symlink(r->entry)||archive_entry_hardlink(r->entry)){

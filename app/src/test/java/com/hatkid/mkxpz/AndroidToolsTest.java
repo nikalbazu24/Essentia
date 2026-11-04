@@ -34,7 +34,7 @@ public class AndroidToolsTest {
         String text=text(guide.getWindow().getDecorView());
         assertTrue(text.contains("Essentia by Díptico"));assertTrue(text.contains("Cuida tus partidas"));assertTrue(text.contains("Thor"));
     }
-    @Test @Config(qualifiers="land-w720dp-h480dp") public void guideAlsoStartsInLandscape(){
+    @Test @Config(qualifiers="w720dp-h480dp-land") public void guideAlsoStartsInLandscape(){
         Activity guide=Robolectric.buildActivity(GuideActivity.class).setup().get();assertTrue(text(guide.getWindow().getDecorView()).contains("Abrir tienda"));
     }
     @Test public void optionalAiStartsDisabledWithoutCreatingAKey(){
@@ -42,6 +42,27 @@ public class AndroidToolsTest {
         Activity ai=Robolectric.buildActivity(AiTranslationActivity.class).setup().get();
         assertFalse(AiTranslation.enabled(ai));assertFalse(AiTranslation.prefs(ai).contains("key"));
         assertTrue(text(ai.getWindow().getDecorView()).contains("desactivada por defecto"));
+    }
+    @Test public void writableProbeDoesNotDeleteAnExistingUserFile()throws Exception{
+        Activity a=controls(null);
+        java.io.File folder=new java.io.File(a.getCacheDir(),"probe-"+java.util.UUID.randomUUID());assertTrue(folder.mkdir());
+        java.io.File existing=new java.io.File(folder,".essentia_write_test");
+        java.nio.file.Files.write(existing.toPath(),new byte[]{1,2,3});
+        Saves.dirFor(a,folder,"Demo");
+        assertArrayEquals(new byte[]{1,2,3},java.nio.file.Files.readAllBytes(existing.toPath()));
+    }
+    @Test public void importingSaveKeepsPreviousBytes()throws Exception{
+        Activity a=controls(null);java.io.File base=new java.io.File(a.getCacheDir(),"import-"+java.util.UUID.randomUUID());assertTrue(base.mkdir());
+        java.io.File source=new java.io.File(base,"source"),target=new java.io.File(base,"target");assertTrue(source.mkdir());assertTrue(target.mkdir());
+        java.io.File incoming=new java.io.File(source,"Game.rxdata"),old=new java.io.File(target,"Game.rxdata");
+        java.nio.file.Files.write(incoming.toPath(),new byte[]{4,5});java.nio.file.Files.write(old.toPath(),new byte[]{1,2});
+        assertEquals(1,Saves.copyFiles(java.util.Collections.singletonList(incoming),target));
+        assertArrayEquals(new byte[]{4,5},java.nio.file.Files.readAllBytes(old.toPath()));
+        java.io.File root=new java.io.File(android.os.Environment.getExternalStorageDirectory(),"Essentia/Respaldos/target");
+        boolean found=false;for(java.io.File journal:root.listFiles()){
+            java.io.File previous=new java.io.File(journal,"Game.rxdata");
+            if(previous.isFile()&&java.util.Arrays.equals(new byte[]{1,2},java.nio.file.Files.readAllBytes(previous.toPath())))found=true;
+        }assertTrue(found);
     }
     private String text(View view){
         StringBuilder out=new StringBuilder();if(view instanceof TextView)out.append(((TextView)view).getText()).append('\n');

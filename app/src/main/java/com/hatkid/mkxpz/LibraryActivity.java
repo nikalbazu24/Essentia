@@ -1423,6 +1423,10 @@ public class LibraryActivity extends ControllerActivity
 
     private void importSaves(Library.Entry e)
     {
+        if (Games.isGameRunning(this) || UpdateService.hasWork() || GameRemoval.busy()) {
+            Toast.makeText(this,"Cierra los juegos y espera a que terminen las instalaciones",Toast.LENGTH_LONG).show();
+            return;
+        }
         mPending = e;
         File target = saveDirOf(e);
         List<File> legacy = Saves.legacy(this);
@@ -1477,6 +1481,9 @@ public class LibraryActivity extends ControllerActivity
             .setPositiveButton(R.string.imp_do, (d, w) -> {
                 List<File> chosen = new ArrayList<>();
                 for (int i = 0; i < files.size(); i++) if (checked[i]) chosen.add(files.get(i));
+                if (Games.isGameRunning(this) || UpdateService.hasWork() || GameRemoval.busy()) {
+                    Toast.makeText(this,"Cierra los juegos antes de importar partidas",Toast.LENGTH_LONG).show(); return;
+                }
                 int n = Saves.copyFiles(chosen, target);
                 Toast.makeText(this, getResources().getQuantityString(R.plurals.imp_done, n, n), Toast.LENGTH_LONG).show();
             })
@@ -1566,6 +1573,9 @@ public class LibraryActivity extends ControllerActivity
                 }
                 List<String> names = new ArrayList<>();
                 for (Uri u : uris) names.add(displayName(u));
+                if (Games.isGameRunning(this) || UpdateService.hasWork() || GameRemoval.busy()) {
+                    Toast.makeText(this,"Cierra los juegos antes de importar partidas",Toast.LENGTH_LONG).show(); return;
+                }
                 int n = Saves.copyUris(this, uris, names, saveDirOf(mPending));
                 Toast.makeText(this, getResources().getQuantityString(R.plurals.imp_done, n, n), Toast.LENGTH_LONG).show();
                 break;

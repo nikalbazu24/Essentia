@@ -103,7 +103,8 @@ public class GuideActivity extends ControllerActivity {
             if(!f.getCanonicalFile().equals(f.getAbsoluteFile()))return;
             String relative=f.getAbsolutePath().substring(root.getAbsolutePath().length());
             boolean matches=relative.startsWith("/"+Saves.safeName(title)+"/")
-                ||relative.startsWith("/"+Saves.safeName(new File(path).getName())+"_");
+                ||relative.startsWith("/"+Saves.safeName(new File(path).getName())+"_")
+                ||relative.startsWith("/"+Saves.safeName(new File(path).getName())+"/");
             if(matches&&!f.getName().equals("nuevos")&&!Saves.findIn(f).isEmpty())out.add(f);
             File[] children=f.listFiles();if(children!=null)for(File child:children)if(child.isDirectory())scan(root,child,out,depth+1);
         }catch(Exception ignored){}
