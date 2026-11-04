@@ -34,6 +34,7 @@ public final class LoadingScreen extends FrameLayout
     private final TextView mHint;
     private boolean mDone = false;
     private final boolean mShowTimes;
+    private final String mGamePath;
     private String mPhase = null;
     private long mPhaseStart;
     private final java.util.LinkedHashMap<String, Long> mPhaseTimes = new java.util.LinkedHashMap<>();
@@ -54,6 +55,7 @@ public final class LoadingScreen extends FrameLayout
     {
         super(c);
         mShowTimes = showTimes;
+        mGamePath = gamePath;
         setBackgroundColor(Ui.BG);
         setClickable(true); // touches don't reach the game while it loads
 
@@ -143,6 +145,7 @@ public final class LoadingScreen extends FrameLayout
     {
         if (mDone) return;
         mDone = true;
+        com.hatkid.mkxpz.Diagnostics.load(getContext(), mGamePath, SystemClock.elapsedRealtime() - mStart);
         long now = SystemClock.elapsedRealtime();
         if (mPhase != null) mPhaseTimes.put(mPhase, now - mPhaseStart);
         float total = (now - mStart) / 1000f;

@@ -48,6 +48,23 @@ public final class SecondScreen extends Presentation
     private LinearLayout mTiles;
     private TextView mFooter;
     private TextView mBattery;
+    private LinearLayout mNavigation;
+    private TextView mNews;
+
+    public void navigation(Runnable previous, Runnable play, Runnable next, Runnable store, String news) {
+        if (mNavigation == null) return;
+        mNavigation.removeAllViews();
+        String[] labels = { "‹", "Jugar", "›", "Tienda" };
+        Runnable[] actions = { previous, play, next, store };
+        for (int i=0;i<labels.length;i++) {
+            android.widget.Button b=Ui.button(getContext(),labels[i],false);
+            final Runnable action=actions[i]; b.setOnClickListener(v->action.run());
+            b.setContentDescription(i==0?"Juego anterior":i==2?"Juego siguiente":labels[i]);
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,Ui.dp(getContext(),48),1f);
+            lp.setMargins(Ui.dp(getContext(),3),0,Ui.dp(getContext(),3),0);mNavigation.addView(b,lp);
+        }
+        mNews.setText(news);
+    }
 
     private SecondScreen(Context outer, Display display)
     {
@@ -153,6 +170,12 @@ public final class SecondScreen extends Presentation
         mTiles = new LinearLayout(c);
         mTiles.setOrientation(LinearLayout.VERTICAL);
         info.addView(mTiles, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        mNavigation=new LinearLayout(c);
+        mNavigation.setPadding(0,Ui.dp(c,8),0,0);
+        col.addView(mNavigation,new LinearLayout.LayoutParams(-1,-2));
+        mNews=Ui.text(c,"",12,Ui.ACCENT_LIGHT,false);mNews.setMaxLines(1);
+        mNews.setEllipsize(TextUtils.TruncateAt.END);col.addView(mNews);
 
         // ---- status bar
         LinearLayout bar = new LinearLayout(c);

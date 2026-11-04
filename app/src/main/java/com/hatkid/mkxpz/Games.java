@@ -77,8 +77,29 @@ public final class Games
      */
     public static void startGame(Activity a, File gameDir, boolean newTask)
     {
+        CloudResume.before(a, gameDir, () -> startGameNow(a, gameDir, newTask));
+    }
+
+    private static void startGameNow(Activity a, File gameDir, boolean newTask)
+    {
+        synchronized (UpdateService.class) { startGameLocked(a,gameDir,newTask); }
+    }
+
+    private static void startGameLocked(Activity a, File gameDir, boolean newTask)
+    {
         if (GameRemoval.busy()) {
             android.widget.Toast.makeText(a, R.string.delete_busy, android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (UpdateService.busy(gameDir.getAbsolutePath())) {
+            android.widget.Toast.makeText(a, "Espera a que termine la instalación", android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        try { ArchiveInstall.recover(gameDir); }
+        catch (java.io.IOException e) {
+            new AlertDialog.Builder(a).setTitle("Recuperación pendiente")
+                .setMessage("No se pudo recuperar la actualización interrumpida. Conserva la carpeta y vuelve a instalar el juego desde la tienda. " + e.getMessage())
+                .setPositiveButton("Aceptar", null).show();
             return;
         }
         Log.i(TAG, "Starting game in " + gameDir);
@@ -123,6 +144,16 @@ public final class Games
     public static boolean classicEngineAvailable(Context c)
     {
         return new File(c.getApplicationInfo().nativeLibraryDir, "libmkxp-z-legacy.so").isFile();
+    }
+
+    public static boolean isGameRunning(Context c)
+    {
+        ActivityManager am = (ActivityManager)c.getSystemService(Context.ACTIVITY_SERVICE);
+        if (am == null) return true;
+        List<ActivityManager.RunningAppProcessInfo> procs = am.getRunningAppProcesses();
+        if (procs != null) for (ActivityManager.RunningAppProcessInfo p : procs)
+            if ((c.getPackageName() + ":game").equals(p.processName)) return true;
+        return false;
     }
 
     public static void killGameProcess(Context c)

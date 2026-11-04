@@ -20,6 +20,7 @@ import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextClock;
 import android.widget.TextView;
 
@@ -27,7 +28,8 @@ import com.hatkid.mkxpz.R;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.io.FileInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -47,6 +49,8 @@ public final class GamePanel extends Presentation
     public interface Actions
     {
         void controls();
+        void notes();
+        void progress();
         void menu();
         /** A quick action for the game (see essentia_actions.rb). */
         void game(String command);
@@ -67,6 +71,8 @@ public final class GamePanel extends Presentation
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private LiveMapView mMap;
     private TextView mPlace;
+    private TextView mProgress;
+    private TextView mNotes;
     private TextView mMessage;
     private TextView mTurboChip;
     private Tile mTurboTile;
@@ -76,6 +82,9 @@ public final class GamePanel extends Presentation
     private final TextView[] mTabs = new TextView[3];
     private final Map<String, Tile> mToggles = new HashMap<>();
     private String mLastLine = null;
+    private volatile boolean mStopped;
+    private volatile boolean mReadPending;
+    private final java.util.concurrent.ExecutorService mReader = java.util.concurrent.Executors.newSingleThreadExecutor();
     private String mLoadedImage = null;
     private long mStart;
     private boolean mTurbo = false;
@@ -83,7 +92,15 @@ public final class GamePanel extends Presentation
 
     private final Runnable mPoll = new Runnable() {
         @Override public void run() {
-            readLive();
+            if (mStopped) return;
+            if (!mReadPending) {
+                mReadPending = true;
+                mReader.execute(() -> { try { readLive(); } finally { mReadPending = false; } });
+            }
+            if (mNotes != null) {
+                String notes=getContext().getSharedPreferences("essentia_notes",Context.MODE_PRIVATE).getString(mGameDir.getAbsolutePath(),"");
+                mNotes.setText(notes.isEmpty()?"Toca aquí para escribir notas":"Notas · "+notes);
+            }
             mHandler.postDelayed(this, 500);
         }
     };
@@ -143,6 +160,15 @@ public final class GamePanel extends Presentation
         col.setPadding(pad, pad, pad, pad);
 
         col.addView(buildHeader(c));
+        mProgress = Ui.text(c, "Equipo y logros · esperando al juego", 12, Ui.ACCENT_LIGHT, false);
+        mProgress.setMaxLines(3);
+        mProgress.setOnClickListener(v -> mActions.progress());
+        col.addView(mProgress);
+        String notes = c.getSharedPreferences("essentia_notes", Context.MODE_PRIVATE).getString(mGameDir.getAbsolutePath(), "");
+        mNotes = Ui.text(c, notes.isEmpty() ? "Añade notas desde las herramientas del juego" : "Notas · " + notes, 12, Ui.TEXT_DIM, false);
+        mNotes.setMaxLines(2);
+        mNotes.setOnClickListener(v -> mActions.notes());
+        col.addView(mNotes);
 
         LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.25f);
         mlp.topMargin = Ui.dp(c, 10);
@@ -284,7 +310,15 @@ public final class GamePanel extends Presentation
             v -> mActions.game("noenc")));
         addTile(g, R.drawable.ic_p_heal, R.string.act_heal, false, v -> mActions.game("heal"));
         addTile(g, R.drawable.ic_p_money, R.string.act_money, false, v -> mActions.game("money"));
-        return g;
+        addTile(g, R.drawable.ic_p_bag, R.string.act_candy, false, v -> mActions.game("candy"));
+        addTile(g, R.drawable.ic_p_party, R.string.act_testpokemon, false, v -> mActions.game("testpokemon"));
+        for (int i=0;i<g.getChildCount();i++) {
+            GridLayout.LayoutParams lp=(GridLayout.LayoutParams)g.getChildAt(i).getLayoutParams();
+            lp.height=Ui.dp(c,72);lp.rowSpec=GridLayout.spec(GridLayout.UNDEFINED);
+            g.getChildAt(i).setLayoutParams(lp);
+        }
+        ScrollView scroll=new ScrollView(c);scroll.addView(g,new ScrollView.LayoutParams(-1,-2));
+        return scroll;
     }
 
     private View buildTabs(Context c)
@@ -445,6 +479,8 @@ public final class GamePanel extends Presentation
     protected void onStop()
     {
         super.onStop();
+        mStopped = true;
+        mReader.shutdownNow();
         mHandler.removeCallbacks(mPoll);
         mHandler.removeCallbacks(mHideMessage);
     }
@@ -459,13 +495,28 @@ public final class GamePanel extends Presentation
         try {
             if (!mLiveFile.isFile()) {
                 if (System.currentTimeMillis() - mStart > 20000)
-                    mMap.setEmptyText(getContext().getString(R.string.panel_map_none));
+                    mHandler.post(() -> { if (!mStopped) mMap.setEmptyText(getContext().getString(R.string.panel_map_none)); });
                 return;
             }
-            line = new String(Files.readAllBytes(mLiveFile.toPath()), StandardCharsets.UTF_8);
+            if (mLiveFile.length() > 16384) return;
+            try (FileInputStream in = new FileInputStream(mLiveFile)) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024]; int n;
+                while ((n = in.read(buffer)) != -1) {
+                    if (out.size() + n > 16384) return;
+                    out.write(buffer, 0, n);
+                }
+                line = new String(out.toByteArray(), StandardCharsets.UTF_8);
+            }
         } catch (Exception e) {
             return;
         }
+        final String result = line;
+        mHandler.post(() -> { if (!mStopped) applyLive(result); });
+    }
+
+    private void applyLive(String line)
+    {
         if (line.equals(mLastLine)) return;
         mLastLine = line;
 
@@ -475,9 +526,16 @@ public final class GamePanel extends Presentation
         mPlace.setText(name.isEmpty() ? getContext().getString(R.string.panel_map_position,
             parse(f[1]), parse(f[2])) : name);
 
+        if (f.length >= 14 && mProgress != null) {
+            String team = f[10].isEmpty() ? "Equipo no disponible" : f[10];
+            mProgress.setText(team + "\nMedallas: " + (f[11].isEmpty() ? "—" : f[11])
+                + " · Pokédex: " + (f[12].isEmpty() ? "—" : f[12]) + " capturados / "
+                + (f[13].isEmpty() ? "—" : f[13]) + " vistos");
+        }
         String image = f[8].trim();
         int sx = parse(f[6]), sy = parse(f[7]);
         if (image.isEmpty() || sx < 0) {
+            mLoadedImage = null;
             mMap.setMap(null);
             mMap.setEmptyText(getContext().getString(R.string.panel_map_none));
             return;
@@ -488,7 +546,7 @@ public final class GamePanel extends Presentation
             new Thread(() -> {
                 Bitmap bmp = loadImage(image);
                 mHandler.post(() -> {
-                    if (mMap != null) {
+                    if (!mStopped && image.equals(mLoadedImage) && mMap != null) {
                         mMap.setMap(bmp);
                         if (bmp == null) mMap.setEmptyText(getContext().getString(R.string.panel_map_none));
                     }
@@ -512,7 +570,15 @@ public final class GamePanel extends Presentation
         }
         if (f == null || !f.isFile()) return null;
         try {
-            return BitmapFactory.decodeFile(f.getAbsolutePath());
+            if (!f.getCanonicalPath().startsWith(mGameDir.getCanonicalPath() + File.separator)) return null;
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(f.getAbsolutePath(), options);
+            int sample = 1;
+            while (options.outWidth / sample > 1600 || options.outHeight / sample > 1600) sample *= 2;
+            options.inJustDecodeBounds = false;
+            options.inSampleSize = sample;
+            return BitmapFactory.decodeFile(f.getAbsolutePath(), options);
         } catch (Throwable t) {
             return null;
         }

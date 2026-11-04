@@ -97,6 +97,7 @@ public class StoreActivity extends ControllerActivity
         showList();
         mPool.execute(() -> {
             List<Catalog.Game> fresh = Catalog.refresh(this, false);
+            Community.refresh(this);
             mMain.post(() -> {
                 if (isFinishing() || isDestroyed()) return;
                 mGames = fresh;
@@ -630,6 +631,12 @@ public class StoreActivity extends ControllerActivity
         chipScroll.setHorizontalScrollBarEnabled(false);
         chipScroll.addView(chips);
         info.addView(chipScroll);
+        TextView compatibilitySummary = Ui.text(this, Community.summary(this,g.id), 14, Ui.TEXT_DIM, false);
+        info.addView(compatibilitySummary);
+        android.widget.Button contribute = Ui.button(this, "Aportar mi prueba de compatibilidad", false);
+        contribute.setOnClickListener(v -> Community.contribute(this,g));
+        info.addView(contribute);
+
 
         if (!g.description.isEmpty()) {
             TextView d = Ui.text(this, g.description, 15, Ui.TEXT, false);
@@ -822,7 +829,7 @@ public class StoreActivity extends ControllerActivity
         mZipFor = g;
         mZipForPath = path;
         Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
-            .putExtra(Intent.EXTRA_MIME_TYPES, new String[] { "application/zip", "application/x-zip-compressed", "application/octet-stream" });
+            .putExtra(Intent.EXTRA_MIME_TYPES, new String[] { "application/zip", "application/x-zip-compressed", "application/x-rar-compressed", "application/vnd.rar", "application/x-7z-compressed", "application/octet-stream" });
         try {
             startActivityForResult(i, REQ_ZIP);
         } catch (Exception e) {
@@ -846,7 +853,7 @@ public class StoreActivity extends ControllerActivity
         }
         Toast.makeText(this, R.string.store_zip_copying, Toast.LENGTH_SHORT).show();
         mPool.execute(() -> {
-            File out = new File(getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir(), "import.zip");
+            File out = new File(getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir(), "import-" + java.util.UUID.randomUUID() + ".archive");
             boolean ok = false;
             try (InputStream in = getContentResolver().openInputStream(uri); OutputStream o = new FileOutputStream(out)) {
                 byte[] buf = new byte[1 << 16];

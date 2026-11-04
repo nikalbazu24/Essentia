@@ -16,6 +16,22 @@ import java.util.Map;
 public final class ButtonMap
 {
     private static final String KEY = "button_map_v1";
+    private static String sKey = KEY;
+    private static String scope(Context c) {
+        if (c instanceof android.app.Activity) {
+            String path = ((android.app.Activity)c).getIntent().getStringExtra(MainActivity.EXTRA_GAME_PATH);
+            if (path != null && !path.isEmpty()) {
+                try {
+                    byte[] bytes = java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(path.getBytes("UTF-8"));
+                    StringBuilder key = new StringBuilder(KEY + ":");
+                    for (byte b : bytes) key.append(String.format(java.util.Locale.ROOT, "%02x", b & 255));
+                    return key.toString();
+                } catch (Exception e) { throw new IllegalStateException(e); }
+            }
+        }
+        return KEY;
+    }
 
     /** Physical buttons that can be changed, in the order shown to the user. */
     public static final int[] BUTTONS = {
@@ -124,8 +140,10 @@ public final class ButtonMap
     {
         sMap.clear();
         sMap.putAll(DEFAULTS);
+        sKey = scope(c);
         try {
-            String json = c.getSharedPreferences(EssentiaSettings.PREFS, Context.MODE_PRIVATE).getString(KEY, null);
+            android.content.SharedPreferences prefs = c.getSharedPreferences(EssentiaSettings.PREFS, Context.MODE_PRIVATE);
+            String json = prefs.getString(sKey, prefs.getString(KEY, null));
             if (json == null) return;
             JSONObject o = new JSONObject(json);
             for (int b : BUTTONS) {
@@ -143,9 +161,8 @@ public final class ButtonMap
 
     public static synchronized void reset(Context c)
     {
-        sMap.clear();
-        sMap.putAll(DEFAULTS);
-        save(c);
+        c.getSharedPreferences(EssentiaSettings.PREFS, Context.MODE_PRIVATE).edit().remove(scope(c)).commit();
+        load(c);
     }
 
     /** Nintendo-style controllers: A/B and X/Y swapped. */
@@ -166,7 +183,7 @@ public final class ButtonMap
             JSONObject o = new JSONObject();
             for (Map.Entry<Integer, String> e : sMap.entrySet()) o.put(String.valueOf(e.getKey()), e.getValue());
             c.getSharedPreferences(EssentiaSettings.PREFS, Context.MODE_PRIVATE).edit()
-                .putString(KEY, o.toString()).commit();
+                .putString(scope(c), o.toString()).commit();
         } catch (Exception ignored) { }
     }
 }

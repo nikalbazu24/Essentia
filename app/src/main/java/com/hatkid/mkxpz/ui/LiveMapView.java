@@ -129,7 +129,7 @@ public final class LiveMapView extends View
             canvas.drawCircle(cx, cy, base + phase * base * 2.4f, mRing);
             canvas.drawCircle(cx, cy, base + Ui.dp(getContext(), 2), mOutline);
             canvas.drawCircle(cx, cy, base, mDot);
-            postInvalidateDelayed(40); // keep the marker pulsing
+            postInvalidateDelayed(100); // 10 Hz marker; leave CPU/GPU time to the game
         }
     }
 

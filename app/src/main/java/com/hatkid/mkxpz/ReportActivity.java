@@ -48,6 +48,7 @@ public class ReportActivity extends Activity
         String path = getIntent().getStringExtra(EXTRA_PATH);
         String error = getIntent().getStringExtra(EXTRA_ERROR);
         if (path == null) { finish(); return; }
+        Diagnostics.error(this,path,error);
         Library.Entry e = Library.find(this, path);
         String title = e != null ? e.displayTitle() : Games.readTitle(new File(path));
 
@@ -117,7 +118,7 @@ public class ReportActivity extends Activity
                 r.put("screen", e != null && !e.screenMode.isEmpty() ? e.screenMode : EssentiaSettings.screenMode(app));
                 String summary = error == null ? "(reporte manual)" : error.split("\n\n")[0];
                 r.put("error", (note.trim().isEmpty() ? "" : "Nota: " + note.trim() + "\n") + summary);
-                r.put("detail", error == null ? "" : error);
+                r.put("detail", (error == null ? "" : error) + (Diagnostics.enabled(app) ? "\n" + Diagnostics.summary(app,path) : ""));
                 if (cloud) {
                     if (scriptsFile != null && scriptsFile.length() < 12L * 1024 * 1024) {
                         r.put("scripts", Base64.encodeToString(readAll(scriptsFile), Base64.NO_WRAP));

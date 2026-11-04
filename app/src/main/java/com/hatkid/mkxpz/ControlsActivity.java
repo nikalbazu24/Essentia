@@ -86,6 +86,11 @@ public class ControlsActivity extends ControllerActivity
         header.addView(title);
         list.addView(header);
 
+        String gamePath = getIntent().getStringExtra(MainActivity.EXTRA_GAME_PATH);
+        TextView scope = Ui.text(this, gamePath == null ? "Controles generales" :
+            "Solo este juego · Restablecer vuelve a los controles generales", 14, Ui.ACCENT_LIGHT, false);
+        list.addView(scope);
+
         // Live tester
         TextView testTitle = Ui.text(this, getString(R.string.ctl_test_title), 18, Ui.ACCENT_LIGHT, true);
         testTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 22), 0, Ui.dp(this, 6));

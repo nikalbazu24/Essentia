@@ -73,7 +73,7 @@ public class UpdateService extends Service
     public static void start(Context c, String path, String title, String link, String zip, String version, boolean fresh)
     {
         synchronized (UpdateService.class) {
-            if (GameRemoval.busy()) {
+            if (GameRemoval.busy() || Games.isGameRunning(c)) {
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
                     android.widget.Toast.makeText(c.getApplicationContext(), R.string.delete_busy,
                         android.widget.Toast.LENGTH_LONG).show());

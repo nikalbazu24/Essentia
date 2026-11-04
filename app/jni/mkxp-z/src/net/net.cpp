@@ -6,6 +6,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #if defined(MKXPZ_SSL)
 #define CPPHTTPLIB_OPENSSL_SUPPORT
@@ -127,10 +128,21 @@ HTTPResponse HTTPRequest::get() {
     
     httplib::Headers head;
     
-    // Seems to need to be disabled for now, at least on macOS
+    // Android provides its current trusted roots before starting the engine.
 #ifdef MKXPZ_SSL
+#ifdef MKXPZ_BUILD_ANDROID
+    if (target.scheme_ == "https") {
+        const char *trust = getenv("ESSENTIA_CA_FILE");
+        if (trust && *trust) client->set_ca_cert_path(trust);
+        client->enable_server_certificate_verification(true);
+    }
+#else
     client->enable_server_certificate_verification(false);
 #endif
+#endif
+    client->set_connection_timeout(5, 0);
+    client->set_read_timeout(5, 0);
+    client->set_write_timeout(5, 0);
     client->set_follow_location(follow_location);
     
     for (auto const &h : _headers)
@@ -146,7 +158,7 @@ HTTPResponse HTTPRequest::get() {
     }
     else {
         int err = result.error();
-        const char *errname = httpErrorNames[err];
+        const char *errname = (err >= 0 && err < (int)(sizeof(httpErrorNames)/sizeof(httpErrorNames[0]))) ? httpErrorNames[err] : "Unknown";
         delete client;
         throw Exception(Exception::MKXPError, "Failed to GET %s (%i: %s)", destination.c_str(), err, errname);
     }
@@ -171,10 +183,21 @@ HTTPResponse HTTPRequest::post(StringMap &postData) {
     httplib::Headers head;
     httplib::Params params;
     
-    // Seems to need to be disabled for now, at least on macOS
+    // Android provides its current trusted roots before starting the engine.
 #ifdef MKXPZ_SSL
+#ifdef MKXPZ_BUILD_ANDROID
+    if (target.scheme_ == "https") {
+        const char *trust = getenv("ESSENTIA_CA_FILE");
+        if (trust && *trust) client->set_ca_cert_path(trust);
+        client->enable_server_certificate_verification(true);
+    }
+#else
     client->enable_server_certificate_verification(false);
 #endif
+#endif
+    client->set_connection_timeout(5, 0);
+    client->set_read_timeout(5, 0);
+    client->set_write_timeout(5, 0);
     client->set_follow_location(follow_location);
     
     for (auto const &h : _headers)
@@ -193,7 +216,7 @@ HTTPResponse HTTPRequest::post(StringMap &postData) {
     }
     else {
         int err = result.error();
-        const char *errname = httpErrorNames[err];
+        const char *errname = (err >= 0 && err < (int)(sizeof(httpErrorNames)/sizeof(httpErrorNames[0]))) ? httpErrorNames[err] : "Unknown";
         delete client;
         throw Exception(Exception::MKXPError, "Failed to POST %s (%i: %s)", destination.c_str(), err, errname);
     }
@@ -216,10 +239,21 @@ HTTPResponse HTTPRequest::post(const char *body, const char *content_type) {
     
     httplib::Headers head;
     
-    // Seems to need to be disabled for now, at least on macOS
+    // Android provides its current trusted roots before starting the engine.
 #ifdef MKXPZ_SSL
+#ifdef MKXPZ_BUILD_ANDROID
+    if (target.scheme_ == "https") {
+        const char *trust = getenv("ESSENTIA_CA_FILE");
+        if (trust && *trust) client->set_ca_cert_path(trust);
+        client->enable_server_certificate_verification(true);
+    }
+#else
     client->enable_server_certificate_verification(false);
 #endif
+#endif
+    client->set_connection_timeout(5, 0);
+    client->set_read_timeout(5, 0);
+    client->set_write_timeout(5, 0);
     client->set_follow_location(true);
     
     for (auto const &h : _headers)
@@ -236,7 +270,7 @@ HTTPResponse HTTPRequest::post(const char *body, const char *content_type) {
     else {
         int err = result.error();
         delete client;
-        throw Exception(Exception::MKXPError, "Failed to POST %s (%i: %s)", destination.c_str(), err, httpErrorNames[err]);
+        throw Exception(Exception::MKXPError, "Failed to POST %s (%i: %s)", destination.c_str(), err, (err >= 0 && err < (int)(sizeof(httpErrorNames)/sizeof(httpErrorNames[0]))) ? httpErrorNames[err] : "Unknown");
     }
     delete client;
     return ret;

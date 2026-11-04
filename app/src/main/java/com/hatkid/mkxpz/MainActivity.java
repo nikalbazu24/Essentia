@@ -199,10 +199,24 @@ public class MainActivity extends SDLActivity
             boolean autoEngine = in != null && in.getBooleanExtra(EXTRA_AUTO_ENGINE, false);
             android.system.Os.setenv("ESSENTIA_AUTO_FALLBACK", autoEngine ? fallback.getAbsolutePath() : "", true);
 
+            try {
+                String trust = NetworkTrust.prepare(this).getAbsolutePath();
+                android.system.Os.setenv("ESSENTIA_CA_FILE", trust, true);
+                android.system.Os.setenv("SSL_CERT_FILE", trust, true);
+            } catch (Exception e) { Log.w(TAG,"No se pudo preparar la conexión segura"); }
+
             // Live map for the second screen (written by essentia_live.rb)
             //noinspection ResultOfMethodCallIgnored
             new java.io.File(getCacheDir(), "essentia_live.txt").delete();
             boolean livePanel = EssentiaSettings.GAME2_PANEL.equals(EssentiaSettings.gameSecondScreen(this));
+            java.io.File helpRoot = new java.io.File(android.os.Environment.getExternalStorageDirectory(),
+                "Essentia/Respaldos/" + Saves.safeName(getIntent().getStringExtra(EXTRA_TITLE)));
+            helpRoot.mkdirs();
+            android.system.Os.setenv("ESSENTIA_HELP_BACKUP_DIR", new java.io.File(helpRoot,
+                "antes-ayuda-" + System.currentTimeMillis()).getAbsolutePath(), true);
+            android.system.Os.setenv("ESSENTIA_PROGRESS_FILE", GameProgress.file(this, GAME_PATH).getAbsolutePath(), true);
+            android.system.Os.setenv("ESSENTIA_DIAGNOSTICS_FILE", Diagnostics.enabled(this)
+                ? Diagnostics.file(this,GAME_PATH,"fps").getAbsolutePath() : "", true);
             android.system.Os.setenv("ESSENTIA_LIVE_FILE",
                 livePanel ? new java.io.File(getCacheDir(), "essentia_live.txt").getAbsolutePath() : "", true);
 
@@ -605,8 +619,17 @@ public class MainActivity extends SDLActivity
     }
 
     /** Sends a quick action to the game (screenshot, team, bag, save...). */
+    private boolean mHelpConfirmed;
     public void gameAction(String command)
     {
+        if (!mHelpConfirmed && java.util.Arrays.asList("through","noenc","heal","money","candy","testpokemon").contains(command)) {
+            new AlertDialog.Builder(this).setTitle("Ayudas opcionales")
+                .setMessage("Pueden alterar la experiencia o no ser compatibles con este juego. Essentia conservará una copia de las partidas guardadas antes de aplicar la primera ayuda. No puede respaldar el progreso que todavía no guardaste.")
+                .setNegativeButton("Cancelar",null).setPositiveButton("Activar esta sesión",(d,w)->{
+                    mHelpConfirmed=true;GameLink.send(this,command);
+                }).show();
+            return;
+        }
         GameLink.send(this, command);
     }
 
@@ -645,6 +668,8 @@ public class MainActivity extends SDLActivity
                 if (mPanel != null) mPanel.setToggle("noenc", result.equals("1"));
                 break;
             case "heal": msg = getString(result.equals("ok") ? R.string.act_heal_ok : R.string.act_unsupported); break;
+            case "candy": msg = result.equals("ok") ? "Añadidos 5 caramelos raros" : getString(R.string.act_unsupported); break;
+            case "testpokemon": msg = result.equals("ok") ? "Añadido un Pikachu de prueba de nivel 5" : getString(R.string.act_unsupported); break;
             case "money": msg = getString(result.equals("ok") ? R.string.act_money_ok : R.string.act_unsupported); break;
             case "speed": break;
             case "updater":
@@ -734,6 +759,18 @@ public class MainActivity extends SDLActivity
             },
             new com.hatkid.mkxpz.ui.GamePanel.Actions() {
                 @Override public void controls() { com.hatkid.mkxpz.ui.ControlsGuide.showDialog(MainActivity.this); }
+                @Override public void progress() {
+                    new AlertDialog.Builder(MainActivity.this).setTitle("Equipo y logros")
+                        .setMessage(GameProgress.summary(MainActivity.this,gamePath())).setPositiveButton("Cerrar",null).show();
+                }
+                @Override public void notes() {
+                    android.widget.EditText input=new android.widget.EditText(MainActivity.this);
+                    input.setMinLines(4);
+                    input.setText(getSharedPreferences("essentia_notes",MODE_PRIVATE).getString(gamePath(),""));
+                    new AlertDialog.Builder(MainActivity.this).setTitle("Mis notas del juego").setView(input)
+                        .setNegativeButton("Cancelar",null).setPositiveButton("Guardar",(d,w)->
+                            getSharedPreferences("essentia_notes",MODE_PRIVATE).edit().putString(gamePath(),input.getText().toString()).commit()).show();
+                }
                 @Override public void menu() { showExitDialog(); }
                 @Override public void game(String command) { gameAction(command); }
                 @Override public void turbo() { toggleTurbo(); }

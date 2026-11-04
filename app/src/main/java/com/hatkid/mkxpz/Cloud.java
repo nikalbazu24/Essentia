@@ -92,11 +92,7 @@ public final class Cloud
         if (code != 200) throw new java.io.IOException("HTTP " + code);
         String text;
         try (InputStream in = con.getInputStream()) {
-            ByteArrayOutputStream buf = new ByteArrayOutputStream();
-            byte[] b = new byte[16384];
-            int r;
-            while ((r = in.read(b)) > 0) buf.write(b, 0, r);
-            text = buf.toString("UTF-8");
+            text = new String(SaveTransaction.read(in, 32L * 1024 * 1024), "UTF-8");
         } finally {
             con.disconnect();
         }

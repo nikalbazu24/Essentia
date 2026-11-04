@@ -126,11 +126,12 @@ public class LibraryActivity extends ControllerActivity
         }
         applyViewMode();
 
+
         if (!Games.hasAllFilesAccess()) {
             Games.askAllFilesAccess(this, REQ_ALL_FILES, this::finish);
         } else if (savedInstanceState == null) {
             Updater.check(this, () -> { }, false);
-            mRoot.postDelayed(() -> { if (!isFinishing()) com.hatkid.mkxpz.ui.WhatsNew.showIfNew(this); }, 1800);
+            mRoot.postDelayed(() -> { if (!isFinishing() && getPreferences(MODE_PRIVATE).getBoolean("guide_v2", false)) com.hatkid.mkxpz.ui.WhatsNew.showIfNew(this); }, 1800);
             rescanFolders();
             if (EssentiaSettings.flag(this, EssentiaSettings.RESUME_LAST, false)) {
                 List<Library.Entry> all = Library.load(this);
@@ -141,10 +142,21 @@ public class LibraryActivity extends ControllerActivity
         }
     }
 
+    private boolean mResumed;
+    private void showGuideIfNeeded() {
+        if (!mResumed || isFinishing() || isDestroyed() || !Games.hasAllFilesAccess()
+            || getPreferences(MODE_PRIVATE).getBoolean("guide_v2",false)) return;
+        getPreferences(MODE_PRIVATE).edit().putBoolean("guide_v2",true).apply();
+        getSharedPreferences(EssentiaSettings.PREFS,MODE_PRIVATE).edit().putInt("whats_new_tour",5).apply();
+        startActivity(new Intent(this,GuideActivity.class));
+    }
+
     @Override
     protected void onResume()
     {
         super.onResume();
+        mResumed=true;
+        mRoot.postDelayed(this::showGuideIfNeeded,2600);
         if (mThemeStamp != Ui.themeStamp()) { recreate(); return; }
         MusicPlayer.resume(this);
         UpdateService.setListener(() -> runOnUiThread(this::refreshUpdates));
@@ -156,6 +168,7 @@ public class LibraryActivity extends ControllerActivity
     @Override
     protected void onPause()
     {
+        mResumed=false;
         super.onPause();
         MusicPlayer.pause();
         UpdateService.setListener(null);
@@ -202,7 +215,7 @@ public class LibraryActivity extends ControllerActivity
         flask.setImageResource(R.drawable.ic_launcher_foreground);
         int fs = Ui.dp(this, 150);
         col.addView(flask, new LinearLayout.LayoutParams(fs, fs));
-        TextView name = Ui.text(this, getString(R.string.app_name), 34, Ui.TEXT, true);
+        TextView name = Ui.text(this, "Essentia by Díptico", 34, Ui.TEXT, true);
         name.setLetterSpacing(0.12f);
         name.setGravity(Gravity.CENTER);
         col.addView(name);
@@ -611,6 +624,7 @@ public class LibraryActivity extends ControllerActivity
             : EssentiaSettings.VIEW_GRID.equals(mView) ? EssentiaSettings.VIEW_LIST : EssentiaSettings.VIEW_SHELF;
         EssentiaSettings.setViewMode(this, mView);
         applyViewMode();
+
         focusSelected();
         String name = getString(isShelf() ? R.string.lib_view_shelf
             : isList() ? R.string.lib_view_list : R.string.lib_view_grid);
@@ -932,6 +946,7 @@ public class LibraryActivity extends ControllerActivity
         mCount.setText(getResources().getQuantityString(R.plurals.lib_count, mGames.size(), mGames.size()));
         if (mSelected >= mGames.size()) mSelected = Math.max(0, mGames.size() - 1);
         applyViewMode();
+
         select(mSelected);
         focusSelected();
     }
@@ -972,6 +987,12 @@ public class LibraryActivity extends ControllerActivity
     private void updateSecondScreen()
     {
         if (mSecond == null) return;
+        List<Catalog.Game> news = Catalog.cached(this);
+        String newsText = news.isEmpty() ? "Descubre fangames en la tienda" : "De la tienda · "
+            + news.get(0).title + (news.size()>1 ? " · " + news.get(1).title : "");
+        mSecond.navigation(() -> select(mGames.isEmpty()?0:(mSelected+mGames.size()-1)%mGames.size()),
+            () -> play(mSelected), () -> select(mGames.isEmpty()?0:(mSelected+1)%mGames.size()),
+            () -> startActivity(new Intent(this,StoreActivity.class)), newsText);
         String footer = getResources().getQuantityString(R.plurals.lib_count, mGames.size(), mGames.size())
             + (mTotalPlay > 0 ? "  ·  " + getString(R.string.stat_total, GameStats.duration(this, mTotalPlay)) : "")
             + "  ·  " + getString(R.string.lib_second_hint);
@@ -1112,6 +1133,10 @@ public class LibraryActivity extends ControllerActivity
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
         labels.add(getString(R.string.lib_play)); actions.add(() -> play(pos));
+        labels.add("Herramientas, notas y recuperación"); actions.add(() -> startActivity(
+            new Intent(this, GuideActivity.class).putExtra(MainActivity.EXTRA_GAME_PATH, e.path)));
+        labels.add("Controles de este juego"); actions.add(() -> startActivity(
+            new Intent(this, ControlsActivity.class).putExtra(MainActivity.EXTRA_GAME_PATH, e.path)));
         labels.add(getString(R.string.opt_cover)); actions.add(() -> pickCover(e));
         if (!e.cover.isEmpty()) { labels.add(getString(R.string.opt_cover_reset)); actions.add(() -> resetCover(e)); }
         labels.add(getString(R.string.opt_rename)); actions.add(() -> rename(e));
@@ -1402,6 +1427,10 @@ public class LibraryActivity extends ControllerActivity
 
     private void importSaves(Library.Entry e)
     {
+        if (Games.isGameRunning(this) || UpdateService.hasWork() || GameRemoval.busy()) {
+            Toast.makeText(this,"Cierra los juegos y espera a que terminen las instalaciones",Toast.LENGTH_LONG).show();
+            return;
+        }
         mPending = e;
         File target = saveDirOf(e);
         List<File> legacy = Saves.legacy(this);
@@ -1456,6 +1485,9 @@ public class LibraryActivity extends ControllerActivity
             .setPositiveButton(R.string.imp_do, (d, w) -> {
                 List<File> chosen = new ArrayList<>();
                 for (int i = 0; i < files.size(); i++) if (checked[i]) chosen.add(files.get(i));
+                if (Games.isGameRunning(this) || UpdateService.hasWork() || GameRemoval.busy()) {
+                    Toast.makeText(this,"Cierra los juegos antes de importar partidas",Toast.LENGTH_LONG).show(); return;
+                }
                 int n = Saves.copyFiles(chosen, target);
                 Toast.makeText(this, getResources().getQuantityString(R.plurals.imp_done, n, n), Toast.LENGTH_LONG).show();
             })
@@ -1545,6 +1577,9 @@ public class LibraryActivity extends ControllerActivity
                 }
                 List<String> names = new ArrayList<>();
                 for (Uri u : uris) names.add(displayName(u));
+                if (Games.isGameRunning(this) || UpdateService.hasWork() || GameRemoval.busy()) {
+                    Toast.makeText(this,"Cierra los juegos antes de importar partidas",Toast.LENGTH_LONG).show(); return;
+                }
                 int n = Saves.copyUris(this, uris, names, saveDirOf(mPending));
                 Toast.makeText(this, getResources().getQuantityString(R.plurals.imp_done, n, n), Toast.LENGTH_LONG).show();
                 break;

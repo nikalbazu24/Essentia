@@ -334,6 +334,7 @@ try { exp } catch (...) {}
         const char *live = getenv("ESSENTIA_LIVE_FILE");
         if (live && *live)
             preloadScripts.push_back("essentia_preload/essentia_live.rb");
+            preloadScripts.push_back("essentia_preload/essentia_diagnostics.rb");
     }
 
     // Essentia: quick actions (turbo, screenshots, team/bag/save from the panel)

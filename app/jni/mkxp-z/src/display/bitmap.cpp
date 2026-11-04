@@ -629,17 +629,13 @@ Bitmap::Bitmap(int width, int height)
 
 Bitmap::Bitmap(void *pixeldata, int width, int height)
 {
-    SDL_Surface *surface = SDL_CreateRGBSurface(0, width, height, p->format->BitsPerPixel,
-                                                p->format->Rmask,
-                                                p->format->Gmask,
-                                                p->format->Bmask,
-                                                p->format->Amask);
+    SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, width, height, 32, SDL_PIXELFORMAT_ABGR8888);
     
     if (!surface)
         throw Exception(Exception::SDLError, "Error creating Bitmap: %s",
                         SDL_GetError());
     
-    memcpy(surface->pixels, pixeldata, width*height*(p->format->BitsPerPixel/8));
+    memcpy(surface->pixels, pixeldata, (size_t)width * height * 4);
     
     if (surface->w > glState.caps.maxTexSize || surface->h > glState.caps.maxTexSize)
     {

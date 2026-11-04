@@ -46,6 +46,11 @@
 struct SpritePrivate
 {
     Bitmap *bitmap;
+    // A large tileset stays CPU-backed; upload only this sprite's selected tile.
+    Bitmap *megaCrop;
+    bool megaDirty;
+    sigslot::connection megaModified;
+    void invalidateMega() { megaDirty = true; }
     
     Quad quad;
     Transform trans;
@@ -99,6 +104,8 @@ struct SpritePrivate
     
     SpritePrivate()
     : bitmap(0),
+    megaCrop(0),
+    megaDirty(true),
     srcRect(&tmp.rect),
     mirrored(false),
     bushDepth(0),
@@ -134,6 +141,8 @@ struct SpritePrivate
     
     ~SpritePrivate()
     {
+        megaModified.disconnect();
+        delete megaCrop;
         srcRectCon.disconnect();
         prepareCon.disconnect();
     }
@@ -144,15 +153,16 @@ struct SpritePrivate
             return;
         
         /* Calculate effective (normalized) bush depth */
+        float height = bitmap->isMega() ? srcRect->height : bitmap->height();
+        if (height <= 0) { efBushDepth = 1.0f; return; }
         float texBushDepth = (bushDepth / trans.getScale().y) -
-        (srcRect->y + srcRect->height) +
-        bitmap->height();
-        
-        efBushDepth = 1.0f - texBushDepth / bitmap->height();
+            ((bitmap->isMega() ? 0 : srcRect->y) + srcRect->height) + height;
+        efBushDepth = 1.0f - texBushDepth / height;
     }
     
     void onSrcRectChange()
     {
+        megaDirty = true;
         FloatRect rect = srcRect->toFloatRect();
         Vec2i bmSize;
         
@@ -265,7 +275,7 @@ struct SpritePrivate
             int x = -wave.amp;
             int w = width - x * 2;
             
-            FloatRect tex(x, srcRect->y, w, srcRect->height);
+            FloatRect tex(x, bitmap->isMega() ? 0 : srcRect->y, w, srcRect->height);
             
             Quad::setTexPosRect(&wave.qArray.vertices[0], tex, tex);
             wave.qArray.commit();
@@ -304,6 +314,27 @@ struct SpritePrivate
     
     void prepare()
     {
+        if (!nullOrDisposed(bitmap) && bitmap->isMega()) {
+            if (megaDirty) {
+                delete megaCrop;
+                megaCrop = 0;
+                megaDirty = false;
+                int x = srcRect->x, y = srcRect->y;
+                int w = clamp<int>(srcRect->width, 0, bitmap->width() - x);
+                int h = clamp<int>(srcRect->height, 0, bitmap->height() - y);
+                // Games set the atlas first and its 32x32 source rectangle next.
+                // Do not allocate the entire atlas while waiting for that rectangle.
+                if (x >= 0 && y >= 0 && w > 0 && h > 0 &&
+                    w <= Bitmap::maxSize() && h <= Bitmap::maxSize()) {
+                    megaCrop = new Bitmap(w, h);
+                    megaCrop->blt(0, 0, *bitmap, IntRect(x, y, w, h));
+                    FloatRect texture(0, 0, w, h);
+                    quad.setTexRect(mirrored ? texture.hFlipped() : texture);
+                    quad.setPosRect(texture);
+                }
+            }
+            if (!megaCrop) { isVisible = false; return; }
+        }
         if (wave.dirty)
         {
             updateWave();
@@ -366,12 +397,16 @@ void Sprite::setBitmap(Bitmap *bitmap)
     if (p->bitmap == bitmap)
         return;
     
+    p->megaModified.disconnect();
+    delete p->megaCrop;
+    p->megaCrop = 0;
+    p->megaDirty = true;
     p->bitmap = bitmap;
-    
+
     if (nullOrDisposed(bitmap))
         return;
-    
-    bitmap->ensureNonMega();
+    if (bitmap->isMega())
+        p->megaModified = bitmap->modified.connect(&SpritePrivate::invalidateMega, p);
     
     *p->srcRect = bitmap->rect();
     p->onSrcRectChange();
@@ -647,7 +682,7 @@ void Sprite::draw()
     
     glState.blendMode.pushSet(p->blendType);
     
-    p->bitmap->bindTex(*base);
+    (p->bitmap->isMega() ? p->megaCrop : p->bitmap)->bindTex(*base);
     
     if (p->wave.active)
         p->wave.qArray.draw();

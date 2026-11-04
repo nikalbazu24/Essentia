@@ -147,7 +147,11 @@ public final class GameUpdater
             ? c.get("PASTEBIN_URL") : c.get("VERSION_PASTEBIN");
         if (url == null || url.isEmpty()) throw new IOException("no version link");
 
-        String text = new String(readAll(open(url, null).getInputStream()), StandardCharsets.UTF_8);
+        HttpURLConnection connection = open(url, null);
+        String text;
+        try (InputStream in = connection.getInputStream()) {
+            text = new String(SaveTransaction.read(in, 1024 * 1024), StandardCharsets.UTF_8);
+        } finally { connection.disconnect(); }
         for (String line : text.split("\n")) {
             line = line.trim();
             if (!line.contains("=")) continue;
@@ -164,9 +168,14 @@ public final class GameUpdater
 
     static String host(String url)
     {
-        if (url.contains("mega.nz")) return "MEGA";
-        if (url.contains("dropbox.com")) return "Dropbox";
-        if (url.contains("github.com")) return "GitHub";
+        try {
+            URL parsed = new URL(url);
+            if (!"https".equalsIgnoreCase(parsed.getProtocol()) || parsed.getUserInfo() != null) return null;
+            String h = parsed.getHost().toLowerCase(Locale.ROOT);
+            if (h.equals("mega.nz") || h.equals("mega.co.nz")) return "MEGA";
+            if (h.equals("dropbox.com") || h.endsWith(".dropbox.com")) return "Dropbox";
+            if (h.equals("github.com")) return "GitHub";
+        } catch (Exception ignored) { }
         return null;
     }
 
@@ -175,15 +184,14 @@ public final class GameUpdater
     /** Downloads and installs the new version. Returns the saves backup folder (or null). */
     public static File install(File gameDir, String link, File backupRoot, Progress p) throws Exception
     {
-        File work = new File(gameDir.getParentFile(), "." + gameDir.getName() + ".essentia-update");
-        deleteTree(work);
+        File work = new File(gameDir.getParentFile(), ".essentia-update-" + java.util.UUID.randomUUID());
         if (!work.mkdirs()) throw new IOException("can't create " + work);
         try {
             // 1. download
             File archive = download(link, work, p);
             if (p.cancelled()) return null;
             String lower = archive.getName().toLowerCase(Locale.ROOT);
-            if (!lower.endsWith(".zip")) throw new UnsupportedFormat(archive.getName());
+            archive = GameArchives.zip(archive, work, p);
 
             // 2. back up the saves, then 3. install straight from the zip
             File backup = backupSaves(gameDir, backupRoot);
@@ -208,7 +216,10 @@ public final class GameUpdater
      */
     public static File installLocalZip(File zip, File gameDir, File backupRoot, Progress p) throws Exception
     {
-        if (!zip.getName().toLowerCase(Locale.ROOT).endsWith(".zip")) throw new UnsupportedFormat(zip.getName());
+        File work = new File(gameDir.getParentFile(), ".essentia-update-" + java.util.UUID.randomUUID());
+        if (!work.mkdirs()) throw new IOException("No se puede preparar la instalación");
+        try {
+        zip = GameArchives.zip(zip, work, p);
         if (!gameDir.isDirectory() && !gameDir.mkdirs()) throw new IOException("can't create " + gameDir);
         File backup = backupSaves(gameDir, backupRoot);
         List<String> ignored = new ArrayList<>();
@@ -219,30 +230,26 @@ public final class GameUpdater
         }
         installFromZip(zip, gameDir, ignored, p);
         return backup;
+        } finally { deleteTree(work); }
     }
 
     /** True when the zip holds an RPG Maker game. */
     public static boolean zipHasGame(File zip)
     {
-        try (ZipFile z = openZip(zip)) {
-            return gameRoot(z) != null;
-        } catch (Exception e) {
-            return false;
-        }
+        try { return GameArchives.gameRoot(zip) != null; }
+        catch (Exception | LinkageError e) { return false; }
     }
 
-    /** The game's name inside the zip (its folder), or the zip's own name. */
     public static String zipGameName(File zip)
     {
-        String base = zip.getName().replaceAll("(?i)\\.zip$", "");
-        try (ZipFile z = openZip(zip)) {
-            String root = gameRoot(z);
-            if (root != null && root.length() > 1) {
-                String r = root.substring(0, root.length() - 1);
-                return r.substring(r.lastIndexOf('/') + 1);
+        try {
+            String root = GameArchives.gameRoot(zip);
+            if (!root.isEmpty()) {
+                String clean = root.substring(0, root.length() - 1);
+                return clean.substring(clean.lastIndexOf('/') + 1);
             }
-        } catch (Exception ignored) { }
-        return base;
+        } catch (Exception | LinkageError ignored) { }
+        return zip.getName().replaceAll("(?i)\\.(zip|rar|7z)$", "");
     }
 
     /** Downloads a direct link (GitHub, Dropbox, MEGA or any .zip) into a folder. */
@@ -307,7 +314,7 @@ public final class GameUpdater
             name = path.substring(path.lastIndexOf('/') + 1);
         }
         if (name.isEmpty()) name = "update.zip";
-        name = java.net.URLDecoder.decode(name, "UTF-8");
+        name = Saves.safeName(new File(java.net.URLDecoder.decode(name, "UTF-8").replace('\\', '/')).getName());
         HttpURLConnection c = open(url, null);
         File f = new File(dir, name);
         stream(c.getInputStream(), length(c), f, null, p);
@@ -478,59 +485,7 @@ public final class GameUpdater
      */
     private static void installFromZip(File zip, File gameDir, List<String> ignored, Progress p) throws Exception
     {
-        try (ZipFile z = openZip(zip)) {
-            String root = gameRoot(z);
-            if (root == null) throw new IOException("no game in the download");
-            String canonicalGame = gameDir.getCanonicalPath() + File.separator;
-            Map<String, Map<String, String>> listings = new java.util.HashMap<>();
-
-            // what will be written, and the space it needs
-            List<ZipEntry> todo = new ArrayList<>();
-            long needed = 0;
-            for (Enumeration<? extends ZipEntry> e = z.entries(); e.hasMoreElements(); ) {
-                ZipEntry entry = e.nextElement();
-                if (entry.isDirectory()) continue;
-                String n = entry.getName().replace('\\', '/');
-                if (!n.startsWith(root)) continue;
-                String rel = n.substring(root.length());
-                if (rel.isEmpty()) continue;
-                String first = rel.contains("/") ? rel.substring(0, rel.indexOf('/')).toLowerCase(Locale.ROOT) : "";
-                if (ignored.contains(first) || first.contains("poke_updater")) continue;
-                if (!rel.contains("/") && Saves.looksLikeSave(rel)) continue; // never replace saves
-                todo.add(entry);
-                File dest = resolve(gameDir, rel, listings, false);
-                if (dest == null || !dest.exists()) needed += Math.max(0, entry.getSize());
-            }
-            long free = new StatFs(gameDir.getAbsolutePath()).getAvailableBytes();
-            if (free < needed + 32L * 1024 * 1024) throw new NoSpace(needed + 32L * 1024 * 1024);
-
-            byte[] buf = new byte[1 << 16];
-            int done = 0, written = 0;
-            long last = 0;
-            for (ZipEntry entry : todo) {
-                if (p.cancelled()) return;
-                String rel = entry.getName().replace('\\', '/').substring(root.length());
-                File dest = resolve(gameDir, rel, listings, true);
-                if (dest != null && dest.getCanonicalPath().startsWith(canonicalGame)) {
-                    if (!(dest.isFile() && dest.length() == entry.getSize() && entry.getCrc() != -1
-                          && crc(dest, buf) == entry.getCrc())) {
-                        try (InputStream in = z.getInputStream(entry);
-                             OutputStream out = new java.io.BufferedOutputStream(new FileOutputStream(dest), 1 << 16)) {
-                            int n;
-                            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-                        }
-                        written++;
-                    }
-                }
-                done++;
-                long now = System.currentTimeMillis();
-                if (now - last > 400) {
-                    last = now;
-                    p.update(1, (float) done / todo.size(), done + " / " + todo.size());
-                }
-            }
-            p.update(1, 1f, written + " / " + todo.size());
-        }
+        ArchiveInstall.install(zip, gameDir, ignored, p);
     }
 
     private static long crc(File f, byte[] buf) throws IOException

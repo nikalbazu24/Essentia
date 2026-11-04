@@ -42,15 +42,13 @@ public final class Saves
 
     private static boolean canWrite(File dir)
     {
+        File probe = new File(dir, ".essentia-probe-" + java.util.UUID.randomUUID());
+        boolean created = false;
         try {
-            File probe = new File(dir, ".essentia_write_test");
-            if (probe.createNewFile() || probe.exists()) {
-                //noinspection ResultOfMethodCallIgnored
-                probe.delete();
-                return true;
-            }
-        } catch (Exception ignored) { }
-        return false;
+            created = probe.createNewFile();
+            return created;
+        } catch (Exception ignored) { return false; }
+        finally { if (created) probe.delete(); }
     }
 
     public static String safeName(String s)
@@ -120,16 +118,11 @@ public final class Saves
 
     private static boolean copy(InputStream in, File targetDir, String name) throws Exception
     {
-        File dest = new File(targetDir, name);
-        if (dest.exists()) {
-            File backup = new File(targetDir, name + ".respaldo-" + System.currentTimeMillis());
-            if (!dest.renameTo(backup)) Log.w(TAG, "Could not back up " + dest);
-        }
-        try (OutputStream out = new FileOutputStream(dest)) {
-            byte[] buf = new byte[64 * 1024];
-            int r;
-            while ((r = in.read(buf)) > 0) out.write(buf, 0, r);
-        }
+        if (!looksLikeSave(name)) throw new java.io.IOException("El archivo no es una partida reconocida");
+        SaveTransaction.child(targetDir, name);
+        byte[] data = SaveTransaction.read(in, SaveTransaction.LIMIT);
+        File backups = new File(Environment.getExternalStorageDirectory(), "Essentia/Respaldos/" + safeName(targetDir.getName()));
+        SaveTransaction.restore(targetDir, backups, java.util.Collections.singletonMap(name, data));
         return true;
     }
 }
