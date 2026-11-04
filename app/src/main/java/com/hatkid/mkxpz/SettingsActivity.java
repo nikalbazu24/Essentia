@@ -526,7 +526,7 @@ public class SettingsActivity extends ControllerActivity
         TextView urlLabel = Ui.text(this, getString(R.string.set_cloud_url), 15, Ui.TEXT, true);
         urlLabel.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 4));
         mList.addView(urlLabel);
-        android.widget.EditText url = new android.widget.EditText(this);
+        android.widget.EditText url = com.hatkid.mkxpz.ui.Ui.input(this);
         url.setSingleLine(true);
         url.setTextColor(Ui.TEXT);
         url.setHint("https://script.google.com/macros/s/…/exec");
@@ -537,7 +537,7 @@ public class SettingsActivity extends ControllerActivity
         TextView keyLabel = Ui.text(this, getString(R.string.set_cloud_key), 15, Ui.TEXT, true);
         keyLabel.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 4));
         mList.addView(keyLabel);
-        android.widget.EditText key = new android.widget.EditText(this);
+        android.widget.EditText key = com.hatkid.mkxpz.ui.Ui.input(this);
         key.setSingleLine(true);
         key.setTextColor(Ui.TEXT);
         key.setText(Cloud.backupKey(this));

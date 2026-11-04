@@ -18,8 +18,8 @@ public class AiTranslationActivity extends ControllerActivity {
         LinearLayout form=new LinearLayout(this);form.setOrientation(1);form.setBackground(Ui.rounded(this,Ui.SURFACE,16));form.setPadding(p,p,p,p);list.addView(form);
         form.setVisibility(AiTranslation.enabled(this)?android.view.View.VISIBLE:android.view.View.GONE);
         configure.setOnClickListener(v->form.setVisibility(form.getVisibility()==android.view.View.VISIBLE?android.view.View.GONE:android.view.View.VISIBLE));
-        EditText model=new EditText(this);model.setTextColor(Ui.TEXT);model.setHint("Nombre del modelo habilitado en tu cuenta API");model.setText(AiTranslation.prefs(this).getString("model",""));form.addView(model);
-        EditText key=new EditText(this);key.setTextColor(Ui.TEXT);key.setHint("Clave nueva (vacío conserva la guardada)");key.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);form.addView(key);
+        EditText model=com.hatkid.mkxpz.ui.Ui.input(this);model.setTextColor(Ui.TEXT);model.setHint("Nombre del modelo habilitado en tu cuenta API");model.setText(AiTranslation.prefs(this).getString("model",""));form.addView(model);
+        EditText key=com.hatkid.mkxpz.ui.Ui.input(this);key.setTextColor(Ui.TEXT);key.setHint("Clave nueva (vacío conserva la guardada)");key.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);form.addView(key);
         CheckBox active=new CheckBox(this);active.setText("Activar traducción mediante mi propia API");active.setTextColor(Ui.TEXT);active.setChecked(AiTranslation.enabled(this));form.addView(active);
         String error=AiTranslation.prefs(this).getString("last_error","");if(!error.isEmpty())form.addView(Ui.text(this,error,15,Ui.GOLD,false));
         Button save=Ui.button(this,"Guardar mi elección",false);form.addView(save);

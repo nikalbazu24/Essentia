@@ -936,10 +936,10 @@ public class StoreActivity extends ControllerActivity
         box.setOrientation(LinearLayout.VERTICAL);
         int p = Ui.dp(this, 20);
         box.setPadding(p, Ui.dp(this, 8), p, 0);
-        EditText name = new EditText(this);
+        EditText name = com.hatkid.mkxpz.ui.Ui.input(this);
         name.setHint(R.string.store_suggest_name);
         box.addView(name);
-        EditText link = new EditText(this);
+        EditText link = com.hatkid.mkxpz.ui.Ui.input(this);
         link.setHint(R.string.store_suggest_link);
         box.addView(link);
         AlertDialog d = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)

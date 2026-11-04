@@ -111,6 +111,13 @@ public final class Ui
         return s;
     }
 
+    public static android.widget.EditText input(Context c) {
+        android.widget.EditText input=new android.widget.EditText(c);
+        input.setTextColor(TEXT);input.setHintTextColor(TEXT_DIM);input.setTextSize(16);
+        input.setBackground(focusable(c,SURFACE_HI,12));int p=dp(c,14);input.setPadding(p,p,p,p);
+        input.setMinHeight(dp(c,48));return input;
+    }
+
     public static Button button(Context c, String text, boolean primary)
     {
         Button b = new Button(c);

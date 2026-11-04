@@ -52,7 +52,7 @@ public class GuideActivity extends ControllerActivity {
                         if(catalog!=null&&!Catalog.webUrl(catalog.page).isEmpty())button("Visitar al creador",()->open(catalog.page));
                     }else if(tab==1){
                         text("Mis notas",21);text("Se guardan en este dispositivo para este juego.",16);
-                        notes=new EditText(this);notes.setTextColor(Ui.TEXT);notes.setHintTextColor(Ui.TEXT_DIM);notes.setMinLines(6);
+                        notes=com.hatkid.mkxpz.ui.Ui.input(this);notes.setTextColor(Ui.TEXT);notes.setHintTextColor(Ui.TEXT_DIM);notes.setMinLines(6);
                         notes.setGravity(android.view.Gravity.TOP);notes.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
                         notes.setHint("Objetivos, lugares y recordatorios…");notes.setText(getSharedPreferences("essentia_notes",MODE_PRIVATE).getString(path,""));list.addView(notes);
                         button("Guardar notas",()->{saveNotes();android.widget.Toast.makeText(this,"Notas guardadas",0).show();});

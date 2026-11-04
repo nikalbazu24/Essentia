@@ -79,6 +79,21 @@ public class ExperienceTest {
         Activity ai=Robolectric.buildActivity(AiTranslationActivity.class).setup().get();shot("phone-optional-api",ai.findViewById(android.R.id.content),390,844);ai.finish();
         Activity rtp=Robolectric.buildActivity(RtpActivity.class).setup().get();shot("phone-rtp",rtp.findViewById(android.R.id.content),390,844);rtp.finish();
     }
+    @Test public void remainingToolScreensAndSettingsCategoriesRender()throws Exception {
+        RuntimeEnvironment.setQualifiers("es-rES-w390dp-h844dp-port-mdpi");
+        String path="/fixture/review";
+        app.getSharedPreferences(EssentiaSettings.PREFS,0).edit().putString("library_v1",new org.json.JSONArray().put(new org.json.JSONObject().put("path",path).put("title","Aventura original de prueba")).toString()).commit();
+        Intent scoped=new Intent(app,GuideActivity.class).putExtra(MainActivity.EXTRA_GAME_PATH,path);
+        Activity hub=Robolectric.buildActivity(GuideActivity.class,scoped).setup().get();View root=hub.findViewById(android.R.id.content);
+        for(String tab:new String[]{"Partida","Notas","Respaldo","Herramientas"}){label(root,tab).performClick();shot("tools-"+tab,root,390,844);}hub.finish();
+        Activity review=Robolectric.buildActivity(TranslationReviewActivity.class,new Intent(app,TranslationReviewActivity.class).putExtra(MainActivity.EXTRA_GAME_PATH,path)).setup().get();
+        shot("phone-translation-review",review.findViewById(android.R.id.content),390,844);review.finish();
+        Activity report=Robolectric.buildActivity(ReportActivity.class,new Intent(app,ReportActivity.class).putExtra(ReportActivity.EXTRA_PATH,path)).setup().get();
+        shot("phone-report",report.findViewById(android.R.id.content),390,844);report.finish();
+        Activity settings=Robolectric.buildActivity(SettingsActivity.class).setup().get();root=settings.findViewById(android.R.id.content);
+        int[] categories={R.string.cat_screen,R.string.cat_controls,R.string.cat_games,R.string.cat_cloud,R.string.cat_advanced,R.string.cat_about};
+        for(int category:categories){label(root,settings.getString(category)).performClick();shot("settings-"+category,root,390,844);}settings.finish();
+    }
     private static final GamePanel.Keys KEYS=new GamePanel.Keys(){public void down(int k){}public void up(int k){}};
     private static final GamePanel.Actions ACTIONS=new GamePanel.Actions(){
         public void controls(){}public void notes(){}public void progress(){}public void menu(){}public void game(String c){}

@@ -778,7 +778,7 @@ public class MainActivity extends SDLActivity
                         .setMessage(GameProgress.summary(MainActivity.this,gamePath())).setPositiveButton("Cerrar",null).show();
                 }
                 @Override public void notes() {
-                    android.widget.EditText input=new android.widget.EditText(MainActivity.this);
+                    android.widget.EditText input=com.hatkid.mkxpz.ui.Ui.input(MainActivity.this);
                     input.setMinLines(4);
                     input.setText(getSharedPreferences("essentia_notes",MODE_PRIVATE).getString(gamePath(),""));
                     new AlertDialog.Builder(MainActivity.this).setTitle("Mis notas del juego").setView(input)

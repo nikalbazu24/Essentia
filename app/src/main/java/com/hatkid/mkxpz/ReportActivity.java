@@ -69,7 +69,7 @@ public class ReportActivity extends com.hatkid.mkxpz.ui.ControllerActivity
             err.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 4));
             box.addView(err);
         }
-        EditText note = new EditText(this);
+        EditText note = com.hatkid.mkxpz.ui.Ui.input(this);
         note.setHint(R.string.rep_note_hint);
         note.setMinLines(4);
         note.setTextColor(Ui.TEXT);note.setHintTextColor(Ui.TEXT_DIM);

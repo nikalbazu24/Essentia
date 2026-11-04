@@ -22,7 +22,7 @@ public class TranslationReviewActivity extends ControllerActivity {
         Button back=Ui.button(this,"‹ Volver",false);back.setOnClickListener(v->finish());list.addView(back);
         list.addView(Ui.text(this,"Revisar traducciones · "+e.displayTitle(),22,Ui.TEXT,true));
         list.addView(Ui.text(this,"Cierra el juego antes de corregir. Las correcciones son locales y conservan los códigos de formato.",15,Ui.TEXT_DIM,false));
-        EditText search=new EditText(this);search.setHint("Buscar texto original o traducción");search.setTextColor(Ui.TEXT);list.addView(search);
+        EditText search=com.hatkid.mkxpz.ui.Ui.input(this);search.setHint("Buscar texto original o traducción");search.setTextColor(Ui.TEXT);list.addView(search);
         Button find=Ui.button(this,"Buscar",false);list.addView(find);
         LinearLayout results=new LinearLayout(this);results.setOrientation(1);results.setBackground(Ui.rounded(this,Ui.SURFACE,16));results.setPadding(p,p,p,p);list.addView(results);
         find.setOnClickListener(v->{
@@ -50,7 +50,7 @@ public class TranslationReviewActivity extends ControllerActivity {
         find.performClick();
     }
     private void edit(String original,String value){
-        EditText input=new EditText(this);input.setText(value);input.setMinLines(3);
+        EditText input=com.hatkid.mkxpz.ui.Ui.input(this);input.setText(value);input.setMinLines(3);
         new AlertDialog.Builder(this).setTitle(original).setView(input).setNegativeButton("Cancelar",null)
             .setPositiveButton("Guardar corrección",(d,w)->{
                 if(Games.isGameRunning(this))return;

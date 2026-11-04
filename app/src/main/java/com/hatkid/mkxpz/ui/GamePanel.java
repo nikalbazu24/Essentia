@@ -59,7 +59,7 @@ public final class GamePanel extends Presentation {
         };
     }
     public static void editNotes(Context c,String path) {
-        EditText input=new EditText(c);input.setTextColor(Ui.TEXT);input.setHintTextColor(Ui.TEXT_DIM);
+        EditText input=com.hatkid.mkxpz.ui.Ui.input(c);input.setTextColor(Ui.TEXT);input.setHintTextColor(Ui.TEXT_DIM);
         input.setMinLines(5);input.setGravity(android.view.Gravity.TOP);input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setText(c.getSharedPreferences("essentia_notes",0).getString(path,""));
         AlertDialog dialog=new AlertDialog.Builder(c).setTitle("Mis notas del juego").setView(input)

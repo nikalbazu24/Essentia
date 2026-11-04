@@ -280,7 +280,7 @@ public class LibraryActivity extends ControllerActivity
         help.setOnClickListener(v->startActivity(new Intent(this,GuideActivity.class)));
         LinearLayout.LayoutParams helpLp=new LinearLayout.LayoutParams(isPortrait()?0:Ui.dp(this,80),-2,isPortrait()?1f:0f);helpLp.leftMargin=Ui.dp(this,8);tools.addView(help,helpLp);
         col.addView(tools,wrapWidth());
-        EditText search=new EditText(this);search.setSingleLine(true);search.setTextSize(15);search.setTextColor(Ui.TEXT);search.setHintTextColor(Ui.TEXT_DIM);
+        EditText search=com.hatkid.mkxpz.ui.Ui.input(this);search.setSingleLine(true);search.setTextSize(15);search.setTextColor(Ui.TEXT);search.setHintTextColor(Ui.TEXT_DIM);
         search.setHint("Buscar en tu biblioteca");search.setContentDescription("Buscar en tu biblioteca");search.setBackground(Ui.rounded(this,Ui.SURFACE,12));
         search.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),0);search.setText(mQuery);
         LinearLayout.LayoutParams searchLp=new LinearLayout.LayoutParams(isPortrait()?-1:0,Ui.dp(this,48),isPortrait()?0f:1f);
@@ -1124,7 +1124,7 @@ public class LibraryActivity extends ControllerActivity
 
     private void rename(Library.Entry e)
     {
-        EditText input = new EditText(this);
+        EditText input = com.hatkid.mkxpz.ui.Ui.input(this);
         input.setText(e.displayTitle());
         input.setSelectAllOnFocus(true);
         input.setSingleLine(true);
