@@ -1135,6 +1135,7 @@ public class LibraryActivity extends ControllerActivity
         labels.add(getString(R.string.opt_report)); actions.add(() -> ReportActivity.open(this, e.path, null));
         labels.add(getString(R.string.opt_send_scripts)); actions.add(() -> sendScripts(e));
         labels.add(getString(R.string.lib_remove)); actions.add(() -> { Library.remove(this, e.path); reload(); });
+        labels.add(getString(R.string.delete_game_files)); actions.add(() -> GameRemoval.show(this, e, this::reload));
 
         new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(e.displayTitle())

@@ -49,6 +49,7 @@ public class UpdateService extends Service
     public static synchronized State stateFor(String path) { return sStates.get(path); }
 
     public static synchronized boolean busy(String path) { return sStates.containsKey(path); }
+    public static synchronized boolean hasWork() { return !sStates.isEmpty(); }
 
     /** Called (on any thread) whenever progress changes; the library refreshes. */
     public static synchronized void setListener(Runnable r) { sListener = r; }
@@ -72,6 +73,12 @@ public class UpdateService extends Service
     public static void start(Context c, String path, String title, String link, String zip, String version, boolean fresh)
     {
         synchronized (UpdateService.class) {
+            if (GameRemoval.busy()) {
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
+                    android.widget.Toast.makeText(c.getApplicationContext(), R.string.delete_busy,
+                        android.widget.Toast.LENGTH_LONG).show());
+                return;
+            }
             if (sStates.containsKey(path)) return;
             sStates.put(path, new State(title));
         }

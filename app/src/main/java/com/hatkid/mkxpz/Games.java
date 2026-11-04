@@ -77,6 +77,10 @@ public final class Games
      */
     public static void startGame(Activity a, File gameDir, boolean newTask)
     {
+        if (GameRemoval.busy()) {
+            android.widget.Toast.makeText(a, R.string.delete_busy, android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
         Log.i(TAG, "Starting game in " + gameDir);
         MusicPlayer.stopNow();
         killGameProcess(a);

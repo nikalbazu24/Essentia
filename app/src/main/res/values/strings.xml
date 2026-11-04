@@ -494,4 +494,18 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="store_popular_rank">No. %1$d by first-post reaction score on Eevee Expo · checked %2$s</string>
     <string name="store_popular_source">View community ranking</string>
     <string name="store_media_source">Media source</string>
+    <string name="delete_game_files">Delete game and files…</string>
+    <string name="delete_first_title">Delete this game? · 1/2</string>
+    <string name="delete_first_message">You are about to delete %1$s and its entire folder:\n\n%2$s\n\nEvery file and save inside this folder will be permanently deleted. You will confirm once more before anything is deleted.</string>
+    <string name="delete_separate_saves">Also delete the separate saves in:\n%1$s</string>
+    <string name="delete_shared_saves">Separate saves are shared or cannot be safely assigned to this game. They will be kept.</string>
+    <string name="delete_continue">Continue</string>
+    <string name="delete_final_title">Final confirmation · 2/2</string>
+    <string name="delete_final_message">Permanently delete %1$s?\n\nFolders to delete:\n%2$s\n\nThis cannot be undone. All contents, including saves inside these folders, will be deleted. Cloud backups and files outside these folders are kept.</string>
+    <string name="delete_permanently">Delete permanently</string>
+    <string name="delete_busy">Close running games and wait for updates or deletion to finish before trying again.</string>
+    <string name="delete_working">Deleting the selected files… Please wait.</string>
+    <string name="delete_done">Selected game and files deleted.</string>
+    <string name="delete_failed_title">Deletion could not be completed</string>
+    <string name="delete_failed">No complete deletion was confirmed. Some files may already have been deleted. The library entry was kept. Check file permissions and make sure this folder is not shared with other games or used as a general storage folder.</string>
 </resources>
