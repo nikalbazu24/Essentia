@@ -29,13 +29,22 @@ public class ReportActivity extends com.hatkid.mkxpz.ui.ControllerActivity
 {
     public static final String EXTRA_PATH = "path";
     public static final String EXTRA_ERROR = "error";
+    private static final String EXTRA_LAUNCH_ID = "launch_id";
+    private static final String EXTRA_CAN_TRY_CLASSIC = "try_classic";
 
     /** Opens the report screen for a game (error may be null: manual report). */
     public static void open(Context c, String path, String error)
     {
+        openCrash(c, path, error, null, false);
+    }
+
+    static void openCrash(Context c, String path, String error, String launchId, boolean canTryClassic)
+    {
         Intent i = new Intent(c, ReportActivity.class);
         i.putExtra(EXTRA_PATH, path);
         i.putExtra(EXTRA_ERROR, error);
+        i.putExtra(EXTRA_LAUNCH_ID, launchId);
+        i.putExtra(EXTRA_CAN_TRY_CLASSIC, canTryClassic);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         c.startActivity(i);
     }
@@ -69,6 +78,15 @@ public class ReportActivity extends com.hatkid.mkxpz.ui.ControllerActivity
             err.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 4));
             box.addView(err);
         }
+        GameLaunchState.Attempt pending = GameLaunchState.interrupted(this, path);
+        GameLaunchState.Attempt attempt = pending != null && pending.id.equals(getIntent().getStringExtra(EXTRA_LAUNCH_ID))
+            ? pending : null;
+        if (attempt != null) {
+            if (EssentiaSettings.isWide(attempt.screen)) addRecovery(box, path, attempt, true);
+            if (getIntent().getBooleanExtra(EXTRA_CAN_TRY_CLASSIC, false)
+                && GameLaunchState.rubyCompatibilityError(error) && Games.classicEngineAvailable(this))
+                addRecovery(box, path, attempt, false);
+        }
         EditText note = com.hatkid.mkxpz.ui.Ui.input(this);
         note.setHint(R.string.rep_note_hint);
         note.setMinLines(4);
@@ -88,12 +106,23 @@ public class ReportActivity extends com.hatkid.mkxpz.ui.ControllerActivity
             diagnostic.setPadding(p,p,p,p);diagnostic.setBackground(Ui.rounded(this,Ui.SURFACE,14));box.addView(diagnostic);
         }
         android.widget.Button submit=Ui.button(this,getString(cloud?R.string.rep_send:R.string.rep_share),true);
-        submit.setOnClickListener(v->{submit.setEnabled(false);send(path,title,error,note.getText().toString(),scripts.isChecked(),cloud);});
+        submit.setOnClickListener(v->{submit.setEnabled(false);send(path,title,error,note.getText().toString(),scripts.isChecked(),cloud,attempt);});
         box.addView(submit);
         android.widget.ScrollView scroll=new android.widget.ScrollView(this);scroll.setFillViewport(true);scroll.addView(box);setContentView(scroll);
     }
 
-    private void send(String path, String title, String error, String note, boolean withScripts, boolean cloud)
+    private void addRecovery(LinearLayout box, String path, GameLaunchState.Attempt attempt, boolean original) {
+        int label = original ? R.string.launch_retry_original : R.string.launch_retry_classic;
+        android.widget.Button retry = Ui.button(this, getString(label), true);
+        retry.setOnClickListener(view -> {
+            if (Games.recover(this, new File(path), attempt, original)) finish();
+            else Toast.makeText(this, R.string.launch_retry_unavailable, Toast.LENGTH_LONG).show();
+        });
+        box.addView(retry);
+    }
+
+    private void send(String path, String title, String error, String note, boolean withScripts, boolean cloud,
+                      GameLaunchState.Attempt attempt)
     {
         Context app = getApplicationContext();
         Toast.makeText(app, R.string.rep_sending, Toast.LENGTH_SHORT).show();
@@ -118,9 +147,10 @@ public class ReportActivity extends com.hatkid.mkxpz.ui.ControllerActivity
                 String v = GameUpdater.localVersion(dir);
                 r.put("gameVersion", v == null ? "" : v);
                 r.put("kind", prof.label());
-                r.put("engine", e != null && !e.engine.isEmpty() ? e.engine
+                r.put("engine", attempt != null ? attempt.engine : e != null && !e.engine.isEmpty() ? e.engine
                     : (EssentiaSettings.learnedClassic(app, path) ? "auto→classic" : "auto"));
-                r.put("screen", e != null && !e.screenMode.isEmpty() ? e.screenMode : EssentiaSettings.screenMode(app));
+                r.put("screen", attempt != null ? attempt.screen
+                    : e != null && !e.screenMode.isEmpty() ? e.screenMode : EssentiaSettings.screenMode(app));
                 String summary = error == null ? "(reporte manual)" : error.split("\n\n")[0];
                 r.put("error", (note.trim().isEmpty() ? "" : "Nota: " + note.trim() + "\n") + summary);
                 r.put("detail", (error == null ? "" : error) + (Diagnostics.enabled(app) ? "\n" + Diagnostics.summary(app,path) : ""));

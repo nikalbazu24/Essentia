@@ -27,6 +27,7 @@ public final class Library
         public boolean widescreen = false;
         /** Screen format for this game, or "" to use the general setting. */
         public String screenMode = "";
+        WideOptions panorama = WideOptions.DEFAULT;
         /** Ruby engine for this game: "" / modern (Ruby 3.1) or classic (Ruby 1.8). */
         public String engine = "";
         /** Translate this game to Spanish automatically. */
@@ -66,6 +67,7 @@ public final class Library
                 e.widescreen = o.optBoolean("widescreen", false);
                 e.screenMode = o.optString("screenMode", e.widescreen ? EssentiaSettings.SCREEN_WIDE : "");
                 e.engine = o.optString("engine", "");
+                e.panorama = WideOptions.read(o.optJSONObject("panorama"));
                 e.translate = o.optBoolean("translate", false);
                 e.translationLanguage = TranslationLanguage.normalize(o.optString("translationLanguage", "es"));
                 out.add(e);
@@ -92,6 +94,7 @@ public final class Library
                 o.put("widescreen", EssentiaSettings.SCREEN_WIDE.equals(e.screenMode));
                 o.put("screenMode", e.screenMode);
                 o.put("engine", e.engine);
+                o.put("panorama", e.panorama.write());
                 o.put("translate", e.translate);
                 o.put("translationLanguage", e.translationLanguage);
                 arr.put(o);

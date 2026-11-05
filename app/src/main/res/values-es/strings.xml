@@ -561,4 +561,19 @@ Essentia lo usa solo, sin tocar la carpeta del juego.</string>
     <string name="panel_actions">Acciones</string>
     <string name="panel_keys">Teclas</string>
     <string name="panel_assists">Ayudas</string>
+    <string name="launch_missing_title">Faltan archivos del juego</string>
+    <string name="launch_missing_files">No se encontró un archivo legible para %1$s. Revisa que la instalación esté completa y selecciona la carpeta del juego.</string>
+    <string name="launch_interrupted">La sesión anterior quedó interrumpida con el panorámico activo. Puedes reabrir en Original con el mismo motor y las mismas partidas.</string>
+    <string name="launch_retry_original">Reabrir en Original</string>
+    <string name="launch_retry_classic">Probar con Ruby clásico</string>
+    <string name="launch_retry_same">Reintentar panorámico</string>
+    <string name="launch_retry_unavailable">Vuelve a abrir el juego desde la biblioteca para comprobar la instalación.</string>
+    <string name="panorama_settings">Ajustes panorámicos</string>
+    <string name="panorama_description">Se aplican al reabrir con Panorámico seguro o completo. Las batallas anchas requieren Panorámico completo. Los menús conservan su ancho original.</string>
+    <string name="panorama_ratio">Proporción</string>
+    <string name="panorama_device_ratio">Pantalla del dispositivo</string>
+    <string name="panorama_battles">Batallas anchas</string>
+    <string name="panorama_camera">Desplazamiento de cámara · %1$d%%</string>
+    <string name="panorama_spread">Separación horizontal en batalla · %1$d%%</string>
+    <string name="panorama_reset">Restaurar</string>
 </resources>

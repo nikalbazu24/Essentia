@@ -31,9 +31,6 @@ public class LauncherActivity extends Activity
 
     private static final String TAG = "Essentia[Launcher]";
     private static final int REQ_ALL_FILES = 1;
-    /** From the game screen: the automatic engine found the game needs Ruby 1.8. */
-    public static final String EXTRA_RETRY_CLASSIC = "essentia.RETRY_CLASSIC";
-
     /** Extra keys accepted from frontends (checked in this order). */
     private static final String[] PATH_EXTRAS = {
         "path", "game", "rom", "ROM", "file", "folder", "gamePath", "game_path",
@@ -78,15 +75,6 @@ public class LauncherActivity extends Activity
                 .setCancelable(false)
                 .setPositiveButton(R.string.close, (d, w) -> finish())
                 .show();
-            return;
-        }
-
-        if (getIntent().getBooleanExtra(EXTRA_RETRY_CLASSIC, false)) {
-            EssentiaSettings.setLearnedClassic(this, dir.getAbsolutePath(), true);
-            boolean frontend = getIntent().getBooleanExtra(MainActivity.EXTRA_FROM_FRONTEND, false);
-            if (!frontend) startActivity(new Intent(this, LibraryActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
-            Games.startGame(this, dir, frontend);
             return;
         }
 

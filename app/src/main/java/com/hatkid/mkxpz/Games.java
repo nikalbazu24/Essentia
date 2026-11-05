@@ -82,32 +82,57 @@ public final class Games
 
     private static void startGameNow(Activity a, File gameDir, boolean newTask)
     {
-        synchronized (UpdateService.class) { startGameLocked(a,gameDir,newTask); }
+        synchronized (UpdateService.class) {
+            startGameLocked(a, gameDir, newTask, "", "", false, false);
+        }
     }
 
-    private static void startGameLocked(Activity a, File gameDir, boolean newTask)
+    static void openOriginal(Activity activity, File game) {
+        synchronized (UpdateService.class) {
+            startGameLocked(activity, game, false, EssentiaSettings.SCREEN_ORIGINAL, "", true, false);
+        }
+    }
+
+    static boolean recover(Activity activity, File game, GameLaunchState.Attempt previous, boolean original) {
+        String screen = original ? EssentiaSettings.SCREEN_ORIGINAL : previous.screen;
+        String engine = original ? previous.engine : EssentiaSettings.ENGINE_CLASSIC;
+        synchronized (UpdateService.class) {
+            GameLaunchState.Attempt pending = GameLaunchState.interrupted(activity, game.getAbsolutePath());
+            if (pending == null || !pending.id.equals(previous.id)
+                || !pending.version.equals(GameLaunchState.inspect(game).version)) return false;
+            return startGameLocked(activity, game, previous.frontend, screen, engine, true, !original);
+        }
+    }
+
+    private static boolean startGameLocked(Activity a, File gameDir, boolean newTask,
+                                           String overrideScreen, String overrideEngine,
+                                           boolean confirmed, boolean learnClassic)
     {
         if (GameRemoval.busy()) {
             android.widget.Toast.makeText(a, R.string.delete_busy, android.widget.Toast.LENGTH_LONG).show();
-            return;
+            return false;
         }
         if (UpdateService.busy(gameDir.getAbsolutePath())) {
             android.widget.Toast.makeText(a, "Espera a que termine la instalación", android.widget.Toast.LENGTH_LONG).show();
-            return;
+            return false;
         }
         try { ArchiveInstall.recover(gameDir); }
         catch (java.io.IOException e) {
             new AlertDialog.Builder(a).setTitle("Recuperación pendiente")
                 .setMessage("No se pudo recuperar la actualización interrumpida. Conserva la carpeta y vuelve a instalar el juego desde la tienda. " + e.getMessage())
                 .setPositiveButton("Aceptar", null).show();
-            return;
+            return false;
         }
-        Log.i(TAG, "Starting game in " + gameDir);
-        MusicPlayer.stopNow();
-        killGameProcess(a);
-
         String path = gameDir.getAbsolutePath();
-        Library.Entry entry = Library.markPlayed(a, path);
+        GameLaunchState.Inspection inspection = GameLaunchState.inspect(gameDir);
+        if (inspection.missing != null) {
+            new AlertDialog.Builder(a, com.hatkid.mkxpz.ui.Ui.dialogTheme())
+                .setTitle(R.string.launch_missing_title)
+                .setMessage(a.getString(R.string.launch_missing_files, inspection.missing))
+                .setPositiveButton(R.string.close, null).show();
+            return false;
+        }
+        Library.Entry entry = Library.find(a, path);
         String title = entry != null ? entry.displayTitle() : readTitle(gameDir);
         // screen format: the game's own choice, else the general one, adjusted by
         // the game's profile (e.g. old Essentials keeps menus in their shape)
@@ -116,23 +141,58 @@ public final class Games
         String screen = ownScreen ? entry.screenMode : global;
         GameProfile profile = GameProfile.of(a, gameDir);
         if (!ownScreen && EssentiaSettings.isWide(global) && !profile.screen.isEmpty()) screen = profile.screen;
+        String requestedScreen = screen;
+        if (!overrideScreen.isEmpty()) screen = overrideScreen;
 
         Intent intent = new Intent(a, MainActivity.class);
         intent.putExtra(MainActivity.EXTRA_GAME_PATH, path);
         intent.putExtra(MainActivity.EXTRA_TITLE, title);
-        intent.putExtra(MainActivity.EXTRA_SCREEN_MODE, screen);
         String chosen = entry != null && entry.engine != null ? entry.engine : EssentiaSettings.ENGINE_AUTO;
-        boolean auto = !EssentiaSettings.ENGINE_MODERN.equals(chosen) && !EssentiaSettings.ENGINE_CLASSIC.equals(chosen);
+        boolean auto = overrideEngine.isEmpty() && !EssentiaSettings.ENGINE_MODERN.equals(chosen)
+            && !EssentiaSettings.ENGINE_CLASSIC.equals(chosen);
         boolean classicAvailable = classicEngineAvailable(a);
+        if (EssentiaSettings.ENGINE_CLASSIC.equals(overrideEngine) && !classicAvailable) {
+            android.widget.Toast.makeText(a, R.string.eng_missing, android.widget.Toast.LENGTH_LONG).show();
+            return false;
+        }
         boolean learnedClassic = auto && classicAvailable && EssentiaSettings.learnedClassic(a, path);
-        boolean classic = classicAvailable && (EssentiaSettings.ENGINE_CLASSIC.equals(chosen)
+        boolean classic = classicAvailable && (EssentiaSettings.ENGINE_CLASSIC.equals(
+            overrideEngine.isEmpty() ? chosen : overrideEngine)
             || (auto && (learnedClassic
                 || EssentiaSettings.ENGINE_CLASSIC.equals(profile.engine))));
         String reason=auto?(classic?(learnedClassic?"learned_fallback":"profile_recommendation"):"automatic_modern"):"user_choice";
         if(!classic&&EssentiaSettings.ENGINE_CLASSIC.equals(chosen))reason="classic_unavailable";
+        if (!overrideEngine.isEmpty()) reason = "recovery";
+        String engine = classic ? EssentiaSettings.ENGINE_CLASSIC : EssentiaSettings.ENGINE_MODERN;
+        GameLaunchState.Attempt working = GameLaunchState.working(a, path);
+        if (overrideScreen.isEmpty() && EssentiaSettings.isWide(screen) && working != null
+            && working.matches(inspection.version, requestedScreen) && engine.equals(working.engine)
+            && EssentiaSettings.SCREEN_ORIGINAL.equals(working.screen)) screen = working.screen;
+        GameLaunchState.Attempt previous = GameLaunchState.interrupted(a, path);
+        if (!confirmed && EssentiaSettings.isWide(screen) && previous != null
+            && previous.matches(inspection.version, requestedScreen) && EssentiaSettings.isWide(previous.screen)
+            && engine.equals(previous.engine) && !isGameRunning(a)) {
+            new AlertDialog.Builder(a, com.hatkid.mkxpz.ui.Ui.dialogTheme()).setTitle(title)
+                .setMessage(R.string.launch_interrupted)
+                .setPositiveButton(R.string.launch_retry_original, (dialog, which) -> recover(a, gameDir, previous, true))
+                .setNeutralButton(R.string.launch_retry_same, (dialog, which) -> {
+                    synchronized (UpdateService.class) {
+                        startGameLocked(a, gameDir, newTask, "", "", true, false);
+                    }
+                })
+                .setNegativeButton(R.string.cancel, null).show();
+            return false;
+        }
+        Log.i(TAG, "Starting game in " + gameDir);
+        MusicPlayer.stopNow();
+        killGameProcess(a);
+        Library.markPlayed(a, path);
+        intent.putExtra(MainActivity.EXTRA_SCREEN_MODE, screen);
+        intent.putExtra(MainActivity.EXTRA_LAUNCH_ID, GameLaunchState.begin(a, path, inspection.version, engine,
+            screen, requestedScreen, newTask, learnClassic));
+        if (entry != null) entry.panorama.applyTo(intent);
         intent.putExtra(MainActivity.EXTRA_ENGINE_REASON,reason);
-        intent.putExtra(MainActivity.EXTRA_ENGINE, classic ? EssentiaSettings.ENGINE_CLASSIC : EssentiaSettings.ENGINE_MODERN);
-        // automatic engine, first try with the modern one: may switch to classic
+        intent.putExtra(MainActivity.EXTRA_ENGINE, engine);
         intent.putExtra(MainActivity.EXTRA_AUTO_ENGINE, auto && !classic && classicAvailable);
         intent.putExtra(MainActivity.EXTRA_FROM_FRONTEND, newTask);
         intent.putExtra(MainActivity.EXTRA_TRANSLATE, entry != null && entry.translate);
@@ -144,6 +204,7 @@ public final class Games
         a.startActivity(intent);
         a.overridePendingTransition(0, 0);
         if (a instanceof LauncherActivity) a.finish();
+        return true;
     }
 
     /** True when this APK includes the classic engine (Ruby 1.8). */
@@ -291,7 +352,7 @@ public final class Games
         return f;
     }
 
-    private static File findChild(File dir, String name)
+    static File findChild(File dir, String name)
     {
         if (dir == null) return null;
         File direct = new File(dir, name);
