@@ -51,7 +51,9 @@ public final class LibraryTour {
         LinearLayout links=new LinearLayout(a);Button skip=Ui.button(a,"Omitir",false);Button guide=Ui.button(a,"Guía completa",false,R.drawable.ic_e_help);
         links.addView(skip,new LinearLayout.LayoutParams(0,Ui.dp(a,48),1));links.addView(guide,new LinearLayout.LayoutParams(0,Ui.dp(a,48),1));
         LinearLayout.LayoutParams linksLp=new LinearLayout.LayoutParams(-1,-2);linksLp.topMargin=Ui.dp(a,6);card.addView(links,linksLp);
-        FrameLayout.LayoutParams cardLp=new FrameLayout.LayoutParams(-1,-2);stage.addView(card,cardLp);
+        android.util.DisplayMetrics metrics=a.getResources().getDisplayMetrics();
+        FrameLayout.LayoutParams cardLp=new FrameLayout.LayoutParams(Math.min(Ui.dp(a,500),metrics.widthPixels-Ui.dp(a,24)),Math.min(Ui.dp(a,420),metrics.heightPixels-Ui.dp(a,32)),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);
+        cardLp.setMargins(Ui.dp(a,12),Ui.dp(a,16),Ui.dp(a,12),Ui.dp(a,16));stage.addView(card,cardLp);
         final int[] page={0};
         Runnable place=()->{
             View target=a.findViewById(android.R.id.content).findViewWithTag(STEPS[page[0]][0]);
@@ -82,17 +84,17 @@ public final class LibraryTour {
             if(!handled)return false;if(e.getAction()!=KeyEvent.ACTION_UP)return true;
             if(key==KeyEvent.KEYCODE_BUTTON_B)finish.run();else if(key==KeyEvent.KEYCODE_DPAD_LEFT)previous.performClick();else next.performClick();return true;
         });
-        d.setOnDismissListener(dialog->ACTIVE.remove(a));d.setCanceledOnTouchOutside(false);d.setOnCancelListener(dialog->finish.run());
+        d.setOnDismissListener(dialog->{if(ACTIVE.get(a)==d)ACTIVE.remove(a);});d.setCanceledOnTouchOutside(false);d.setOnCancelListener(dialog->finish.run());
         d.setContentView(stage);d.show();Window window=d.getWindow();
-        window.setBackgroundDrawableResource(android.R.color.transparent);window.setLayout(-1,-1);
+        window.setBackgroundDrawableResource(android.R.color.transparent);window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);window.setLayout(-1,-1);
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
         window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         stage.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(r-l!=or-ol||b-t!=ob-ot)place.run();});
         render.run();stage.post(place);next.requestFocus();return d;
     }
     private static final class Spotlight extends View{
-        private final View origin;View target;final Paint paint=new Paint(3);
-        Spotlight(Context c,View origin){super(c);this.origin=origin;setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
+        View target;final Paint paint=new Paint(3);
+        Spotlight(Context c,View origin){super(c);setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
         @Override protected void onDraw(Canvas canvas){
             paint.setColor(0xDE100A27);Path mask=new Path();mask.setFillType(Path.FillType.EVEN_ODD);mask.addRect(0,0,getWidth(),getHeight(),Path.Direction.CW);
             if(target!=null&&target.isShown()){

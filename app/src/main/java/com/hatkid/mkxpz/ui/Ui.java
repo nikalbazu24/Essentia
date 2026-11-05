@@ -132,7 +132,7 @@ public final class Ui
         StateListDrawable s = new StateListDrawable();
         s.addState(new int[]{android.R.attr.state_pressed}, pressed);
         s.addState(new int[]{android.R.attr.state_focused}, focused);
-        GradientDrawable selected=rounded(c,SURFACE_HI,radiusDp);selected.setStroke(dp(c,1),alpha(ACCENT_LIGHT,0x99));
+        GradientDrawable selected=rounded(c,color==ACCENT?ACCENT:SURFACE_HI,radiusDp);selected.setStroke(dp(c,1),alpha(ACCENT_LIGHT,0x99));
         s.addState(new int[]{android.R.attr.state_selected}, selected);
         s.addState(new int[]{}, normal);
         return s;

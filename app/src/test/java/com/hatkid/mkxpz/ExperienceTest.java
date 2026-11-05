@@ -45,10 +45,11 @@ public class ExperienceTest {
         if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){View found=label(((ViewGroup)v).getChildAt(i),label);if(found!=null)return found;}
         return null;
     }
-    private void shot(String name,View v,int w,int h)throws Exception {
+    private void shot(String name,View v,int w,int h)throws Exception {shot(name,v,w,h,null);}
+    private void shot(String name,View v,int w,int h,View behind)throws Exception {
         v.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));v.layout(0,0,w,h);
         if(v.isLayoutRequested()){v.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));v.layout(0,0,w,h);}
-        Bitmap bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(bitmap);canvas.drawColor(Ui.BG);v.draw(canvas);
+        Bitmap bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(bitmap);canvas.drawColor(Ui.BG);if(behind!=null)behind.draw(canvas);v.draw(canvas);
         File folder=new File("build/reports/ui");folder.mkdirs();
         try(FileOutputStream out=new FileOutputStream(new File(folder,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}
     }
@@ -162,12 +163,12 @@ public class ExperienceTest {
             shot("identity-"+size[0],root,size[0],size[1]);
             View brand=root.findViewWithTag("tour-brand");assertNotNull(brand);assertEquals("Essentia",brand.getContentDescription());
             assertTrue(brand.getMeasuredHeight()>=48);assertNotNull(label(root,"Tour"));
-            assertTrue(LibraryTour.needed(a));Dialog d=LibraryTour.show(a);assertNotNull(d);
+            assertTrue(LibraryTour.needed(a));label(root,"Tour").performClick();Dialog d=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertNotNull(d);
             assertTrue(LibraryTour.needed(a));d.dismiss();assertTrue(LibraryTour.needed(a));
             d=LibraryTour.show(a);View dialog=d.getWindow().getDecorView();
-            shot("tour-"+size[0]+"-welcome",dialog,size[0],size[1]);
+            shot("tour-"+size[0]+"-welcome",dialog,size[0],size[1],root);
             for(int i=0;i<5;i++)label(dialog,"Siguiente").performClick();
-            assertTrue(text(dialog).contains("Hazlo tuyo"));shot("tour-"+size[0]+"-last",dialog,size[0],size[1]);
+            assertTrue(text(dialog).contains("Hazlo tuyo"));shot("tour-"+size[0]+"-last",dialog,size[0],size[1],root);
             label(dialog,"Atrás").performClick();assertTrue(text(dialog).contains("Descubre nuevas aventuras"));
             label(dialog,"Siguiente").performClick();label(dialog,"Terminar").performClick();assertFalse(LibraryTour.needed(a));
             d=LibraryTour.show(a);assertTrue(d.isShowing());d.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,android.view.KeyEvent.KEYCODE_BUTTON_B));assertFalse(d.isShowing());

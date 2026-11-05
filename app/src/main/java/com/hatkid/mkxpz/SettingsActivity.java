@@ -62,6 +62,7 @@ public class SettingsActivity extends ControllerActivity
         Button back = Ui.button(this, "\u2039  " + getString(R.string.set_back), false);
         back.setOnClickListener(v -> finish());
         header.addView(back);
+        if(portrait){LinearLayout.LayoutParams logoLp=new LinearLayout.LayoutParams(Ui.dp(this,38),Ui.dp(this,38));logoLp.leftMargin=Ui.dp(this,10);header.addView(Ui.brand(this,38),logoLp);}
         TextView title = Ui.text(this, getString(R.string.lib_settings), 22, Ui.TEXT, true);
         title.setPadding(portrait?Ui.dp(this,12):0,portrait?0:Ui.dp(this,12),0,0);
         header.addView(title,new LinearLayout.LayoutParams(portrait?0:-1,-2,portrait?1f:0f));
@@ -503,7 +504,6 @@ public class SettingsActivity extends ControllerActivity
         mList.addView(guide, wrap());
         Button news = Ui.button(this, getString(R.string.wn_show), false);
         news.setOnClickListener(v -> com.hatkid.mkxpz.ui.WhatsNew.show(this));
-        mList.addView(news,wrap());
 
         section(R.string.set_about_title, 0);
         TextView about = Ui.text(this, getString(R.string.set_about_text), 14, Ui.TEXT_DIM, false);

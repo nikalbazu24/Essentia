@@ -447,7 +447,7 @@ public class LibraryActivity extends ControllerActivity
 
         LinearLayout holder = new LinearLayout(this);
         holder.setGravity(Gravity.CENTER);
-        pillButton(holder, R.drawable.ic_e_add, getString(R.string.lib_add), true, v -> openFolderPicker());
+        pillButton(holder, R.drawable.ic_e_add, getString(R.string.lib_add).replaceFirst("^\\+\\s*", ""), true, v -> openFolderPicker());
         col.addView(holder);
         return col;
     }
