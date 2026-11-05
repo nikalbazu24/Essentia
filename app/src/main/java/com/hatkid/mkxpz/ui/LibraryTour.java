@@ -82,7 +82,10 @@ public final class LibraryTour {
         d.setOnKeyListener((dialog,key,e)->{
             boolean handled=key==KeyEvent.KEYCODE_BUTTON_A||key==KeyEvent.KEYCODE_BUTTON_B||key==KeyEvent.KEYCODE_DPAD_LEFT||key==KeyEvent.KEYCODE_DPAD_RIGHT;
             if(!handled)return false;if(e.getAction()!=KeyEvent.ACTION_UP)return true;
-            if(key==KeyEvent.KEYCODE_BUTTON_B)finish.run();else if(key==KeyEvent.KEYCODE_DPAD_LEFT)previous.performClick();else next.performClick();return true;
+            if(key==KeyEvent.KEYCODE_BUTTON_B)finish.run();
+            else if(key==KeyEvent.KEYCODE_DPAD_LEFT)previous.performClick();
+            else if(key==KeyEvent.KEYCODE_BUTTON_A){View focused=d.getCurrentFocus();if(focused!=null&&focused.isEnabled()&&focused.isClickable())focused.performClick();else next.performClick();}
+            else next.performClick();return true;
         });
         d.setOnDismissListener(dialog->{if(ACTIVE.get(a)==d)ACTIVE.remove(a);});d.setCanceledOnTouchOutside(false);d.setOnCancelListener(dialog->finish.run());
         d.setContentView(stage);d.show();Window window=d.getWindow();
