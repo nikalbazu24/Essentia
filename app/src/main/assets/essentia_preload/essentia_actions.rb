@@ -86,6 +86,7 @@ module EssentiaActions
     end
 
     def map_safe?
+      return false if companion_battle?
       t = $game_temp
       if t
         return false if t.respond_to?(:in_menu) && t.in_menu
@@ -108,8 +109,16 @@ module EssentiaActions
     end
 
     # Read-only capability snapshot. Never open a menu just to probe support.
+    def companion_battle?
+      [$game_temp, $PokemonTemp].compact.any? do |temp|
+        [:in_battle, :inBattle].any? { |flag| temp.respond_to?(flag) && temp.__send__(flag) }
+      end
+    rescue Exception
+      false
+    end
+
     def companion_context
-      return 'battle' if $game_temp && $game_temp.respond_to?(:in_battle) && $game_temp.in_battle
+      return 'battle' if companion_battle?
       return 'busy' unless map_safe?
       return 'map' if defined?(Scene_Map) && $scene.is_a?(Scene_Map)
       'busy'

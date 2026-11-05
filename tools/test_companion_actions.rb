@@ -39,7 +39,11 @@ check(cap.include?('dex') && cap.include?('save'),'Unlocked APIs advertised with
 $game_temp.in_battle=true
 check(EssentiaActions.companion_context=='battle','Battle context')
 check(EssentiaActions.companion_actions==cap,'Stable capabilities during battle; UI gates unsafe actions')
-$game_temp.in_battle=false;$game_temp.in_menu=true
+$game_temp.in_battle=false
+$PokemonTemp=Struct.new(:inBattle).new(true)
+check(EssentiaActions.companion_context=='battle' && !EssentiaActions.map_safe?,'Legacy battle flag also prevents game menus')
+$PokemonTemp=nil
+$game_temp.in_menu=true
 check(EssentiaActions.companion_context=='busy','Menu context')
 puts 'Companion: unknown and supported games, locks, map/battle/menu states and read-only probes passed'
 require 'tmpdir'
