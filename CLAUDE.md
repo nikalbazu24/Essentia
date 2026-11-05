@@ -33,3 +33,21 @@ Prioridad explícita del dueño: GS Vitro. La revisión del diagnóstico detect�
 motor clásico borraba el error que había disparado el fallback. Se conserva ahora como
 «Error del intento anterior», separado de la sesión actual, acotado y con la redacción de
 credenciales existente. No equivale a identificar ni corregir el cierre del juego.
+
+
+Continuación del 5 de noviembre — PR #8: superficies glass ligeras, resumen con notas
+por juego y accesos anunciados por las APIs disponibles. En combate/transición se
+desactivan los menús y se conserva su posición; juegos sin integración conservan
+captura, turbo, notas y teclas. Misma vista en teléfono/Thor. Validación UI: 17 pruebas,
+44 capturas Android; exploración, combate, cambio de juego y tema oscuro revisados.
+Fixture Ruby original comprueba capacidades, bloqueos, combate clásico y protocolo.
+Consulta la compilación y verificación del APK en el PR antes de dar una versión por publicada.
+
+GS Vitro: la captura posterior al reporte manual SÍ aporta una traza: SystemStackError
+(stack level too deep), Quest Markers → inicializadores del juego → widescreen.rb:409.
+El dueño confirmó que Pantalla Original evita ese cierre inicial. No equivale a resolver
+el juego: quedan música y efectos anteriores al cambiar escena, empeoramiento con el
+tiempo, tirones y fondos de batalla negros/incompletos/solo cielo. Altavoces de Thor;
+usó turbo apagado y ×3, sin comparación controlada desde un arranque nuevo a 1×.
+La cadena de alias del modo panorámico es una hipótesis por reproducir. Audio y
+composición no tienen causa demostrada; no se aplican parches de motor especulativos.
