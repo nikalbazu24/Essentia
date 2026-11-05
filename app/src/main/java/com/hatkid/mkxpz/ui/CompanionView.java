@@ -144,18 +144,18 @@ public final class CompanionView extends FrameLayout
         col.addView(buildTabs(c),new LinearLayout.LayoutParams(-1,Ui.dp(c,56)));
         mPages=new FrameLayout(c);
         LinearLayout summary=new LinearLayout(c);summary.setOrientation(LinearLayout.VERTICAL);
-        mProgress=Ui.text(c,"Equipo y progreso\nAbre tu partida para consultar datos compatibles.",16,Ui.TEXT,false);
-        mProgress.setPadding(pad,pad,pad,pad);mProgress.setBackground(Ui.rounded(c,Ui.pastel(1),20));
+        mProgress=Ui.text(c,"Equipo y progreso\nAbre tu partida para consultar datos compatibles.",16,0xFFFFFFFF,false);
+        mProgress.setPadding(pad,pad,pad,pad);mProgress.setBackground(Ui.feature(c));Ui.icon(mProgress,R.drawable.ic_p_party,0xFFBFF7EB);
         summary.addView(mProgress);
         mSummaryNotes=Ui.text(c,c.getSharedPreferences("essentia_notes",0).getString(mGameDir.getAbsolutePath(),"Anota tu próximo objetivo aquí."),15,Ui.TEXT,false);
         mSummaryNotes.setMaxLines(3);mSummaryNotes.setEllipsize(TextUtils.TruncateAt.END);
-        mSummaryNotes.setPadding(pad,pad,pad,pad);mSummaryNotes.setBackground(Ui.rounded(c,Ui.SURFACE,18));summary.addView(mSummaryNotes);
-        android.widget.Button editNow=Ui.button(c,"Editar mi objetivo y notas",false);editNow.setOnClickListener(v->mActions.notes());summary.addView(editNow);
+        mSummaryNotes.setPadding(pad,pad,pad,pad);mSummaryNotes.setBackground(Ui.rounded(c,Ui.SURFACE,18));summary.addView(mSummaryNotes);Ui.icon(mSummaryNotes,R.drawable.ic_e_note,Ui.ACCENT_LIGHT);
+        android.widget.Button editNow=Ui.button(c,"Editar mi objetivo y notas",false,R.drawable.ic_e_note);editNow.setOnClickListener(v->mActions.notes());summary.addView(editNow);
         TextView status=Ui.text(c,"Solo datos leídos del juego. Si no hay conexión compatible, puedes usar tus notas y los controles.",14,Ui.TEXT_DIM,false);
         status.setPadding(0,pad,0,pad);summary.addView(status);
-        android.widget.Button progress=Ui.button(c,"Ver última lectura guardada",false);
+        android.widget.Button progress=Ui.button(c,"Ver última lectura guardada",false,R.drawable.ic_p_save);
         progress.setOnClickListener(v->mActions.progress());summary.addView(progress);
-        android.widget.Button controls=Ui.button(c,"Ver controles del juego",false);
+        android.widget.Button controls=Ui.button(c,"Ver controles del juego",false,R.drawable.ic_e_gamepad);
         controls.setOnClickListener(v->mActions.controls());summary.addView(controls);
         mPageViews[PAGE_SUMMARY]=scroll(c,summary);
         mPageViews[PAGE_MAP]=buildMapCard(c);
@@ -164,7 +164,7 @@ public final class CompanionView extends FrameLayout
         notes.addView(Ui.text(c,"Objetivos, lugares y recordatorios. Se guardan en este dispositivo para este juego.",14,Ui.TEXT_DIM,false));
         mNotes=Ui.text(c,c.getSharedPreferences("essentia_notes",0).getString(mGameDir.getAbsolutePath(),"Aún no tienes notas."),17,Ui.TEXT,false);mNotes.setPadding(pad,pad,pad,pad);
         mNotes.setBackground(Ui.rounded(c,Ui.pastel(2),20));notes.addView(mNotes);
-        android.widget.Button edit=Ui.button(c,"Editar mis notas",true);edit.setOnClickListener(v->mActions.notes());notes.addView(edit);
+        android.widget.Button edit=Ui.button(c,"Editar mis notas",true,R.drawable.ic_e_note);edit.setOnClickListener(v->mActions.notes());notes.addView(edit);
         mPageViews[PAGE_NOTES]=scroll(c,notes);
         mPageViews[PAGE_ACTIONS]=buildActions(c);
         mPageViews[PAGE_KEYS]=buildKeys(c);
@@ -189,7 +189,8 @@ public final class CompanionView extends FrameLayout
         header.setGravity(Gravity.CENTER_VERTICAL);
 
         ImageView flask = new ImageView(c);
-        flask.setImageResource(R.drawable.ic_launcher_foreground);
+        flask.setImageResource(R.drawable.ic_essentia_mark);
+        flask.setBackground(Ui.feature(c));
         int fs = Ui.dp(c, 38);
         header.addView(flask, new LinearLayout.LayoutParams(fs, fs));
 
@@ -325,24 +326,32 @@ public final class CompanionView extends FrameLayout
     }
 
     private View buildTabs(Context c) {
-        HorizontalScrollView scroll=new HorizontalScrollView(c);scroll.setHorizontalScrollBarEnabled(false);
+        boolean wide=c.getResources().getConfiguration().screenWidthDp>=600;
+        HorizontalScrollView scroll=new HorizontalScrollView(c);scroll.setHorizontalScrollBarEnabled(false);scroll.setFillViewport(wide);
         LinearLayout row=new LinearLayout(c);row.setGravity(Gravity.CENTER_VERTICAL);
         String[] labels={"Resumen","Mapa","Notas","Acciones","Teclas","Ayudas"};
         for(int i=0;i<labels.length;i++) {
             final int page=i;TextView tab=Ui.text(c,labels[i],14,Ui.TEXT,true);
+            tabIcon(tab,new int[]{R.drawable.ic_p_party,R.drawable.ic_e_compass,R.drawable.ic_e_note,R.drawable.ic_e_spark,R.drawable.ic_e_gamepad,R.drawable.ic_p_heal}[i],Ui.ACCENT_LIGHT);
             tab.setGravity(Gravity.CENTER);tab.setFocusable(true);tab.setClickable(true);
-            tab.setPadding(Ui.dp(c,16),0,Ui.dp(c,16),0);tab.setOnClickListener(v->showPage(page));
-            mTabs[i]=tab;LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,Ui.dp(c,48));
+            tab.setPadding(Ui.dp(c,8),0,Ui.dp(c,8),0);tab.setOnClickListener(v->showPage(page));
+            mTabs[i]=tab;LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(wide?0:-2,Ui.dp(c,56),wide?1f:0f);
             lp.rightMargin=Ui.dp(c,6);row.addView(tab,lp);
         }
         scroll.addView(row);return scroll;
     }
 
+    private void tabIcon(TextView tab,int resource,int color) {
+        android.graphics.drawable.Drawable icon=getContext().getDrawable(resource).mutate();icon.setTint(color);
+        int size=Ui.dp(getContext(),18);icon.setBounds(0,0,size,size);tab.setCompoundDrawablesRelative(null,icon,null,null);tab.setCompoundDrawablePadding(Ui.dp(getContext(),3));
+    }
+
     private void showPage(int page) {
         for(int i=0;i<mPageViews.length;i++) {
             mPageViews[i].setVisibility(i==page?View.VISIBLE:View.GONE);
-            mTabs[i].setSelected(i==page);mTabs[i].setTextColor(i==page?Ui.TEXT:Ui.TEXT_DIM);
-            mTabs[i].setBackground(Ui.focusable(getContext(),i==page?Ui.SURFACE_HI:Ui.SURFACE,12));
+            mTabs[i].setSelected(i==page);mTabs[i].setTextColor(i==page?Ui.ON_ACCENT:Ui.TEXT_DIM);
+            tabIcon(mTabs[i],new int[]{R.drawable.ic_p_party,R.drawable.ic_e_compass,R.drawable.ic_e_note,R.drawable.ic_e_spark,R.drawable.ic_e_gamepad,R.drawable.ic_p_heal}[i],i==page?Ui.ON_ACCENT:Ui.ACCENT_LIGHT);
+            mTabs[i].setBackground(Ui.focusable(getContext(),i==page?Ui.ACCENT:Ui.SURFACE,12));
         }
     }
 
@@ -384,7 +393,9 @@ public final class CompanionView extends FrameLayout
         t.view.setGravity(Gravity.CENTER);
         t.icon = new ImageView(c);
         t.icon.setImageResource(iconRes);
-        int s = Ui.dp(c, 26);
+        t.icon.setBackground(Ui.rounded(c,Ui.tone(g.getChildCount()),14));
+        int ip=Ui.dp(c,9);t.icon.setPadding(ip,ip,ip,ip);
+        int s = Ui.dp(c, 42);
         t.view.addView(t.icon, new LinearLayout.LayoutParams(s, s));
         t.label = Ui.text(c, c.getString(labelRes), 13, Ui.TEXT, true);
         t.label.setGravity(Gravity.CENTER);
@@ -406,7 +417,7 @@ public final class CompanionView extends FrameLayout
         t.view.setBackground(Ui.focusable(c, on ? Ui.GOLD : t.baseColor, 18));
         int color = on ? Ui.INK : Ui.TEXT;
         t.label.setTextColor(color);
-        t.icon.setColorFilter(color);
+        t.icon.setColorFilter(on?Ui.INK:0xFFFFFFFF);
     }
 
     @SuppressLint("ClickableViewAccessibility")

@@ -164,6 +164,7 @@ public class StoreActivity extends ControllerActivity
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
 
+        bar.addView(Ui.brand(this,48),new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         LinearLayout names = new LinearLayout(this);
         names.setOrientation(LinearLayout.VERTICAL);
         names.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 10), 0);
@@ -212,9 +213,12 @@ public class StoreActivity extends ControllerActivity
 
     private void fillExplore()
     {
-        TextView intro=Ui.text(this,"Encuentra tu próxima aventura",21,Ui.TEXT,true);mContent.addView(intro);
-        mContent.addView(Ui.text(this,"Juegos de sus creadores · compatibilidad y procedencia en cada ficha",14,Ui.TEXT_DIM,false));
-        android.widget.Button toggle=Ui.button(this,mShowFilters?"Ocultar filtros":"Filtrar juegos y comunidades",false);
+        LinearLayout feature=new LinearLayout(this);feature.setOrientation(LinearLayout.VERTICAL);feature.setBackground(Ui.feature(this));int fp=Ui.dp(this,18);feature.setPadding(fp,fp,fp,fp);
+        TextView eyebrow=Ui.text(this,"EXPLORA · ELIGE · JUEGA",11,0xFFBFF7EB,true);feature.addView(eyebrow);
+        feature.addView(Ui.text(this,"Encuentra tu próxima aventura",25,0xFFFFFFFF,true));
+        feature.addView(Ui.text(this,"Juegos de sus creadores. Consulta compatibilidad y procedencia en cada ficha.",14,0xFFE7DFF9,false));
+        LinearLayout.LayoutParams flp=new LinearLayout.LayoutParams(-1,-2);flp.bottomMargin=Ui.dp(this,12);mContent.addView(feature,flp);
+        android.widget.Button toggle=Ui.button(this,mShowFilters?"Ocultar filtros":"Filtrar juegos y comunidades",false,R.drawable.ic_e_sort);
         toggle.setOnClickListener(v->{mShowFilters=!mShowFilters;fillContent();});mContent.addView(toggle);
         LinearLayout filterContent=new LinearLayout(this);filterContent.setOrientation(LinearLayout.VERTICAL);
         filterContent.setVisibility(mShowFilters?View.VISIBLE:View.GONE);mContent.addView(filterContent);

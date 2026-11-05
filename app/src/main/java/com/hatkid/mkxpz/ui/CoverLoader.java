@@ -54,7 +54,9 @@ public final class CoverLoader
             return;
         }
         view.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        view.setImageResource(placeholderRes);
+        if(placeholderRes==com.hatkid.mkxpz.R.drawable.ic_launcher_foreground)
+            view.setImageDrawable(Ui.coverPlaceholder(view.getContext(),new File(gamePath).getName()));
+        else view.setImageResource(placeholderRes);
         if (cached == NONE) return;
 
         mPool.execute(() -> {
