@@ -7,12 +7,12 @@ import org.json.JSONObject;
 
 /** Per-game framing preferences. Zero ratio uses the active display. */
 final class WideOptions {
-    static final WideOptions DEFAULT = new WideOptions(0, false, 0, 55);
     private static final String RATIO = "panorama.ratio";
     private static final String BATTLES = "panorama.battles";
     private static final String CAMERA = "panorama.camera";
     private static final String SPREAD = "panorama.spread";
     private static final float[] ASPECTS = {0, 16f / 9, 16f / 10, 18f / 9};
+    static final WideOptions DEFAULT = new WideOptions(0, false, 0, 55);
 
     final int ratio;
     final boolean battles;
