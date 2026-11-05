@@ -40,3 +40,6 @@ anterior mostraba SystemStackError en una cadena que incluye el hook panorámico
 Original es una alternativa comprobada en su prueba, no una corrección del panorámico ni una
 validación exhaustiva del juego. Investigar reenvolturas y aliases de initialize con fixtures
 originales; no publicar adjuntos privados ni atribuir el fallo a un motor sin evidencia.
+
+
+Seguimiento del dueño: Original evita el cierre inicial, pero GS Vitro aún presenta tirones, audio de la escena anterior que continúa y empeora con el tiempo, y fondos de batalla incompletos, negros o mostrando solo el cielo. No registrar el juego como resuelto ni plenamente jugable. Separar investigación de recursión panorámica, temporización/audio y composición de batallas. Falta precisar turbo 1×/activado, música/efectos y salida de audio. No modificar motores, partidas o gráficos globales a partir de estos síntomas sin reproducción.
