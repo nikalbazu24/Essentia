@@ -2,6 +2,9 @@ package com.hatkid.mkxpz;
 
 import android.content.Context;
 import android.os.Environment;
+import android.os.FileObserver;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -23,17 +26,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Automatic translation to Spanish while a game runs (game process).
- * essentia_translate.rb writes the texts it needs to a request file; this
- * worker translates them (official Pokémon names and descriptions from a
- * glossary, the rest through Essentia's database, which shares translations
- * between players) and appends them to the game's translations file, which
- * the game reads. The file lives in Essentia/Traducciones and can be edited.
- */
+/** Reads dialogue batches and fills the game's language-specific cache off the game thread. */
 public final class Translator
 {
     private static final String TAG = "Essentia[Translate]";
@@ -45,15 +44,22 @@ public final class Translator
     private final String mGame;
     private final File mTsv;
     private final File mReq;
+    private final String mLanguage;
+    private final ScheduledExecutorService mWorker = Executors.newSingleThreadScheduledExecutor(
+        task -> new Thread(task, "EssentiaTranslate"));
+    private FileObserver mObserver;
+    private boolean mDrainScheduled;
+    private boolean mNotified;
     private volatile boolean mRunning = true;
     private Map<String, String> mGlossary;
 
-    private Translator(Context c, String game, File tsv, File req)
+    private Translator(Context c, String game, File tsv, File req, String language)
     {
-        mContext = c.getApplicationContext();
+        mContext = c;
         mGame = game;
         mTsv = tsv;
         mReq = req;
+        mLanguage = language;
     }
 
     public static File folder(String game)
@@ -64,51 +70,70 @@ public final class Translator
         return d;
     }
 
-    /** Starts the worker; returns the two files for the game (translations, requests). */
-    public static Translator start(Context c, String game)
-    {
-        File tsv = new File(folder(game), "es.tsv");
-        File req = new File(c.getCacheDir(), "translate_requests.txt");
-        //noinspection ResultOfMethodCallIgnored
-        req.delete();
-        Translator t = new Translator(c, game, tsv, req);
-        new Thread(t::run, "EssentiaTranslate").start();
-        return t;
+    public static File translationFile(String game, String language) {
+        return new File(folder(game), TranslationLanguage.normalize(language) + ".tsv");
+    }
+
+    public static Translator start(Context context, String game, String language) throws java.io.IOException {
+        File requests = new File(context.getCacheDir(), "translation-requests");
+        if (!requests.isDirectory() && !requests.mkdirs()) throw new java.io.IOException("Cannot create dialogue mailbox");
+        File[] stale = requests.listFiles((dir, name) -> name.endsWith(".req") || name.endsWith(".tmp"));
+        if (stale != null) for (File file : stale) file.delete();
+        Translator translator = new Translator(context, game, translationFile(game, language), requests, language);
+        translator.mObserver = new FileObserver(requests.getAbsolutePath(), FileObserver.MOVED_TO) {
+            @Override public void onEvent(int event, String name) {
+                if (name != null && name.endsWith(".req")) translator.scheduleDrain();
+            }
+        };
+        translator.mObserver.startWatching();
+        return translator;
     }
 
     public File translationsFile() { return mTsv; }
     public File requestFile() { return mReq; }
-    public void stop() { mRunning = false; }
 
-    // ------------------------------------------------------------ worker
+    public synchronized void stop() {
+        mRunning = false;
+        if (mObserver != null) mObserver.stopWatching();
+        mWorker.shutdownNow();
+    }
 
-    private void run()
-    {
-        seedFromDatabase();
-        File work = new File(mReq.getPath() + ".work");
-        while (mRunning) {
-            try {
-                if (mReq.isFile() && mReq.length() > 0 && mReq.renameTo(work)) {
-                    List<String> texts = readRequests(work);
-                    //noinspection ResultOfMethodCallIgnored
-                    work.delete();
-                    if (!texts.isEmpty()) translate(texts);
-                }
-                Thread.sleep(120);
-            } catch (InterruptedException e) {
-                return;
-            } catch (Exception e) {
-                Log.w(TAG, "worker: " + e);
-                try { Thread.sleep(1000); } catch (InterruptedException ie) { return; }
-            }
+    private synchronized void scheduleDrain() {
+        if (!mRunning || mDrainScheduled) return;
+        mDrainScheduled = true;
+        mWorker.schedule(this::drain, 25, TimeUnit.MILLISECONDS);
+    }
+
+    private void drain() {
+        synchronized (this) { mDrainScheduled = false; }
+        File[] requests = mReq.listFiles((dir, name) -> name.endsWith(".req"));
+        if (requests == null) return;
+        java.util.Arrays.sort(requests);
+        Set<String> texts = new LinkedHashSet<>();
+        for (File request : requests) {
+            if (!mRunning) return;
+            try { texts.addAll(readRequests(request)); }
+            catch (Exception ignored) { Log.w(TAG, "Could not read a dialogue batch"); }
+            finally { request.delete(); }
         }
+        if (!texts.isEmpty()) translate(new ArrayList<>(texts));
+    }
+
+    private void notifyFailure(int message) {
+        if (mNotified || !mRunning) return;
+        mNotified = true;
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (mRunning) android.widget.Toast.makeText(mContext, message, android.widget.Toast.LENGTH_LONG).show();
+        });
     }
 
     private List<String> readRequests(File f) throws Exception
     {
         Set<String> out = new LinkedHashSet<>();
-        for (String line : new String(readAll(f), StandardCharsets.UTF_8).split("\n")) {
-            if (!line.isEmpty()) out.add(unesc(line));
+        try (InputStream in = new FileInputStream(f)) {
+            for (String line : new String(SaveTransaction.read(in, 256 * 1024), StandardCharsets.UTF_8).split("\n")) {
+                if (!line.isEmpty()) out.add(unesc(line));
+            }
         }
         return new ArrayList<>(out);
     }
@@ -123,70 +148,78 @@ public final class Translator
             else remote.add(t);
         }
         if (!done.isEmpty()) append(done);
-        if (remote.isEmpty() || (!Cloud.configured(mContext) && !AiTranslation.enabled(mContext))) return;
-
-        for (int i = 0; i < remote.size(); i += 40) {
-            List<String> part = remote.subList(i, Math.min(remote.size(), i + 40));
-            Map<String, List<String>> codes = new HashMap<>();
-            JSONArray arr = new JSONArray();
-            Map<String, String> protectedToOriginal = new HashMap<>();
-            for (String t : part) {
-                List<String> found = new ArrayList<>();
-                String p = protect(t, found);
-                codes.put(p, found);
-                protectedToOriginal.put(p, t);
-                arr.put(p);
-            }
-            try {
-                JSONObject body = new JSONObject();
-                body.put("action", "translate");
-                body.put("game", mGame);
-                body.put("lang", "es");
-                body.put("texts", arr);
-                JSONObject res = AiTranslation.enabled(mContext) ? AiTranslation.translate(mContext, arr)
-                    : Cloud.post(mContext, body, 45000).getJSONObject("translations");
-                Map<String, String> got = new HashMap<>();
-                Iterator<String> keys = res.keys();
-                while (keys.hasNext()) {
-                    String p = keys.next();
-                    String orig = protectedToOriginal.get(p);
-                    if (orig == null) continue;
-                    got.put(orig, restore(res.getString(p), codes.get(p)));
-                }
-                append(got);
-            } catch (Exception e) {
-                Log.w(TAG, "translate: " + e);
-            }
+        if (remote.isEmpty() || !mRunning) return;
+        if (!Cloud.configured(mContext) && !AiTranslation.enabled(mContext)) {
+            notifyFailure(R.string.translation_unavailable);
+            return;
         }
+
+        Map<String, List<String>> batch = new java.util.LinkedHashMap<>();
+        Map<String, List<String>> codes = new HashMap<>();
+        int length = 0;
+        for (String original : remote) {
+            if (!mRunning) return;
+            List<String> placeholders = new ArrayList<>();
+            String protectedText = protect(original, placeholders);
+            if (protectedText.length() > 3500) continue;
+            if (!batch.containsKey(protectedText)) {
+                if (batch.size() >= 24 || length + protectedText.length() > 3500) {
+                    requestBatch(batch, codes);
+                    batch.clear();
+                    codes.clear();
+                    length = 0;
+                }
+                length += protectedText.length();
+            }
+            List<String> originals = batch.get(protectedText);
+            if (originals == null) {
+                originals = new ArrayList<>();
+                batch.put(protectedText, originals);
+            }
+            originals.add(original);
+            codes.put(original, placeholders);
+        }
+        if (!batch.isEmpty() && mRunning) requestBatch(batch, codes);
     }
 
-    /** Translations already made by anyone for this game. */
-    private void seedFromDatabase()
-    {
-        if (!Cloud.configured(mContext) || (mTsv.isFile() && mTsv.length() > 0)) return;
+    private long retryAfter;
+
+    private void requestBatch(Map<String, List<String>> batch, Map<String, List<String>> codes) {
+        if (android.os.SystemClock.elapsedRealtime() < retryAfter) return;
+        JSONArray texts = new JSONArray(batch.keySet());
         try {
-            JSONObject body = new JSONObject();
-            body.put("action", "tr_dump");
-            body.put("game", mGame);
-            body.put("lang", "es");
-            JSONObject res = Cloud.post(mContext, body, 30000).getJSONObject("translations");
-            // the database keeps texts with their codes as ⟦n⟧ placeholders: those
-            // are translated again when needed; plain texts can be used right away
-            Map<String, String> plain = new HashMap<>();
-            Iterator<String> keys = res.keys();
-            while (keys.hasNext()) {
-                String p = keys.next();
-                if (!TOKEN.matcher(p).find()) plain.put(p, res.getString(p));
+            JSONObject response;
+            if (AiTranslation.enabled(mContext)) {
+                response = AiTranslation.translate(mContext, texts, mLanguage);
+            } else {
+                JSONObject body = new JSONObject().put("action", "translate").put("game", mGame)
+                    .put("lang", mLanguage).put("texts", texts);
+                response = Cloud.post(mContext, body, 6500).getJSONObject("translations");
             }
-            append(plain);
-        } catch (Exception e) {
-            Log.w(TAG, "seed: " + e);
+            Map<String, String> translated = new HashMap<>();
+            for (String key : batch.keySet()) {
+                Object value = response.opt(key);
+                if (!(value instanceof String) || ((String) value).length() > 12000) continue;
+                for (String original : batch.get(key)) {
+                    String restored = restore((String) value, codes.get(original));
+                    if (restored != null && !restored.trim().isEmpty()) translated.put(original, restored);
+                }
+            }
+            append(translated);
+            if (translated.isEmpty()) {
+                retryAfter = android.os.SystemClock.elapsedRealtime() + 10000;
+                notifyFailure(R.string.translation_no_result);
+            }
+        } catch (Exception ignored) {
+            retryAfter = android.os.SystemClock.elapsedRealtime() + 10000;
+            Log.w(TAG, "Translation provider unavailable");
+            notifyFailure(R.string.translation_unavailable);
         }
     }
 
     private synchronized void append(Map<String, String> m)
     {
-        if (m.isEmpty()) return;
+        if (m.isEmpty() || !mRunning) return;
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> e : m.entrySet()) {
             if (e.getValue() == null || e.getValue().isEmpty()) continue;
@@ -204,8 +237,7 @@ public final class Translator
     /** Message codes (\PN, \v[1], <ac>...) become ⟦n⟧ so the translator leaves them alone. */
     static String protect(String t, List<String> found)
     {
-        String s = t.replace("\n", " ");
-        Matcher m = CODES.matcher(s);
+        Matcher m = CODES.matcher(t);
         StringBuffer sb = new StringBuffer();
         while (m.find()) {
             found.add(m.group());
@@ -217,28 +249,26 @@ public final class Translator
 
     static String restore(String t, List<String> found)
     {
-        if (found == null || found.isEmpty()) return t;
         Matcher m = TOKEN.matcher(t);
         StringBuffer sb = new StringBuffer();
         boolean[] used = new boolean[found.size()];
         while (m.find()) {
+            if (m.group(1).length() > 5) return null;
             int i = Integer.parseInt(m.group(1));
-            String code = i >= 0 && i < found.size() ? found.get(i) : "";
-            if (i >= 0 && i < used.length) used[i] = true;
-            m.appendReplacement(sb, Matcher.quoteReplacement(code));
+            if (i >= found.size() || used[i]) return null;
+            used[i] = true;
+            m.appendReplacement(sb, Matcher.quoteReplacement(found.get(i)));
         }
         m.appendTail(sb);
-        // codes the translation lost go at the start (colors, names...)
-        StringBuilder lost = new StringBuilder();
-        for (int i = 0; i < used.length; i++) if (!used[i]) lost.append(found.get(i));
-        return lost + sb.toString();
+        for (boolean present : used) if (!present) return null;
+        return sb.toString();
     }
 
     // ------------------------------------------------------------ glossary
 
     private String glossary(String t)
     {
-        if (t.length() > 400) return null;
+        if (!"es".equals(mLanguage) || t.length() > 400 || CODES.matcher(t).find()) return null;
         if (mGlossary == null) loadGlossary();
         return mGlossary.get(normalize(t));
     }
@@ -291,14 +321,4 @@ public final class Translator
         return sb.toString();
     }
 
-    private static byte[] readAll(File f) throws Exception
-    {
-        try (InputStream in = new FileInputStream(f)) {
-            ByteArrayOutputStream buf = new ByteArrayOutputStream();
-            byte[] b = new byte[16384];
-            int r;
-            while ((r = in.read(b)) > 0) buf.write(b, 0, r);
-            return buf.toByteArray();
-        }
-    }
 }

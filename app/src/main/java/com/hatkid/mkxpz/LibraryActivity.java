@@ -242,24 +242,24 @@ public class LibraryActivity extends ControllerActivity
         root.addView(intro, match());
 
         flask.setScaleX(0.6f); flask.setScaleY(0.6f); flask.setAlpha(0f);
-        flask.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(650)
+        flask.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(250)
             .setInterpolator(new android.view.animation.OvershootInterpolator(1.4f)).start();
         glow.setScaleX(0.3f); glow.setScaleY(0.3f); glow.setAlpha(0f);
-        glow.animate().scaleX(1.15f).scaleY(1.15f).alpha(1f).setDuration(900).start();
+        glow.animate().scaleX(1.15f).scaleY(1.15f).alpha(1f).setDuration(300).start();
         name.setAlpha(0f); name.setTranslationY(Ui.dp(this, 16));
-        name.animate().alpha(1f).translationY(0).setStartDelay(300).setDuration(450).start();
+        name.animate().alpha(1f).translationY(0).setStartDelay(60).setDuration(180).start();
         tag.setAlpha(0f);
-        tag.animate().alpha(1f).setStartDelay(550).setDuration(450).start();
+        tag.animate().alpha(1f).setStartDelay(100).setDuration(180).start();
 
         Runnable close = () -> {
             if (intro.getParent() == null) return;
-            intro.animate().alpha(0f).setDuration(320).withEndAction(() -> {
+            intro.animate().alpha(0f).setDuration(140).withEndAction(() -> {
                 root.removeView(intro);
                 focusSelected();
             }).start();
         };
         intro.setOnClickListener(v -> close.run());
-        intro.postDelayed(close, 1600);
+        intro.postDelayed(close, 360);
     }
 
     private boolean isPortrait()
@@ -290,7 +290,7 @@ public class LibraryActivity extends ControllerActivity
         LinearLayout.LayoutParams helpLp=new LinearLayout.LayoutParams(-2,Ui.dp(this,48));helpLp.leftMargin=Ui.dp(this,8);tools.addView(help,helpLp);
         col.addView(tools,wrapWidth());
         EditText search=com.hatkid.mkxpz.ui.Ui.input(this);search.setSingleLine(true);search.setTextSize(15);search.setTextColor(Ui.TEXT);search.setHintTextColor(Ui.TEXT_DIM);
-        search.setTag("tour-search");Ui.icon(search,R.drawable.ic_e_search,Ui.ACCENT_LIGHT);search.setHint("Buscar en tu biblioteca");search.setContentDescription("Buscar en tu biblioteca");search.setBackground(Ui.rounded(this,Ui.SURFACE,12));
+        search.setTag("tour-search");Ui.icon(search,R.drawable.ic_e_search,Ui.ACCENT_LIGHT);search.setHint(getString(R.string.library_search));search.setContentDescription(getString(R.string.library_search));search.setBackground(Ui.rounded(this,Ui.SURFACE,12));
         search.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),0);search.setText(mQuery);
         LinearLayout.LayoutParams searchLp=new LinearLayout.LayoutParams(isPortrait()?-1:0,Ui.dp(this,48),isPortrait()?0f:1f);
         searchLp.topMargin=isPortrait()?Ui.dp(this,8):0;searchLp.leftMargin=isPortrait()?0:Ui.dp(this,8);
@@ -1117,8 +1117,8 @@ public class LibraryActivity extends ControllerActivity
                 Toast.makeText(this, ok ? R.string.opt_pin_done : R.string.opt_pin_failed, Toast.LENGTH_LONG).show();
             });
         }
-        labels.add(getString(e.translate ? R.string.opt_translate_off : R.string.opt_translate_on));
-        actions.add(() -> toggleTranslate(e));
+        labels.add(getString(R.string.game_translation));
+        actions.add(() -> chooseTranslation(e));
         labels.add(getString(R.string.opt_cloud)); actions.add(() -> cloudBackup(e));
         labels.add(getString(R.string.opt_report)); actions.add(() -> ReportActivity.open(this, e.path, null));
         labels.add(getString(R.string.opt_send_scripts)); actions.add(() -> sendScripts(e));
@@ -1170,18 +1170,32 @@ public class LibraryActivity extends ControllerActivity
 
     // ------------------------------------------------------------ translation and backups
 
-    private void toggleTranslate(Library.Entry e)
+    private void chooseTranslation(Library.Entry entry)
     {
-        e.translate = !e.translate;
-        Library.update(this, e);
-        int msg = !e.translate ? R.string.tr_off
-            : Cloud.configured(this) ? R.string.tr_on : R.string.tr_on_no_cloud;
-        new AlertDialog.Builder(this, com.hatkid.mkxpz.ui.Ui.dialogTheme())
-            .setTitle(e.displayTitle())
-            .setMessage(getString(msg, Translator.folder(e.displayTitle()).getAbsolutePath()))
-            .setPositiveButton(android.R.string.ok, null)
+        String[] codes = TranslationLanguage.codes();
+        String[] labels = new String[codes.length + 1];
+        labels[0] = getString(R.string.game_translation_off);
+        for (int i = 0; i < codes.length; i++) {
+            labels[i + 1] = TranslationLanguage.label(codes[i], getResources().getConfiguration().locale);
+        }
+        int selected = entry.translate ? 1 + java.util.Arrays.asList(codes).indexOf(entry.translationLanguage) : 0;
+        new AlertDialog.Builder(this, Ui.dialogTheme())
+            .setTitle(R.string.game_translation)
+            .setMessage(R.string.game_translation_info)
+            .setPositiveButton(R.string.game_translation_choose, (info, ignored) ->
+                new AlertDialog.Builder(this, Ui.dialogTheme())
+                    .setTitle(R.string.game_translation_choose)
+                    .setSingleChoiceItems(labels, selected, (dialog, choice) -> {
+                        entry.translate = choice > 0;
+                        if (entry.translate) entry.translationLanguage = codes[choice - 1];
+                        Library.update(this, entry);
+                        dialog.dismiss();
+                        reload();
+                    })
+                    .setNegativeButton(R.string.cancel, null)
+                    .show())
+            .setNegativeButton(R.string.cancel, null)
             .show();
-        reload();
     }
 
     private void cloudBackup(Library.Entry e)

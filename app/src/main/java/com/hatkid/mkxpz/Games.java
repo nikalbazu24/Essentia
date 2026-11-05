@@ -107,8 +107,7 @@ public final class Games
         killGameProcess(a);
 
         String path = gameDir.getAbsolutePath();
-        Library.markPlayed(a, path);
-        Library.Entry entry = Library.find(a, path);
+        Library.Entry entry = Library.markPlayed(a, path);
         String title = entry != null ? entry.displayTitle() : readTitle(gameDir);
         // screen format: the game's own choice, else the general one, adjusted by
         // the game's profile (e.g. old Essentials keeps menus in their shape)
@@ -124,23 +123,27 @@ public final class Games
         intent.putExtra(MainActivity.EXTRA_SCREEN_MODE, screen);
         String chosen = entry != null && entry.engine != null ? entry.engine : EssentiaSettings.ENGINE_AUTO;
         boolean auto = !EssentiaSettings.ENGINE_MODERN.equals(chosen) && !EssentiaSettings.ENGINE_CLASSIC.equals(chosen);
-        boolean classic = classicEngineAvailable(a) && (EssentiaSettings.ENGINE_CLASSIC.equals(chosen)
-            || (auto && (EssentiaSettings.learnedClassic(a, path)
+        boolean classicAvailable = classicEngineAvailable(a);
+        boolean learnedClassic = auto && classicAvailable && EssentiaSettings.learnedClassic(a, path);
+        boolean classic = classicAvailable && (EssentiaSettings.ENGINE_CLASSIC.equals(chosen)
+            || (auto && (learnedClassic
                 || EssentiaSettings.ENGINE_CLASSIC.equals(profile.engine))));
-        String reason=auto?(classic?(EssentiaSettings.learnedClassic(a,path)?"learned_fallback":"profile_recommendation"):"automatic_modern"):"user_choice";
+        String reason=auto?(classic?(learnedClassic?"learned_fallback":"profile_recommendation"):"automatic_modern"):"user_choice";
         if(!classic&&EssentiaSettings.ENGINE_CLASSIC.equals(chosen))reason="classic_unavailable";
         intent.putExtra(MainActivity.EXTRA_ENGINE_REASON,reason);
         intent.putExtra(MainActivity.EXTRA_ENGINE, classic ? EssentiaSettings.ENGINE_CLASSIC : EssentiaSettings.ENGINE_MODERN);
         // automatic engine, first try with the modern one: may switch to classic
-        intent.putExtra(MainActivity.EXTRA_AUTO_ENGINE, auto && !classic && classicEngineAvailable(a));
+        intent.putExtra(MainActivity.EXTRA_AUTO_ENGINE, auto && !classic && classicAvailable);
         intent.putExtra(MainActivity.EXTRA_FROM_FRONTEND, newTask);
         intent.putExtra(MainActivity.EXTRA_TRANSLATE, entry != null && entry.translate);
+        if (entry != null) intent.putExtra(MainActivity.EXTRA_TRANSLATION_LANGUAGE, entry.translationLanguage);
         intent.putExtra(MainActivity.EXTRA_DATA_DIR, Saves.dirFor(a, gameDir, title).getAbsolutePath());
         if (newTask) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         }
         a.startActivity(intent);
         a.overridePendingTransition(0, 0);
+        if (a instanceof LauncherActivity) a.finish();
     }
 
     /** True when this APK includes the classic engine (Ruby 1.8). */

@@ -99,6 +99,10 @@ public final class CompanionView extends FrameLayout
     private final Runnable mPoll = new Runnable() {
         @Override public void run() {
             if (mStopped) return;
+            if (!isShown()) {
+                mHandler.postDelayed(this, 500);
+                return;
+            }
             if (!mReadPending) {
                 mReadPending = true;
                 try { mReader.execute(() -> { try { readLive(); } finally { mReadPending = false; } }); }
@@ -329,7 +333,9 @@ public final class CompanionView extends FrameLayout
         boolean wide=c.getResources().getConfiguration().screenWidthDp>=600;
         HorizontalScrollView scroll=new HorizontalScrollView(c);scroll.setHorizontalScrollBarEnabled(false);scroll.setFillViewport(wide);
         LinearLayout row=new LinearLayout(c);row.setGravity(Gravity.CENTER_VERTICAL);
-        String[] labels={"Resumen","Mapa","Notas","Acciones","Teclas","Ayudas"};
+        String[] labels = {c.getString(R.string.panel_summary), c.getString(R.string.panel_map),
+            c.getString(R.string.panel_notes), c.getString(R.string.panel_actions),
+            c.getString(R.string.panel_keys), c.getString(R.string.panel_assists)};
         for(int i=0;i<labels.length;i++) {
             final int page=i;TextView tab=Ui.text(c,labels[i],14,Ui.TEXT,true);
             tabIcon(tab,new int[]{R.drawable.ic_p_party,R.drawable.ic_e_compass,R.drawable.ic_e_note,R.drawable.ic_e_spark,R.drawable.ic_e_gamepad,R.drawable.ic_p_heal}[i],Ui.ACCENT_LIGHT);

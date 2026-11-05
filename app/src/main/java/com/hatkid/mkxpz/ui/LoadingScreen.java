@@ -29,7 +29,7 @@ public final class LoadingScreen extends FrameLayout
     private static final String TAG = "Essentia[Loading]";
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private final long mStart = SystemClock.elapsedRealtime();
+    private final long mStart;
     private final TextView mStatus;
     private final TextView mHint;
     private boolean mDone = false;
@@ -51,9 +51,10 @@ public final class LoadingScreen extends FrameLayout
         }
     };
 
-    public LoadingScreen(Context c, String title, String gamePath, boolean showTimes)
+    public LoadingScreen(Context c, String title, String gamePath, boolean showTimes, long loadingStarted)
     {
         super(c);
+        mStart = loadingStarted;
         mShowTimes = showTimes;
         mGamePath = gamePath;
         setBackgroundColor(Ui.BG);

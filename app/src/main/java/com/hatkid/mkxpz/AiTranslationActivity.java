@@ -27,6 +27,7 @@ public class AiTranslationActivity extends ControllerActivity {
             Runnable apply=()->{
                 try{
                     String value=model.getText().toString().trim();
+                    if (value.startsWith("models/")) value = value.substring(7);
                     if(active.isChecked()&&!value.matches("[a-zA-Z0-9._-]{1,100}"))throw new Exception("Indica un modelo válido de Gemini API");
                     if(active.isChecked()&&Games.isGameRunning(this))throw new Exception("Cierra los juegos antes de activar o cambiar la API");
                     if(!key.getText().toString().trim().isEmpty())AiTranslation.saveKey(this,key.getText().toString().trim());

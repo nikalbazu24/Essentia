@@ -15,7 +15,13 @@ import android.view.WindowManager;
  */
 public abstract class ControllerActivity extends Activity
 {
+
+    @Override protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(com.hatkid.mkxpz.AppLanguage.wrap(base));
+    }
+
     private int mAppearanceStamp;
+    private String mLanguage;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -23,6 +29,7 @@ public abstract class ControllerActivity extends Activity
         setTheme(Ui.LIGHT?com.hatkid.mkxpz.R.style.AppThemeLight:com.hatkid.mkxpz.R.style.AppTheme);
         super.onCreate(savedInstanceState);
         mAppearanceStamp=Ui.themeStamp();
+        mLanguage=com.hatkid.mkxpz.AppLanguage.selection(this);
         Window w = getWindow();
         w.getDecorView().setBackgroundColor(Ui.BG);
         w.setStatusBarColor(Ui.BG);
@@ -35,7 +42,8 @@ public abstract class ControllerActivity extends Activity
 
     @Override protected void onResume() {
         super.onResume();Ui.applyTheme(this);
-        if(!(this instanceof com.hatkid.mkxpz.LibraryActivity)&&mAppearanceStamp!=Ui.themeStamp())recreate();
+        if (!mLanguage.equals(com.hatkid.mkxpz.AppLanguage.selection(this))
+            || (!(this instanceof com.hatkid.mkxpz.LibraryActivity) && mAppearanceStamp != Ui.themeStamp())) recreate();
     }
 
     @Override public void setContentView(View content) {
