@@ -331,20 +331,25 @@ public final class CompanionView extends FrameLayout
         String[] labels={"Resumen","Mapa","Notas","Acciones","Teclas","Ayudas"};
         for(int i=0;i<labels.length;i++) {
             final int page=i;TextView tab=Ui.text(c,labels[i],14,Ui.TEXT,true);
-            Ui.icon(tab,new int[]{R.drawable.ic_p_party,R.drawable.ic_e_compass,R.drawable.ic_e_note,R.drawable.ic_e_spark,R.drawable.ic_e_gamepad,R.drawable.ic_p_heal}[i],Ui.ACCENT_LIGHT);
+            tabIcon(tab,new int[]{R.drawable.ic_p_party,R.drawable.ic_e_compass,R.drawable.ic_e_note,R.drawable.ic_e_spark,R.drawable.ic_e_gamepad,R.drawable.ic_p_heal}[i],Ui.ACCENT_LIGHT);
             tab.setGravity(Gravity.CENTER);tab.setFocusable(true);tab.setClickable(true);
-            tab.setPadding(Ui.dp(c,16),0,Ui.dp(c,16),0);tab.setOnClickListener(v->showPage(page));
-            mTabs[i]=tab;LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,Ui.dp(c,48));
+            tab.setPadding(Ui.dp(c,8),0,Ui.dp(c,8),0);tab.setOnClickListener(v->showPage(page));
+            mTabs[i]=tab;LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,Ui.dp(c,56));
             lp.rightMargin=Ui.dp(c,6);row.addView(tab,lp);
         }
         scroll.addView(row);return scroll;
+    }
+
+    private void tabIcon(TextView tab,int resource,int color) {
+        android.graphics.drawable.Drawable icon=getContext().getDrawable(resource).mutate();icon.setTint(color);
+        int size=Ui.dp(getContext(),18);icon.setBounds(0,0,size,size);tab.setCompoundDrawablesRelative(null,icon,null,null);tab.setCompoundDrawablePadding(Ui.dp(getContext(),3));
     }
 
     private void showPage(int page) {
         for(int i=0;i<mPageViews.length;i++) {
             mPageViews[i].setVisibility(i==page?View.VISIBLE:View.GONE);
             mTabs[i].setSelected(i==page);mTabs[i].setTextColor(i==page?Ui.ON_ACCENT:Ui.TEXT_DIM);
-            Ui.icon(mTabs[i],new int[]{R.drawable.ic_p_party,R.drawable.ic_e_compass,R.drawable.ic_e_note,R.drawable.ic_e_spark,R.drawable.ic_e_gamepad,R.drawable.ic_p_heal}[i],i==page?Ui.ON_ACCENT:Ui.ACCENT_LIGHT);
+            tabIcon(mTabs[i],new int[]{R.drawable.ic_p_party,R.drawable.ic_e_compass,R.drawable.ic_e_note,R.drawable.ic_e_spark,R.drawable.ic_e_gamepad,R.drawable.ic_p_heal}[i],i==page?Ui.ON_ACCENT:Ui.ACCENT_LIGHT);
             mTabs[i].setBackground(Ui.focusable(getContext(),i==page?Ui.ACCENT:Ui.SURFACE,12));
         }
     }

@@ -150,6 +150,7 @@ public class ExperienceTest {
         view.updateCapabilities("party,bag,save,shot,speed","map");
         View party=label(view,a.getString(R.string.act_party));assertNotNull(party);assertTrue(((View)party.getParent()).isEnabled());
         label(view,"Acciones").performClick();shot("context-map",view,640,480);
+        View lastTab=label(view,"Ayudas");android.graphics.Rect visible=new android.graphics.Rect();assertTrue(lastTab.getGlobalVisibleRect(visible));assertEquals(lastTab.getWidth(),visible.width());
         view.updateCapabilities("party,bag,save,shot,speed","battle");
         party=label(view,a.getString(R.string.act_party));assertFalse(((View)party.getParent()).isEnabled());shot("context-battle",view,640,480);
         view.updateCapabilities("shot,speed","map");assertNull(label(view,a.getString(R.string.act_party)));shot("context-other-game",view,640,480);

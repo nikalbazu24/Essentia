@@ -53,7 +53,7 @@ La cadena de alias del modo panorámico es una hipótesis por reproducir. Audio 
 composición no tienen causa demostrada; no se aplican parches de motor especulativos.
 
 
-Revisión posterior de identidad, autorizada por el dueño: beta.78 le resultó plana y
+Revisión posterior de identidad, PR #9, autorizada por el dueño: beta.78 le resultó plana y
 monótona, sin logo visible ni tour reconocible. Se recupera el frasco original con
 recurso propio sin márgenes adaptativos para la interfaz; los iconos del launcher se
 conservan. `LibraryTour` recorre controles reales, puede repetirse desde Biblioteca,
