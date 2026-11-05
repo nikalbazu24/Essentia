@@ -5,7 +5,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.*;
-import android.os.Build;
 import android.view.*;
 import android.widget.*;
 import com.hatkid.mkxpz.*;
@@ -33,10 +32,10 @@ public final class LibraryTour {
     public static Dialog show(Activity a){
         if(a.isFinishing()||a.isDestroyed())return null;
         Dialog existing=ACTIVE.get(a);if(existing!=null&&existing.isShowing())return existing;
-        Dialog d=new Dialog(a,android.R.style.Theme_Material_NoActionBar);ACTIVE.put(a,d);
+        Dialog d=new Dialog(a,R.style.EssentiaTourOverlay);ACTIVE.put(a,d);
         FrameLayout stage=new FrameLayout(a);
-        Spotlight spotlight=new Spotlight(a,a.findViewById(android.R.id.content));stage.addView(spotlight,new FrameLayout.LayoutParams(-1,-1));
-        LinearLayout card=new LinearLayout(a);card.setOrientation(LinearLayout.VERTICAL);
+        Spotlight spotlight=new Spotlight(a);spotlight.setTag("tour-spotlight");stage.addView(spotlight,new FrameLayout.LayoutParams(-1,-1));
+        LinearLayout card=new LinearLayout(a);card.setTag("tour-card");card.setOrientation(LinearLayout.VERTICAL);
         int pad=Ui.dp(a,18);card.setPadding(pad,pad,pad,pad);card.setBackground(Ui.rounded(a,Ui.SURFACE,24));card.setElevation(Ui.dp(a,12));
         LinearLayout heading=new LinearLayout(a);heading.setGravity(Gravity.CENTER_VERTICAL);heading.addView(Ui.brand(a,46),new LinearLayout.LayoutParams(Ui.dp(a,46),Ui.dp(a,46)));
         LinearLayout identity=new LinearLayout(a);identity.setOrientation(LinearLayout.VERTICAL);identity.setPadding(Ui.dp(a,12),0,0,0);
@@ -60,11 +59,14 @@ public final class LibraryTour {
             if(target==null||!target.isShown())target=a.findViewById(android.R.id.content).findViewWithTag("tour-add");
             spotlight.target=target;spotlight.invalidate();
             int w=stage.getWidth(),h=stage.getHeight();if(w<=0||h<=0)return;
-            int[] xy=new int[2];if(target!=null)target.getLocationOnScreen(xy);
+            int[] xy=new int[2],origin=new int[2];stage.getLocationOnScreen(origin);if(target!=null)target.getLocationOnScreen(xy);
+            int targetX=xy[0]-origin[0]+(target==null?0:target.getWidth()/2);
+            int targetY=xy[1]-origin[1]+(target==null?0:target.getHeight()/2);
             FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)card.getLayoutParams();
             boolean landscape=w>h*1.3f;lp.width=landscape?Math.min(Ui.dp(a,410),w/2):Math.min(Ui.dp(a,500),w-Ui.dp(a,24));
             lp.height=Math.min(Ui.dp(a,420),h-Ui.dp(a,32));
-            lp.gravity=landscape?Gravity.END|Gravity.CENTER_VERTICAL:Gravity.CENTER_HORIZONTAL|(xy[1]>h/2?Gravity.TOP:Gravity.BOTTOM);
+            lp.gravity=landscape?(targetX>w/2?Gravity.LEFT:Gravity.RIGHT)|Gravity.CENTER_VERTICAL
+                :Gravity.CENTER_HORIZONTAL|(targetY>h/2?Gravity.TOP:Gravity.BOTTOM);
             lp.setMargins(Ui.dp(a,12),Ui.dp(a,16),Ui.dp(a,12),Ui.dp(a,16));card.setLayoutParams(lp);
         };
         Runnable render=()->{
@@ -88,18 +90,21 @@ public final class LibraryTour {
             else next.performClick();return true;
         });
         d.setOnDismissListener(dialog->{if(ACTIVE.get(a)==d)ACTIVE.remove(a);});d.setCanceledOnTouchOutside(false);d.setOnCancelListener(dialog->finish.run());
-        d.setContentView(stage);d.show();Window window=d.getWindow();
-        window.setBackgroundDrawableResource(android.R.color.transparent);window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);window.setLayout(-1,-1);
+        d.setContentView(stage);Window window=d.getWindow();
+        // The first frame must allow composition with the library's existing surface.
+        window.setBackgroundDrawableResource(android.R.color.transparent);window.setFormat(PixelFormat.TRANSLUCENT);
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);window.setDimAmount(0f);window.setLayout(-1,-1);
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
         window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+        d.show();window.setLayout(-1,-1);
         stage.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(r-l!=or-ol||b-t!=ob-ot)place.run();});
         render.run();stage.post(place);next.requestFocus();return d;
     }
     private static final class Spotlight extends View{
         View target;final Paint paint=new Paint(3);
-        Spotlight(Context c,View origin){super(c);setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
+        Spotlight(Context c){super(c);setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
         @Override protected void onDraw(Canvas canvas){
-            paint.setColor(0xDE100A27);Path mask=new Path();mask.setFillType(Path.FillType.EVEN_ODD);mask.addRect(0,0,getWidth(),getHeight(),Path.Direction.CW);
+            paint.setColor(0x70100A27);Path mask=new Path();mask.setFillType(Path.FillType.EVEN_ODD);mask.addRect(0,0,getWidth(),getHeight(),Path.Direction.CW);
             if(target!=null&&target.isShown()){
                 int[] p=new int[2],own=new int[2];target.getLocationOnScreen(p);getLocationOnScreen(own);float pad=Ui.dp(getContext(),4);
                 RectF rect=new RectF(p[0]-own[0]-pad,p[1]-own[1]-pad,p[0]-own[0]+target.getWidth()+pad,p[1]-own[1]+target.getHeight()+pad);

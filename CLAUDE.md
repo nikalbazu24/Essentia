@@ -62,3 +62,13 @@ arranque que marcaba `whats_new_tour=5` antes de abrir una guía textual. La gu�
 novedades siguen disponibles. Identidad más intensa, contraste, iconos y carátulas de
 reserva distintas por juego, sin inventar arte oficial. Revisar capturas antes de
 integrar; mantener intactos juegos, partidas, motores y pendientes de GS Vitro.
+
+Corrección posterior del tour: el dueño mostró en Thor beta.85 un fondo opaco azul
+que ocultaba Biblioteca. La ventana usaba un tema no translúcido y la máscara tenía
+87 % de opacidad. El tour usa ahora un tema explícitamente translúcido, superficie
+con alfa desde el primer fotograma, sin oscurecimiento adicional del sistema y máscara
+al 44 %. En horizontal, la tarjeta se coloca al lado opuesto del control señalado.
+Las capturas previas componían Biblioteca manualmente: ahora esa composición exige
+comprobar primero el tema, el formato de ventana y el alfa renderizado. Se añade
+regresión Android 13 para temas claro/oscuro y ambas orientaciones. Validación de CI,
+APK y confirmación física pendientes; consultar PR de la corrección antes de anunciar.
