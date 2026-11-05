@@ -211,13 +211,14 @@ public class ExperienceTest {
                 shotTour("tour13-"+theme+"-"+size[0]+"-step"+(page+1),d,size[0],size[1],root);
                 if(page==1){
                     View add=root.findViewWithTag("tour-add"),card=decor.findViewWithTag("tour-card");
-                    int[] targetPos=new int[2],cardPos=new int[2];add.getLocationOnScreen(targetPos);card.getLocationOnScreen(cardPos);
-                    Rect targetBounds=new Rect(targetPos[0],targetPos[1],targetPos[0]+add.getWidth(),targetPos[1]+add.getHeight());
-                    Rect cardBounds=new Rect(cardPos[0],cardPos[1],cardPos[0]+card.getWidth(),cardPos[1]+card.getHeight());
-                    assertFalse("Tour card must not cover Añadir",Rect.intersects(targetBounds,cardBounds));
-                    View spotlight=decor.findViewWithTag("tour-spotlight");int[] origin=new int[2];spotlight.getLocationOnScreen(origin);
+                    // Compare the two rendered viewports; this JVM does not compose WindowManager screen offsets.
+                    Rect targetBounds=new Rect(0,0,add.getWidth(),add.getHeight());((ViewGroup)root).offsetDescendantRectToMyCoords(add,targetBounds);
+                    Rect cardBounds=new Rect(0,0,card.getWidth(),card.getHeight());((ViewGroup)decor).offsetDescendantRectToMyCoords(card,cardBounds);
+                    assertFalse("Tour card must not cover Añadir: "+targetBounds+" / "+cardBounds,Rect.intersects(targetBounds,cardBounds));
+                    View spotlight=decor.findViewWithTag("tour-spotlight");Rect origin=new Rect(0,0,spotlight.getWidth(),spotlight.getHeight());
+                    ((ViewGroup)decor).offsetDescendantRectToMyCoords(spotlight,origin);
                     Bitmap mask=Bitmap.createBitmap(size[0],size[1],Bitmap.Config.ARGB_8888);spotlight.draw(new Canvas(mask));
-                    assertEquals("Highlighted control must be unobscured",0,Color.alpha(mask.getPixel(targetBounds.centerX()-origin[0],targetBounds.centerY()-origin[1])));
+                    assertEquals("Highlighted control must be unobscured",0,Color.alpha(mask.getPixel(targetBounds.centerX()-origin.left,targetBounds.centerY()-origin.top)));
                 }
                 label(decor,page==5?"Terminar":"Siguiente").performClick();
             }
