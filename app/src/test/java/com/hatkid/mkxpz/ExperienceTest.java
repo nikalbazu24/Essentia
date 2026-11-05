@@ -140,6 +140,19 @@ public class ExperienceTest {
         }
         Ui.setTheme(app,"esencia");
     }
+    @Test public void companionActionsReflectGameCapabilitiesAndScene()throws Exception {
+        RuntimeEnvironment.setQualifiers("es-rES-w640dp-h480dp-land-mdpi");
+        Activity a=Robolectric.buildActivity(GuideActivity.class).setup().get();
+        CompanionView view=new CompanionView(a,false,"Juego de prueba","/fixture/context",new File(a.getCacheDir(),"none"),KEYS,ACTIONS);a.setContentView(view);
+        assertNull(label(view,a.getString(R.string.act_party)));
+        view.updateCapabilities("party,bag,save,shot,speed","map");
+        View party=label(view,a.getString(R.string.act_party));assertNotNull(party);assertTrue(((View)party.getParent()).isEnabled());
+        label(view,"Acciones").performClick();shot("context-map",view,640,480);
+        view.updateCapabilities("party,bag,save,shot,speed","battle");
+        party=label(view,a.getString(R.string.act_party));assertFalse(((View)party.getParent()).isEnabled());shot("context-battle",view,640,480);
+        view.updateCapabilities("shot,speed","map");assertNull(label(view,a.getString(R.string.act_party)));shot("context-other-game",view,640,480);
+        view.dispose();a.finish();
+    }
     @Test public void automaticRetryKeepsPreviousErrorWithoutAttributingItToClassic(){
         String path="/fixture/fallback-evidence";
         app.getSharedPreferences("diagnostics",0).edit().putBoolean("enabled",true).commit();

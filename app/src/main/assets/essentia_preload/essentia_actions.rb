@@ -86,6 +86,7 @@ module EssentiaActions
     end
 
     def map_safe?
+      return false if companion_battle?
       t = $game_temp
       if t
         return false if t.respond_to?(:in_menu) && t.in_menu
@@ -105,6 +106,46 @@ module EssentiaActions
 
     def trainer
       $player || $Trainer
+    end
+
+    # Read-only capability snapshot. Never open a menu just to probe support.
+    def companion_battle?
+      [$game_temp, $PokemonTemp].compact.any? do |temp|
+        [:in_battle, :inBattle].any? { |flag| temp.respond_to?(flag) && temp.__send__(flag) }
+      end
+    rescue Exception
+      false
+    end
+
+    def companion_context
+      return 'battle' if companion_battle?
+      return 'busy' unless map_safe?
+      return 'map' if defined?(Scene_Map) && $scene.is_a?(Scene_Map)
+      'busy'
+    rescue Exception
+      'unknown'
+    end
+
+    def companion_actions
+      available = %w[shot speed]
+      return available unless @hooked[:map]
+      t = trainer
+      if t && t.respond_to?(:party) &&
+          ((defined?(PokemonParty_Scene) && defined?(PokemonPartyScreen)) ||
+           (defined?(PokemonScreen_Scene) && defined?(PokemonScreen)))
+        available << 'party'
+      end
+      available << 'bag' if ($bag || $PokemonBag) && defined?(PokemonBag_Scene) && defined?(PokemonBagScreen)
+      dex_unlocked = t && (!t.respond_to?(:has_pokedex) || t.has_pokedex)
+      if dex_unlocked && ((defined?(PokemonPokedex_Scene) && defined?(PokemonPokedexScreen)) ||
+                         (defined?(PokemonPokedexScene) && defined?(PokemonPokedex)))
+        available << 'dex'
+      end
+      save_disabled = $game_system && $game_system.respond_to?(:save_disabled) && $game_system.save_disabled
+      available << 'save' if !save_disabled && ((defined?(Game) && Game.respond_to?(:save)) || respond_to?(:pbSave, true))
+      available
+    rescue Exception
+      %w[shot speed]
     end
 
     # ------------------------------------------------------------ hooks

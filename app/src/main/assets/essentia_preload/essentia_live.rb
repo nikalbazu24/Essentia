@@ -35,6 +35,11 @@ module Essentia
     return if LIVE_FILE.to_s.empty?
     fields = [map_id, $game_player.x, $game_player.y, $game_map.width, $game_map.height,
               region, mx, my, image, name] + progress
+    if defined?(EssentiaActions) && EssentiaActions.respond_to?(:companion_actions)
+      fields += [EssentiaActions.companion_actions.join(','), EssentiaActions.companion_context]
+    else
+      fields += ['', 'unknown']
+    end
     line = fields.map { |v| v.to_s.gsub(/[\t\r\n]/, ' ') }.join("\t")
     return if line == @live_last
     @live_last = line

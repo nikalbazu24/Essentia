@@ -79,6 +79,11 @@ public final class CompanionView extends FrameLayout
     private Tile mTurboTile;
     private Tile mAutoTile;
     private FrameLayout mPages;
+    private GridLayout mActionGrid;
+    private TextView mActionStatus;
+    private String mCapabilities="";
+    private String mContext="unknown";
+    private TextView mSummaryNotes;
     private final View[] mPageViews = new View[6];
     private final TextView[] mTabs = new TextView[6];
     private final Map<String, Tile> mToggles = new HashMap<>();
@@ -101,7 +106,9 @@ public final class CompanionView extends FrameLayout
             }
             if (mNotes != null) {
                 String notes=getContext().getSharedPreferences("essentia_notes",Context.MODE_PRIVATE).getString(mGameDir.getAbsolutePath(),"");
-                mNotes.setText(notes.isEmpty()?"Aún no tienes notas. Usa Editar para anotar tu próximo objetivo.":notes);
+                String display=notes.isEmpty()?"Aún no tienes notas. Usa Editar para anotar tu próximo objetivo.":notes;
+                if(!display.contentEquals(mNotes.getText()))mNotes.setText(display);
+                if(mSummaryNotes!=null&&!display.contentEquals(mSummaryNotes.getText()))mSummaryNotes.setText(display);
             }
             mHandler.postDelayed(this, 500);
         }
@@ -140,6 +147,10 @@ public final class CompanionView extends FrameLayout
         mProgress=Ui.text(c,"Equipo y progreso\nAbre tu partida para consultar datos compatibles.",16,Ui.TEXT,false);
         mProgress.setPadding(pad,pad,pad,pad);mProgress.setBackground(Ui.rounded(c,Ui.pastel(1),20));
         summary.addView(mProgress);
+        mSummaryNotes=Ui.text(c,c.getSharedPreferences("essentia_notes",0).getString(mGameDir.getAbsolutePath(),"Anota tu próximo objetivo aquí."),15,Ui.TEXT,false);
+        mSummaryNotes.setMaxLines(3);mSummaryNotes.setEllipsize(TextUtils.TruncateAt.END);
+        mSummaryNotes.setPadding(pad,pad,pad,pad);mSummaryNotes.setBackground(Ui.rounded(c,Ui.SURFACE,18));summary.addView(mSummaryNotes);
+        android.widget.Button editNow=Ui.button(c,"Editar mi objetivo y notas",false);editNow.setOnClickListener(v->mActions.notes());summary.addView(editNow);
         TextView status=Ui.text(c,"Solo datos leídos del juego. Si no hay conexión compatible, puedes usar tus notas y los controles.",14,Ui.TEXT_DIM,false);
         status.setPadding(0,pad,0,pad);summary.addView(status);
         android.widget.Button progress=Ui.button(c,"Ver última lectura guardada",false);
@@ -239,16 +250,39 @@ public final class CompanionView extends FrameLayout
         return card;
     }
 
-    private View buildActions(Context c)
-    {
-        GridLayout g = grid(c, 3);
-        addTile(g, R.drawable.ic_p_party, R.string.act_party, false, v -> mActions.game("party"));
-        addTile(g, R.drawable.ic_p_bag, R.string.act_bag, false, v -> mActions.game("bag"));
-        addTile(g, R.drawable.ic_p_dex, R.string.act_dex, false, v -> mActions.game("dex"));
-        addTile(g, R.drawable.ic_p_save, R.string.act_save, false, v -> mActions.game("save"));
-        mTurboTile = addTile(g, R.drawable.ic_p_turbo, R.string.act_turbo, false, v -> mActions.turbo());
-        addTile(g, R.drawable.ic_p_shot, R.string.act_shot, false, v -> mActions.game("shot"));
-        return scroll(c,g);
+    private View buildActions(Context c) {
+        LinearLayout col=new LinearLayout(c);col.setOrientation(LinearLayout.VERTICAL);
+        mActionStatus=Ui.text(c,"Accesos generales · esperando capacidades del juego",14,Ui.TEXT_DIM,false);
+        mActionStatus.setPadding(Ui.dp(c,8),Ui.dp(c,8),Ui.dp(c,8),Ui.dp(c,12));col.addView(mActionStatus);
+        mActionGrid=grid(c,getResources().getConfiguration().screenWidthDp<480?2:3);col.addView(mActionGrid);
+        rebuildActions();return scroll(c,col);
+    }
+
+    /** Only actions advertised by the current game are offered; generic utilities remain. */
+    public void updateCapabilities(String csv,String context) {
+        if(csv.equals(mCapabilities)&&context.equals(mContext))return;
+        mCapabilities=csv;mContext=context;rebuildActions();
+    }
+
+    private void rebuildActions() {
+        if(mActionGrid==null)return;
+        boolean hadFocus=mActionGrid.hasFocus();mActionGrid.removeAllViews();
+        java.util.Set<String> available=new java.util.HashSet<>(java.util.Arrays.asList(mCapabilities.split(",")));
+        Context c=getContext();
+        if(available.contains("party"))addTile(mActionGrid,R.drawable.ic_p_party,R.string.act_party,false,v->mActions.game("party"));
+        if(available.contains("bag"))addTile(mActionGrid,R.drawable.ic_p_bag,R.string.act_bag,false,v->mActions.game("bag"));
+        if(available.contains("dex"))addTile(mActionGrid,R.drawable.ic_p_dex,R.string.act_dex,false,v->mActions.game("dex"));
+        if(available.contains("save"))addTile(mActionGrid,R.drawable.ic_p_save,R.string.act_save,false,v->mActions.game("save"));
+        for(int i=0;i<mActionGrid.getChildCount();i++){
+            View action=mActionGrid.getChildAt(i);boolean ready="map".equals(mContext);
+            action.setEnabled(ready);action.setAlpha(ready?1f:0.45f);
+        }
+        mTurboTile=addTile(mActionGrid,R.drawable.ic_p_turbo,R.string.act_turbo,false,v->mActions.turbo());
+        addTile(mActionGrid,R.drawable.ic_p_shot,R.string.act_shot,false,v->mActions.game("shot"));
+        String state="map".equals(mContext)?"Exploración":"battle".equals(mContext)?"Combate":"busy".equals(mContext)?"Menú o transición":"Sin capacidades confirmadas";
+        mActionStatus.setText(state+" · "+(mActionGrid.getChildCount()>2?"accesos compatibles del juego":"captura y turbo disponibles; notas y controles en sus pestañas"));
+        setTurbo(mTurbo,mTurboSpeed);
+        if(hadFocus&&mActionGrid.getChildCount()>0)mActionGrid.getChildAt(0).requestFocus();
     }
 
     private View buildKeys(Context c)
@@ -334,7 +368,7 @@ public final class CompanionView extends FrameLayout
         GridLayout.LayoutParams lp = new GridLayout.LayoutParams(
             GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(GridLayout.UNDEFINED, 1f));
         lp.width = 0;
-        lp.height = Ui.dp(c,88);
+        lp.height = Ui.dp(c,96);
         int m = Ui.dp(c, 4);
         lp.setMargins(m, m, m, m);
         return lp;
@@ -350,7 +384,7 @@ public final class CompanionView extends FrameLayout
         t.view.setGravity(Gravity.CENTER);
         t.icon = new ImageView(c);
         t.icon.setImageResource(iconRes);
-        int s = Ui.dp(c, 30);
+        int s = Ui.dp(c, 26);
         t.view.addView(t.icon, new LinearLayout.LayoutParams(s, s));
         t.label = Ui.text(c, c.getString(labelRes), 13, Ui.TEXT, true);
         t.label.setGravity(Gravity.CENTER);
@@ -460,6 +494,7 @@ public final class CompanionView extends FrameLayout
             if (!mLiveFile.isFile()) {
                 if (System.currentTimeMillis() - mStart > 20000)
                     mHandler.post(() -> { if (!mStopped) {
+                        updateCapabilities("","unknown");
                         mMap.setEmptyText(getContext().getString(R.string.panel_map_none));
                         mPlace.setText("Sin datos compatibles en esta sesión");
                         mProgress.setText("Equipo y progreso no disponibles en esta sesión.\nTus notas, teclas y controles siguen disponibles.");
@@ -490,6 +525,7 @@ public final class CompanionView extends FrameLayout
 
         String[] f = line.split("\t", -1);
         if (f.length < 10) return;
+        updateCapabilities(f.length>14?f[14].trim():"",f.length>15?f[15].trim():"unknown");
         String name = f[9].trim();
         mPlace.setText(name.isEmpty() ? getContext().getString(R.string.panel_map_position,
             parse(f[1]), parse(f[2])) : name);
