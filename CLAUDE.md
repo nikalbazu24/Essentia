@@ -51,3 +51,14 @@ tiempo, tirones y fondos de batalla negros/incompletos/solo cielo. Altavoces de 
 usó turbo apagado y ×3, sin comparación controlada desde un arranque nuevo a 1×.
 La cadena de alias del modo panorámico es una hipótesis por reproducir. Audio y
 composición no tienen causa demostrada; no se aplican parches de motor especulativos.
+
+
+Revisión posterior de identidad, autorizada por el dueño: beta.78 le resultó plana y
+monótona, sin logo visible ni tour reconocible. Se recupera el frasco original con
+recurso propio sin márgenes adaptativos para la interfaz; los iconos del launcher se
+conservan. `LibraryTour` recorre controles reales, puede repetirse desde Biblioteca,
+Guía y Ajustes, y registra visto solo al terminar/omitir explícitamente. Sustituye el
+arranque que marcaba `whats_new_tour=5` antes de abrir una guía textual. La guía y las
+novedades siguen disponibles. Identidad más intensa, contraste, iconos y carátulas de
+reserva distintas por juego, sin inventar arte oficial. Revisar capturas antes de
+integrar; mantener intactos juegos, partidas, motores y pendientes de GS Vitro.

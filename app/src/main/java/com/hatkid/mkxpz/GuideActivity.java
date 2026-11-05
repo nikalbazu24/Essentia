@@ -28,6 +28,7 @@ public class GuideActivity extends ControllerActivity {
         int pad = Ui.dp(this, 20); list.setPadding(pad,pad,pad,pad); list.setBackgroundColor(Ui.BG);
         scroll.addView(list); setContentView(scroll);
         button("‹ Volver", this::finish);
+        list.addView(Ui.brand(this,64),new LinearLayout.LayoutParams(Ui.dp(this,64),Ui.dp(this,64)));
         text("Essentia by Díptico",27);
         if(path!=null&&game!=null) {
             text(title,23);
@@ -75,6 +76,7 @@ public class GuideActivity extends ControllerActivity {
             }
             tabs.getChildAt(Math.max(0,Math.min(3,selected))).performClick();return;
         }
+        button("Repetir tour visual",()->com.hatkid.mkxpz.ui.LibraryTour.open(this));
         text("Tu biblioteca de aventuras en Android",17);
         text("1 · Prepara el juego", 21);
         text("Descarga la versión completa del creador. Essentia ejecuta juegos RPG Maker XP, VX y VX Ace; no ejecuta ROMs de GBA/NDS ni juegos Unity o EXE de Windows. En la tienda puedes visitar las páginas y ver la compatibilidad conocida.",16);
@@ -105,7 +107,7 @@ public class GuideActivity extends ControllerActivity {
         if(size<21){t.setBackground(Ui.rounded(this,Ui.SURFACE,14));t.setPadding(Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,14),Ui.dp(this,12));}
     }
     private void button(String label,Runnable action) {
-        Button b=Ui.button(this,label,false);b.setOnClickListener(v->action.run());
+        Button b=Ui.button(this,label,false,R.drawable.ic_e_compass);b.setOnClickListener(v->action.run());
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=Ui.dp(this,8);list.addView(b,lp);
     }
     private void open(String url) {

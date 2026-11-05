@@ -36,9 +36,8 @@ public final class AppShell {
         int p=Ui.dp(a,8); nav.setPadding(p,p,p,p);
         nav.setBackgroundColor(Ui.SURFACE);
         if (rail) {
-            TextView brand=Ui.text(a,"E",26,Ui.ACCENT_LIGHT,true);
-            brand.setGravity(Gravity.CENTER); brand.setContentDescription("Essentia");
-            nav.addView(brand,new LinearLayout.LayoutParams(-1,Ui.dp(a,64)));
+            View brand=Ui.brand(a,56);
+            LinearLayout.LayoutParams brandLp=new LinearLayout.LayoutParams(Ui.dp(a,56),Ui.dp(a,56));brandLp.bottomMargin=Ui.dp(a,20);brandLp.topMargin=Ui.dp(a,8);nav.addView(brand,brandLp);
         }
         String[] labels={"Biblioteca","Descubrir","Ajustes"};
         int[] icons={R.drawable.ic_e_grid,R.drawable.ic_e_store,R.drawable.ic_e_settings};
@@ -47,10 +46,10 @@ public final class AppShell {
             final int index=i;
             LinearLayout item=new LinearLayout(a);item.setOrientation(LinearLayout.VERTICAL);item.setGravity(Gravity.CENTER);
             item.setFocusable(true);item.setClickable(true);item.setSelected(i==selected);
-            item.setContentDescription(labels[i]);item.setBackground(Ui.focusable(a,Ui.SURFACE,14));
-            ImageView icon=new ImageView(a);icon.setImageResource(icons[i]);icon.setImageTintList(Ui.tint(i==selected?Ui.ACCENT_LIGHT:Ui.TEXT_DIM));
+            item.setContentDescription(labels[i]);item.setTag("tour-nav-"+i);item.setBackground(Ui.focusable(a,i==selected?Ui.ACCENT:Ui.SURFACE,18));
+            ImageView icon=new ImageView(a);icon.setImageResource(icons[i]);icon.setImageTintList(Ui.tint(i==selected?Ui.ON_ACCENT:Ui.TEXT_DIM));
             item.addView(icon,new LinearLayout.LayoutParams(Ui.dp(a,22),Ui.dp(a,22)));
-            TextView label=Ui.text(a,labels[i],12,i==selected?Ui.TEXT:Ui.TEXT_DIM,i==selected);label.setGravity(Gravity.CENTER);
+            TextView label=Ui.text(a,labels[i],12,i==selected?Ui.ON_ACCENT:Ui.TEXT_DIM,i==selected);label.setGravity(Gravity.CENTER);
             item.addView(label);
             item.setOnClickListener(v->{
                 if(index==selected)return;

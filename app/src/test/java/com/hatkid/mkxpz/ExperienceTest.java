@@ -47,6 +47,7 @@ public class ExperienceTest {
     }
     private void shot(String name,View v,int w,int h)throws Exception {
         v.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));v.layout(0,0,w,h);
+        if(v.isLayoutRequested()){v.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));v.layout(0,0,w,h);}
         Bitmap bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(bitmap);canvas.drawColor(Ui.BG);v.draw(canvas);
         File folder=new File("build/reports/ui");folder.mkdirs();
         try(FileOutputStream out=new FileOutputStream(new File(folder,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}
@@ -153,6 +154,27 @@ public class ExperienceTest {
         view.updateCapabilities("shot,speed","map");assertNull(label(view,a.getString(R.string.act_party)));shot("context-other-game",view,640,480);
         view.dispose();a.finish();
     }
+    @Test public void visualTourCanBeFinishedSkippedAndReplayedWithoutTouchingLibrary()throws Exception {
+        app.getSharedPreferences(EssentiaSettings.PREFS,0).edit().remove("experience_tour_seen").commit();
+        for(int[] size:new int[][]{{390,844},{960,540}}){
+            RuntimeEnvironment.setQualifiers("es-rES-w"+size[0]+"dp-h"+size[1]+"dp-mdpi");
+            Activity a=Robolectric.buildActivity(LibraryActivity.class).setup().get();View root=a.findViewById(android.R.id.content);
+            shot("identity-"+size[0],root,size[0],size[1]);
+            View brand=root.findViewWithTag("tour-brand");assertNotNull(brand);assertEquals("Essentia",brand.getContentDescription());
+            assertTrue(brand.getMeasuredHeight()>=48);assertNotNull(label(root,"Tour"));
+            assertTrue(LibraryTour.needed(a));Dialog d=LibraryTour.show(a);assertNotNull(d);
+            assertTrue(LibraryTour.needed(a));d.dismiss();assertTrue(LibraryTour.needed(a));
+            d=LibraryTour.show(a);View dialog=d.getWindow().getDecorView();
+            shot("tour-"+size[0]+"-welcome",dialog,size[0],size[1]);
+            for(int i=0;i<5;i++)label(dialog,"Siguiente").performClick();
+            assertTrue(text(dialog).contains("Hazlo tuyo"));shot("tour-"+size[0]+"-last",dialog,size[0],size[1]);
+            label(dialog,"Atrás").performClick();assertTrue(text(dialog).contains("Descubre nuevas aventuras"));
+            label(dialog,"Siguiente").performClick();label(dialog,"Terminar").performClick();assertFalse(LibraryTour.needed(a));
+            d=LibraryTour.show(a);assertTrue(d.isShowing());d.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,android.view.KeyEvent.KEYCODE_BUTTON_B));assertFalse(d.isShowing());
+            app.getSharedPreferences(EssentiaSettings.PREFS,0).edit().remove("experience_tour_seen").commit();a.finish();
+        }
+    }
+
     @Test public void automaticRetryKeepsPreviousErrorWithoutAttributingItToClassic(){
         String path="/fixture/fallback-evidence";
         app.getSharedPreferences("diagnostics",0).edit().putBoolean("enabled",true).commit();

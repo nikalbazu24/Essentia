@@ -134,7 +134,7 @@ public class LibraryActivity extends ControllerActivity
             Games.askAllFilesAccess(this, REQ_ALL_FILES, this::finish);
         } else if (savedInstanceState == null) {
             Updater.check(this, () -> { }, false);
-            mRoot.postDelayed(() -> { if (!isFinishing() && getPreferences(MODE_PRIVATE).getBoolean("guide_v2", false)) com.hatkid.mkxpz.ui.WhatsNew.showIfNew(this); }, 1800);
+
             rescanFolders();
             if (EssentiaSettings.flag(this, EssentiaSettings.RESUME_LAST, false)) {
                 List<Library.Entry> all = Library.load(this);
@@ -146,12 +146,19 @@ public class LibraryActivity extends ControllerActivity
     }
 
     private boolean mResumed;
+    private android.app.Dialog mTour;
     private void showGuideIfNeeded() {
-        if (!mResumed || isFinishing() || isDestroyed() || !Games.hasAllFilesAccess()
-            || getPreferences(MODE_PRIVATE).getBoolean("guide_v2",false)) return;
-        getPreferences(MODE_PRIVATE).edit().putBoolean("guide_v2",true).apply();
-        getSharedPreferences(EssentiaSettings.PREFS,MODE_PRIVATE).edit().putInt("whats_new_tour",5).apply();
-        startActivity(new Intent(this,GuideActivity.class));
+        if (!mResumed || isFinishing() || isDestroyed() || !Games.hasAllFilesAccess()) return;
+        if(mTour!=null&&mTour.isShowing())return;
+        if(com.hatkid.mkxpz.ui.LibraryTour.needed(this))mTour=com.hatkid.mkxpz.ui.LibraryTour.show(this);
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);setIntent(intent);
+        if(intent.getBooleanExtra("show_experience_tour",false)){
+            intent.removeExtra("show_experience_tour");
+            mRoot.postDelayed(()->{if(mResumed&&!isFinishing())mTour=com.hatkid.mkxpz.ui.LibraryTour.show(this);},400);
+        }
     }
 
     @Override
@@ -159,7 +166,10 @@ public class LibraryActivity extends ControllerActivity
     {
         super.onResume();
         mResumed=true;
-        mRoot.postDelayed(this::showGuideIfNeeded,2600);
+        if(getIntent().getBooleanExtra("show_experience_tour",false)){
+            getIntent().removeExtra("show_experience_tour");
+            mRoot.postDelayed(()->{if(mResumed&&!isFinishing())mTour=com.hatkid.mkxpz.ui.LibraryTour.show(this);},2600);
+        }else mRoot.postDelayed(this::showGuideIfNeeded,2600);
         if (mThemeStamp != Ui.themeStamp()) { recreate(); return; }
         MusicPlayer.resume(this);
         UpdateService.setListener(() -> runOnUiThread(this::refreshUpdates));
@@ -185,6 +195,7 @@ public class LibraryActivity extends ControllerActivity
     protected void onDestroy()
     {
         super.onDestroy();
+        if(mTour!=null)mTour.dismiss();
         mCovers.shutdown();
         mStatsExec.shutdownNow();
     }
@@ -274,14 +285,12 @@ public class LibraryActivity extends ControllerActivity
         mViewIcon=iconButton(tools,R.drawable.ic_e_grid,R.string.lib_view_label,v->cycleView());
         View sorting=pillButton(tools,R.drawable.ic_e_sort,"",false,v->toggleSort());
         mSortLabel=sorting.findViewWithTag("label");
-        TextView help=Ui.text(this,"Guía",14,Ui.ACCENT_LIGHT,true);
-        help.setGravity(Gravity.CENTER);help.setMinHeight(Ui.dp(this,48));help.setFocusable(true);
-        help.setBackground(Ui.focusable(this,Ui.SURFACE,12));
-        help.setOnClickListener(v->startActivity(new Intent(this,GuideActivity.class)));
-        LinearLayout.LayoutParams helpLp=new LinearLayout.LayoutParams(isPortrait()?0:Ui.dp(this,80),-2,isPortrait()?1f:0f);helpLp.leftMargin=Ui.dp(this,8);tools.addView(help,helpLp);
+        android.widget.Button help=Ui.button(this,"Tour",false,R.drawable.ic_e_compass);
+        help.setTag("tour-start");help.setOnClickListener(v->mTour=com.hatkid.mkxpz.ui.LibraryTour.show(this));
+        LinearLayout.LayoutParams helpLp=new LinearLayout.LayoutParams(-2,Ui.dp(this,48));helpLp.leftMargin=Ui.dp(this,8);tools.addView(help,helpLp);
         col.addView(tools,wrapWidth());
         EditText search=com.hatkid.mkxpz.ui.Ui.input(this);search.setSingleLine(true);search.setTextSize(15);search.setTextColor(Ui.TEXT);search.setHintTextColor(Ui.TEXT_DIM);
-        search.setHint("Buscar en tu biblioteca");search.setContentDescription("Buscar en tu biblioteca");search.setBackground(Ui.rounded(this,Ui.SURFACE,12));
+        search.setTag("tour-search");Ui.icon(search,R.drawable.ic_e_search,Ui.ACCENT_LIGHT);search.setHint("Buscar en tu biblioteca");search.setContentDescription("Buscar en tu biblioteca");search.setBackground(Ui.rounded(this,Ui.SURFACE,12));
         search.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),0);search.setText(mQuery);
         LinearLayout.LayoutParams searchLp=new LinearLayout.LayoutParams(isPortrait()?-1:0,Ui.dp(this,48),isPortrait()?0f:1f);
         searchLp.topMargin=isPortrait()?Ui.dp(this,8):0;searchLp.leftMargin=isPortrait()?0:Ui.dp(this,8);
@@ -331,33 +340,37 @@ public class LibraryActivity extends ControllerActivity
     private View buildTopBar()
     {
         LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout names=new LinearLayout(this);names.setOrientation(LinearLayout.VERTICAL);
-        names.addView(Ui.text(this,"Tu biblioteca",26,Ui.TEXT,true));
-        mCount=Ui.text(this,"",13,Ui.TEXT_DIM,false);names.addView(mCount);
+        View brand=Ui.brand(this,52);brand.setTag("tour-brand");bar.addView(brand,new LinearLayout.LayoutParams(Ui.dp(this,52),Ui.dp(this,52)));
+        LinearLayout names=new LinearLayout(this);names.setOrientation(LinearLayout.VERTICAL);names.setPadding(Ui.dp(this,12),0,0,0);
+        names.addView(Ui.text(this,"Essentia",25,Ui.TEXT,true));
+        mCount=Ui.text(this,"",12,Ui.ACCENT_LIGHT,true);names.addView(mCount);
         bar.addView(names,new LinearLayout.LayoutParams(0,-2,1f));
-        pillButton(bar,R.drawable.ic_e_add,"Añadir",true,v->openFolderPicker());
+        View add=pillButton(bar,R.drawable.ic_e_add,"Añadir",true,v->openFolderPicker());add.setTag("tour-add");
         mStoreLabel=null;
         return bar;
     }
 
     private View buildHero()
     {
-        LinearLayout hero=new LinearLayout(this);hero.setGravity(Gravity.CENTER_VERTICAL);
-        hero.setBackground(Ui.rounded(this,Ui.pastel(0),22));int p=Ui.dp(this,12);hero.setPadding(p,p,p,p);
+        LinearLayout hero=new LinearLayout(this);hero.setOrientation(LinearLayout.VERTICAL);hero.setTag("tour-game");
+        hero.setBackground(Ui.feature(this));int p=Ui.dp(this,14);hero.setPadding(p,p,p,p);
+        LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
         mHeroCover=new ImageView(this);mHeroCover.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        mHeroCover.setBackground(Ui.rounded(this,Ui.SURFACE_HI,10));mHeroCover.setClipToOutline(true);
-        hero.addView(mHeroCover,new LinearLayout.LayoutParams(Ui.dp(this,72),Ui.dp(this,72)));
+        mHeroCover.setBackground(Ui.rounded(this,Ui.SURFACE_HI,14));mHeroCover.setClipToOutline(true);
+        top.addView(mHeroCover,new LinearLayout.LayoutParams(Ui.dp(this,76),Ui.dp(this,76)));
         LinearLayout info=new LinearLayout(this);info.setOrientation(LinearLayout.VERTICAL);info.setPadding(p,0,p,0);
-        mHeroLabel=Ui.text(this,"Seleccionado",11,Ui.ACCENT_LIGHT,true);info.addView(mHeroLabel);
-        mHeroTitle=Ui.text(this,"",19,Ui.TEXT,true);mHeroTitle.setMaxLines(2);mHeroTitle.setEllipsize(TextUtils.TruncateAt.END);info.addView(mHeroTitle);
-        mHeroDetail=Ui.text(this,"",12,Ui.TEXT_DIM,false);mHeroDetail.setMaxLines(1);info.addView(mHeroDetail);
-        mHeroChips=new LinearLayout(this); // full statistics stay in the game tools and lower screen
-        hero.addView(info,new LinearLayout.LayoutParams(0,-2,1f));
-        LinearLayout actions=new LinearLayout(this);actions.setOrientation(isPortrait()?LinearLayout.VERTICAL:LinearLayout.HORIZONTAL);
-        mHeroPlay=pillButton(actions,R.drawable.ic_e_play,"Jugar",true,v->play(mSelected));
-        View options=pillButton(actions,R.drawable.ic_e_more,"Más",false,v->showOptions(mSelected));
-        ((LinearLayout.LayoutParams)options.getLayoutParams()).topMargin=isPortrait()?Ui.dp(this,6):0;
-        hero.addView(actions);return hero;
+        mHeroLabel=Ui.text(this,"TU PRÓXIMA PARTIDA",11,0xFFBFF7EB,true);info.addView(mHeroLabel);
+        mHeroTitle=Ui.text(this,"",22,0xFFFFFFFF,true);mHeroTitle.setMaxLines(2);mHeroTitle.setEllipsize(TextUtils.TruncateAt.END);info.addView(mHeroTitle);
+        mHeroDetail=Ui.text(this,"",12,0xFFE7DFF9,false);mHeroDetail.setMaxLines(1);info.addView(mHeroDetail);
+        mHeroChips=new LinearLayout(this);
+        top.addView(info,new LinearLayout.LayoutParams(0,-2,1f));hero.addView(top);
+        LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER_VERTICAL);
+        mHeroPlay=pillButton(actions,R.drawable.ic_e_play,"Jugar",false,v->play(mSelected));
+        View options=pillButton(actions,R.drawable.ic_e_settings,"Opciones",false,v->showOptions(mSelected));
+        for(int i=0;i<actions.getChildCount();i++){
+            View action=actions.getChildAt(i);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f);lp.leftMargin=i==0?0:Ui.dp(this,8);action.setLayoutParams(lp);
+        }
+        LinearLayout.LayoutParams actionsLp=new LinearLayout.LayoutParams(-1,-2);actionsLp.topMargin=Ui.dp(this,12);hero.addView(actions,actionsLp);return hero;
     }
 
     private GridView buildGrid()
@@ -652,13 +665,13 @@ public class LibraryActivity extends ControllerActivity
 
         View shade = new View(this);
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{ 0x00000000, 0x00000000, Ui.SURFACE }));
+            new int[]{ 0x00000000, 0x220C0825, 0xF018102D }));
         card.addView(shade, match());
 
-        h.title = Ui.text(this, "", 14, Ui.TEXT, true);
+        h.title = Ui.text(this, "", 14, 0xFFFFFFFF, true);
         h.title.setMaxLines(2);
         h.title.setEllipsize(TextUtils.TruncateAt.END);
-        h.title.setBackgroundColor(Ui.SURFACE);
+        h.title.setBackgroundColor(0x8818102D);
         int p = Ui.dp(this, 10);
         h.title.setPadding(p, p, p, p);
         card.addView(h.title, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,

@@ -47,7 +47,7 @@ public class SettingsActivity extends ControllerActivity
             == android.content.res.Configuration.ORIENTATION_PORTRAIT;
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(portrait ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
-        root.setBackgroundColor(Ui.BG);
+        root.setBackground(Ui.backdrop());
 
         // Left (or top): back button and the categories
         LinearLayout side = new LinearLayout(this);
@@ -66,6 +66,7 @@ public class SettingsActivity extends ControllerActivity
         title.setPadding(portrait?Ui.dp(this,12):0,portrait?0:Ui.dp(this,12),0,0);
         header.addView(title,new LinearLayout.LayoutParams(portrait?0:-1,-2,portrait?1f:0f));
         side.addView(header);
+        if(!portrait)side.addView(Ui.brand(this,52),new LinearLayout.LayoutParams(Ui.dp(this,52),Ui.dp(this,52)));
 
         mTabs = new LinearLayout(this);
         mTabs.setOrientation(portrait ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
@@ -152,7 +153,7 @@ public class SettingsActivity extends ControllerActivity
         mCategory = cat;
         for (int i = 0; i < mTabs.getChildCount(); i++) mTabs.getChildAt(i).setSelected(i == cat);
         mList.removeAllViews();
-        TextView heading=Ui.text(this,getString(CATEGORIES[cat]),26,Ui.TEXT,true);mList.addView(heading);
+        mList.addView(Ui.section(this,getString(CATEGORIES[cat]),CATEGORY_ICONS[cat],Ui.tone(cat)));
         String[] hints={"Hazlo tuyo. Los cambios de aspecto conservan tus juegos.","Pantalla principal y acompañante de juego.","Mando, pantalla táctil y accesos durante la partida.","Juegos, partidas y recursos en un solo lugar.","Conexiones opcionales entre tus dispositivos Android.","Cambia una opción a la vez y compara en el mismo juego.","Actualizaciones, ayuda y créditos de Essentia."};
         TextView hint=Ui.text(this,hints[cat],14,Ui.TEXT_DIM,false);hint.setPadding(0,0,0,Ui.dp(this,16));mList.addView(hint);
         switch (cat) {
@@ -491,14 +492,18 @@ public class SettingsActivity extends ControllerActivity
 
     private void buildAbout()
     {
-        Button licenses = Ui.button(this,"Créditos y licencias",false);
+        Button tour=Ui.button(this,"Repetir tour visual",true,R.drawable.ic_e_compass);
+        tour.setOnClickListener(v->com.hatkid.mkxpz.ui.LibraryTour.open(this));mList.addView(tour,wrap());
+        Button licenses = Ui.button(this,"Créditos y licencias",false,R.drawable.ic_e_note);
         licenses.setOnClickListener(v -> Licenses.show(this));
         mList.addView(licenses,wrap());
         Button guide = Ui.button(this, "Essentia by Díptico · Guía y herramientas", false);
         guide.setOnClickListener(v -> startActivity(new Intent(this, GuideActivity.class)));
+        Ui.icon(guide,R.drawable.ic_e_help,Ui.ACCENT_LIGHT);
         mList.addView(guide, wrap());
         Button news = Ui.button(this, getString(R.string.wn_show), false);
         news.setOnClickListener(v -> com.hatkid.mkxpz.ui.WhatsNew.show(this));
+        mList.addView(news,wrap());
 
         section(R.string.set_about_title, 0);
         TextView about = Ui.text(this, getString(R.string.set_about_text), 14, Ui.TEXT_DIM, false);
@@ -591,9 +596,8 @@ public class SettingsActivity extends ControllerActivity
 
     private void section(int titleRes, int descRes)
     {
-        TextView t = Ui.text(this, getString(titleRes), 18, Ui.ACCENT_LIGHT, true);
-        t.setPadding(Ui.dp(this, 4), Ui.dp(this, 26), 0, Ui.dp(this, 6));
-        mList.addView(t);
+        View heading=Ui.section(this,getString(titleRes),CATEGORY_ICONS[mCategory],Ui.tone(mCategory));
+        LinearLayout.LayoutParams headingLp=new LinearLayout.LayoutParams(-1,-2);headingLp.topMargin=Ui.dp(this,22);headingLp.bottomMargin=Ui.dp(this,10);mList.addView(heading,headingLp);
         if (descRes != 0) {
             TextView d = Ui.text(this, getString(descRes), 14, Ui.TEXT_DIM, false);
             d.setPadding(Ui.dp(this, 4), 0, 0, Ui.dp(this, 8));
