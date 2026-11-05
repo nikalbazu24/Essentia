@@ -28,6 +28,9 @@ public class ExperienceTest {
     @Implements(Community.class) public static class OfflineCommunity {
         @Implementation public static void refresh(Context c){}
     }
+    @Implements(Games.class) public static class GrantedStorage {
+        @Implementation public static boolean hasAllFilesAccess(){return true;}
+    }
     private Context app;
     @Before public void setup()throws Exception {
         app=RuntimeEnvironment.getApplication();
@@ -198,7 +201,7 @@ public class ExperienceTest {
         }
     }
 
-    @Test @Config(sdk=33) public void tourPreservesLibraryAtAndroid13AndLeavesAddVisible()throws Exception {
+    @Test @Config(sdk=33,shadows={GrantedStorage.class}) public void tourPreservesLibraryAtAndroid13AndLeavesAddVisible()throws Exception {
         for(String theme:new String[]{"esencia","noche"})for(int[] size:new int[][]{{390,844},{960,540}}){
             RuntimeEnvironment.setQualifiers("es-rES-w"+size[0]+"dp-h"+size[1]+"dp-mdpi");Ui.setTheme(app,theme);
             Activity a=Robolectric.buildActivity(LibraryActivity.class).setup().get();View root=a.findViewById(android.R.id.content);
