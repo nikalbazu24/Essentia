@@ -158,6 +158,9 @@ jobs:
           find app/src/main/assets/essentia_preload -name '*.rb' -exec ruby -c {} \;
           ruby tools/test_live_progress.rb
           ruby tools/test_translation.rb
+          ESSENTIA_SCREEN_MODE=wide_safe ruby tools/test_widescreen.rb
+          ESSENTIA_SCREEN_MODE=wide ruby tools/test_widescreen.rb
+          ESSENTIA_SCREEN_MODE=wide ESSENTIA_WIDE_BATTLES=1 ESSENTIA_WIDE_CAMERA=10 ESSENTIA_WIDE_SPREAD=0 ruby tools/test_widescreen.rb
           ruby tools/test_companion_actions.rb
           ruby tools/test_help_backup.rb
           ruby tools/test_load_network.rb

@@ -12,7 +12,7 @@
 #       - full-screen pictures are extended (the outer strip is widened a
 #         little; bars continue with their edge colors)
 #       - scrolling patterns keep tiling across the whole width
-#       - windows that span the screen (message boxes...) are made wider
+#       - windows retain their original dimensions and placement
 #
 # Everything here only changes where things are drawn; the game keeps seeing
 # its own coordinates (x, width, Graphics.width...).
@@ -23,6 +23,7 @@ module EssentiaWide
   @battle = 0        # inside a battle
   @center = {}       # original camera constants
   @wrapped = {}
+  @original_hooks = []
   @frame = 0
   @viewports = []    # viewports adjusted for 4:3 screens (weak list)
   @building = 0      # making the map's pieces
@@ -30,10 +31,17 @@ module EssentiaWide
   # Safe widescreen (default): only the map is wide; title, menus and battles
   # keep their own shape in the middle, with soft blurred sides.
   SAFE = ENV['ESSENTIA_SCREEN_MODE'] == 'wide_safe'
+  WIDE_BATTLES = !SAFE && ENV['ESSENTIA_WIDE_BATTLES'] == '1'
+  CAMERA = [[(ENV['ESSENTIA_WIDE_CAMERA'] || '0').to_i, -15].max, 15].min
+  BATTLE_SPREAD = [[(ENV['ESSENTIA_WIDE_SPREAD'] || '55').to_i, 0].max, 55].min / 100.0
 
   class << self
     def safe?
       SAFE
+    end
+
+    def wide_battles?
+      WIDE_BATTLES
     end
 
     def aspect
@@ -85,7 +93,7 @@ module EssentiaWide
     # cover the whole wide screen and the map must keep drawing all of it).
     def in_battle?
       return true if @battle > 0
-      return false if @wrapped[:pbBattleAnimation]
+      return false if @wrapped[[Object, :pbBattleAnimation]]
       $game_temp && $game_temp.respond_to?(:in_battle) && $game_temp.in_battle
     rescue StandardError
       false
@@ -140,7 +148,7 @@ module EssentiaWide
       t = (cx - base[0] / 2.0) / 64.0
       t = -1.0 if t < -1.0
       t = 1.0 if t > 1.0
-      (off * 0.55 * t).round
+      (off * BATTLE_SPREAD * t).round
     end
 
     # ------------------------------------------------------------ pictures
@@ -151,15 +159,17 @@ module EssentiaWide
     def extended(src, battle)
       tall = src.height >= base[1] / 2
       cache = (src.instance_variable_get(:@essentia_ext) || {})
-      key = [wide_w, tall]
+      centered_picture = !battle || !wide_battles?
+      key = [wide_w, tall, centered_picture]
       ext = cache[key]
       return ext if ext && !ext.disposed?
       h = src.height
       bw = src.width
       m = off
       w = bw + 2 * m   # pictures a bit wider than the screen (scrolling) too
+      return nil if w * h > 4_194_304
       ext = Bitmap.new(w, h)
-      if tall && SAFE
+      if tall && centered_picture
         # Safe mode: the whole picture, stretched, blurred and darkened, fills
         # the sides; the picture itself stays sharp in the middle.
         ext.stretch_blt(Rect.new(0, 0, w, h), src, Rect.new(0, 0, bw, h))
@@ -225,7 +235,7 @@ module EssentiaWide
       r = v.essentia_rect
       bw = base[0]
       return if @making_backdrop
-      if r.x == 0 && (r.width == bw || r.width == wide_w) && (SAFE || !in_battle?)
+      if r.x == 0 && (r.width == bw || r.width == wide_w) && (!wide_battles? || !in_battle?)
         # Title, menus, bag...: the screen stays exactly as designed, in the
         # middle (nothing hidden off-screen shows up); only its background
         # pictures reach the edges, on a layer just behind (see backdrop_for).
@@ -351,8 +361,9 @@ module EssentiaWide
           Game_Player.const_defined?(name)
         end
         next unless here
-        @center[name] = Game_Player.const_get(name) unless @center.key?(name)
-        value = @center[name] + extra * 2
+        key = [Game_Player, name]
+        @center[key] = Game_Player.const_get(name) unless @center.key?(key)
+        value = @center[key] + extra * 2 + (extra * 4 * CAMERA / 100.0).round
         next if Game_Player.const_get(name) == value
         Game_Player.send(:remove_const, name)
         Game_Player.const_set(name, value)
@@ -376,42 +387,53 @@ module EssentiaWide
     end
 
     def wrap_block_method(name, battle)
-      return unless Object.private_method_defined?(name) || Object.method_defined?(name)
-      current = Object.instance_method(name)
-      return if @wrapped[name] == current
-      raw = :"essentia_wide_raw_#{name}"
-      Object.send(:alias_method, raw, name)
-      Object.send(:define_method, name) do |*args, &block|
-        if block
-          __send__(raw, *args) { |*a| EssentiaWide.inside(battle) { block.call(*a) } }
-        else
-          __send__(raw, *args)
-        end
-      end
-      Object.send(:private, name)
-      @wrapped[name] = Object.instance_method(name)
-    rescue StandardError
+      install_hook(Object, name, battle ? :battle : :menu)
     end
 
     def wrap_init(class_name)
       return unless Object.const_defined?(class_name)
       klass = Object.const_get(class_name)
       return unless klass.is_a?(Class)
-      current = klass.instance_method(:initialize)
-      return if @wrapped[class_name] == current
-      raw = :essentia_wide_raw_initialize
-      klass.send(:alias_method, raw, :initialize)
-      klass.send(:define_method, :initialize) do |*args, &block|
-        # the map is being built: it must see the wide screen
-        EssentiaWide.building_map do
-          EssentiaWide.entering_map if EssentiaWide.depth_zero?
-          EssentiaWide.expand_map_viewports
-          __send__(raw, *args, &block)
-        end
-      end
-      klass.send(:private, :initialize)
-      @wrapped[class_name] = klass.instance_method(:initialize)
+      install_hook(klass, :initialize, :map)
     rescue StandardError
+    end
+
+    def install_hook(klass, name, kind)
+      return unless klass.private_method_defined?(name) || klass.method_defined?(name)
+      key = [klass, name]
+      current = klass.instance_method(name)
+      return if @wrapped[key] == current
+
+      # Plugins can keep an alias to an earlier hook. Its original method must
+      # stay fixed when a later definition is wrapped, or both call each other.
+      index = @original_hooks.length
+      @original_hooks << [current, kind]
+      private_method = klass.private_method_defined?(name)
+      protected_method = klass.protected_method_defined?(name)
+      # A regular method definition can forward a block on both Ruby engines.
+      klass.class_eval("def #{name}(*args, &block); EssentiaWide.invoke_hook(#{index}, self, args, block); end",
+        __FILE__, __LINE__)
+      klass.send(:ruby2_keywords, name) if klass.respond_to?(:ruby2_keywords, true)
+      klass.send(:private, name) if private_method
+      klass.send(:protected, name) if protected_method
+      @wrapped[key] = klass.instance_method(name)
+    rescue StandardError
+    end
+
+    def invoke_hook(index, receiver, args, block)
+      original, kind = @original_hooks[index]
+      method = original.bind(receiver)
+      if kind == :map
+        building_map do
+          entering_map if depth_zero?
+          expand_map_viewports
+          method.call(*args, &block)
+        end
+      elsif block
+        method.call(*args) { |*values| inside(kind == :battle) { block.call(*values) } }
+      else
+        method.call(*args)
+      end
     end
 
     # Old Pokémon Essentials replaces Graphics.width with its own (always 4:3)
@@ -642,7 +664,7 @@ class Sprite
     else
       self.essentia_raw_bitmap = gb unless essentia_raw_bitmap.equal?(gb)
       extra = 0
-      if @essentia_battle && gb && !EssentiaWide.safe?
+      if @essentia_battle && gb && EssentiaWide.wide_battles?
         r = src_rect
         cx = gx - ox + r.width * zoom_x / 2.0
         cy = y - oy + r.height * zoom_y / 2.0
@@ -791,8 +813,7 @@ end
 
 # ---------------------------------------------------------------- windows
 
-# Windows of 4:3 screens: the ones that span the whole width get wider, the
-# others stay where the game puts them (in the middle part).
+# Windows keep their original layout in the center.
 # The engine's Window and Pokémon Essentials' SpriteWindow (a subclass made of
 # sprites) are wrapped separately, each with its own method names, so one
 # never calls into the other by mistake.
@@ -852,22 +873,15 @@ module EssentiaWideWindow
         # sprite-based windows move their own pieces (already shifted);
         # engine windows are shifted here
         shift = SPRITES ? 0 : EssentiaWide.off
-        full_x = SPRITES ? -EssentiaWide.off : 0
       elsif vp.instance_variable_get(:@essentia_full)
         shift = 0
-        full_x = -EssentiaWide.off
       else
         self.essentia_P_raw_width = @essentia_gw
         self.essentia_P_raw_x = @essentia_gx
         return
       end
-      if @essentia_gx == 0 && @essentia_gw == EssentiaWide.base[0] && !EssentiaWide.safe?
-        self.essentia_P_raw_width = EssentiaWide.wide_w
-        self.essentia_P_raw_x = full_x
-      else
-        self.essentia_P_raw_width = @essentia_gw
-        self.essentia_P_raw_x = @essentia_gx + shift
-      end
+      self.essentia_P_raw_width = @essentia_gw
+      self.essentia_P_raw_x = @essentia_gx + shift
     rescue Exception
       @essentia_P_on = false
     end

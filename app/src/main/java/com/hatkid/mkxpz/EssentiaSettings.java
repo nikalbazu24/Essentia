@@ -185,26 +185,15 @@ public final class EssentiaSettings
     /** Automatic (default): modern; if the game turns out to need Ruby 1.8, classic from then on. */
     public static final String ENGINE_AUTO = "";
 
-    private static SharedPreferences learned(Context c)
-    {
-        return c.getSharedPreferences("essentia_engine_auto", Context.MODE_PRIVATE);
-    }
-
-    /** The automatic engine found that this game needs the classic engine. */
-    /** (Remembered per version of Essentia: after an update the modern engine is tried again.) */
+    /** A classic retry that reached a frame and then closed normally for this game version. */
     public static boolean learnedClassic(Context c, String path)
     {
-        try {
-            return learned(c).getInt(path, 0) == BuildConfig.VERSION_CODE;
-        } catch (ClassCastException e) {
-            return false;
-        }
+        return GameLaunchState.learnedClassic(c, path);
     }
 
-    public static void setLearnedClassic(Context c, String path, boolean v)
+    public static void forgetLearnedClassic(Context c, String path)
     {
-        if (v) learned(c).edit().putInt(path, BuildConfig.VERSION_CODE).commit();
-        else learned(c).edit().remove(path).commit();
+        GameLaunchState.forgetClassic(c, path);
     }
 
     /** Folder with the RPG Maker RTP (Essentia/RTP/XP, VX, VXAce). */

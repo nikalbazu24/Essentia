@@ -564,4 +564,19 @@ Essentia uses it automatically, without touching the game\'s folder.</string>
     <string name="panel_actions">Actions</string>
     <string name="panel_keys">Keys</string>
     <string name="panel_assists">Assists</string>
+    <string name="launch_missing_title">Game files are missing</string>
+    <string name="launch_missing_files">A readable file for %1$s was not found. Check that the installation is complete and select the game folder.</string>
+    <string name="launch_interrupted">The previous session was interrupted with widescreen active. You can reopen in Original with the same engine and saves.</string>
+    <string name="launch_retry_original">Reopen in Original</string>
+    <string name="launch_retry_classic">Try classic Ruby</string>
+    <string name="launch_retry_same">Retry widescreen</string>
+    <string name="launch_retry_unavailable">Reopen the game from the library to check the installation.</string>
+    <string name="panorama_settings">Widescreen settings</string>
+    <string name="panorama_description">Applied when reopening with Safe or Full widescreen. Wide battles require Full widescreen. Menus keep their original width.</string>
+    <string name="panorama_ratio">Aspect ratio</string>
+    <string name="panorama_device_ratio">Device display</string>
+    <string name="panorama_battles">Wide battles</string>
+    <string name="panorama_camera">Camera offset · %1$d%%</string>
+    <string name="panorama_spread">Horizontal battle spread · %1$d%%</string>
+    <string name="panorama_reset">Reset</string>
 </resources>

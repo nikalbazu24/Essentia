@@ -1343,45 +1343,6 @@ static void showExc(VALUE exc, const BacktraceData &btData) {
     }
 #endif
 #if defined(MKXPZ_BUILD_ANDROID) && !defined(MKXPZ_LEGACY_RUBY)
-    /* Essentia: automatic engine. An error typical of a game written for
-     * Ruby 1.8, early on: Essentia reopens the game with the classic engine. */
-    {
-        const char *fallback = getenv("ESSENTIA_AUTO_FALLBACK");
-        const char *cls = RSTRING_PTR(name);
-        const char *m = RSTRING_PTR(msg);
-        static const char *const versionErrors[] = {
-            "SyntaxError", "NoMethodError", "NameError", "TypeError", "ArgumentError",
-            "LocalJumpError", "FrozenError", "EncodingError", "Encoding::CompatibilityError",
-            "Encoding::UndefinedConversionError", "Encoding::InvalidByteSequenceError",
-            "Encoding::ConverterNotFoundError", 0
-        };
-        bool versionError = false;
-        for (int i = 0; versionErrors[i]; ++i)
-            if (!strcmp(cls, versionErrors[i])) versionError = true;
-        if (!strcmp(cls, "RuntimeError") && m && strstr(m, "frozen"))
-            versionError = true;
-        long running = (long) (SDL_GetTicks() / 1000);
-        if (fallback && *fallback && versionError && running < 240)
-        {
-            FILE *f = fopen(fallback, "wb");
-            if (f)
-            {
-                ms.resize(strlen(ms.c_str()));
-                fwrite(ms.data(), 1, ms.size(), f);
-                fclose(f);
-                const char *lang = getenv("ESSENTIA_LANG");
-                if (lang && !strncmp(lang, "es", 2))
-                    showMsg("Este juego fue hecho para una versi\u00f3n antigua de Ruby.\n\n"
-                            "Essentia lo abrir\u00e1 ahora con el motor cl\u00e1sico (Ruby 1.8) "
-                            "y lo recordar\u00e1 para la pr\u00f3xima vez.");
-                else
-                    showMsg("This game was made for an old version of Ruby.\n\n"
-                            "Essentia will now open it with the classic engine (Ruby 1.8) "
-                            "and remember that for next time.");
-                return;
-            }
-        }
-    }
     /* Essentia: old games often need the classic engine (Ruby 1.8) */
     {
         ms.resize(strlen(ms.c_str()));

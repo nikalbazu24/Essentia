@@ -1104,6 +1104,9 @@ public class LibraryActivity extends ControllerActivity
         if (!e.cover.isEmpty()) { labels.add(getString(R.string.opt_cover_reset)); actions.add(() -> resetCover(e)); }
         labels.add(getString(R.string.opt_rename)); actions.add(() -> rename(e));
         labels.add(getString(R.string.opt_screen)); actions.add(() -> chooseScreen(e));
+        labels.add(getString(R.string.panorama_settings)); actions.add(() -> choosePanorama(e));
+        labels.add(getString(R.string.launch_retry_original));
+        actions.add(() -> Games.openOriginal(this, new File(e.path)));
         labels.add(getString(R.string.opt_engine)); actions.add(() -> chooseEngine(e));
         labels.add(getString(R.string.opt_import)); actions.add(() -> importSaves(e));
         labels.add(getString(R.string.upd_game)); actions.add(() -> {
@@ -1324,7 +1327,7 @@ public class LibraryActivity extends ControllerActivity
                 }
                 e.engine = values[which];
                 // choosing a fixed engine forgets what the automatic one learned
-                if (which != 0) EssentiaSettings.setLearnedClassic(this, e.path, false);
+                if (which != 0) EssentiaSettings.forgetLearnedClassic(this, e.path);
                 Library.update(this, e);
                 d.dismiss();
                 reload();
@@ -1348,11 +1351,76 @@ public class LibraryActivity extends ControllerActivity
                 e.screenMode = values[which];
                 e.widescreen = EssentiaSettings.SCREEN_WIDE.equals(e.screenMode);
                 Library.update(this, e);
+                GameLaunchState.forgetScreen(this, e.path);
                 d.dismiss();
                 reload();
             })
             .setNegativeButton(R.string.cancel, null)
             .show();
+    }
+
+    private void choosePanorama(Library.Entry entry) {
+        int padding = Ui.dp(this, 16);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(padding, padding, padding, padding);
+        body.addView(Ui.text(this, getString(R.string.panorama_description), 14, Ui.TEXT_DIM, false));
+
+        body.addView(Ui.text(this, getString(R.string.panorama_ratio), 16, Ui.TEXT, true));
+        String[] ratios = {getString(R.string.panorama_device_ratio), "16:9", "16:10", "18:9"};
+        android.widget.Spinner ratio = new android.widget.Spinner(this);
+        android.widget.ArrayAdapter<String> choices = new android.widget.ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_dropdown_item, ratios);
+        ratio.setAdapter(choices);
+        ratio.setSelection(entry.panorama.ratio);
+        body.addView(ratio);
+
+        android.widget.CheckBox battles = new android.widget.CheckBox(this);
+        battles.setText(R.string.panorama_battles);
+        battles.setTextColor(Ui.TEXT);
+        battles.setChecked(entry.panorama.battles);
+        body.addView(battles);
+
+        android.widget.SeekBar camera = panoramaSlider(body, R.string.panorama_camera, -15, 15, entry.panorama.camera);
+        android.widget.SeekBar spread = panoramaSlider(body, R.string.panorama_spread, 0, 55, entry.panorama.spread);
+        spread.setEnabled(battles.isChecked());
+        battles.setOnCheckedChangeListener((button, checked) -> spread.setEnabled(checked));
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(body);
+        new AlertDialog.Builder(this, Ui.dialogTheme())
+            .setTitle(R.string.panorama_settings).setView(scroll)
+            .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton(R.string.panorama_reset, (dialog, which) -> savePanorama(entry, WideOptions.DEFAULT))
+            .setPositiveButton(android.R.string.ok, (dialog, which) ->
+                savePanorama(entry, new WideOptions(ratio.getSelectedItemPosition(), battles.isChecked(),
+                    camera.getProgress() - 15, spread.getProgress()))).show();
+    }
+
+    private android.widget.SeekBar panoramaSlider(LinearLayout body, int title, int min, int max, int value) {
+        TextView label = Ui.text(this, getString(title, value), 16, Ui.TEXT, true);
+        body.addView(label);
+        android.widget.SeekBar slider = new android.widget.SeekBar(this);
+        slider.setMax(max - min);
+        slider.setProgress(value - min);
+        slider.setContentDescription(label.getText());
+        slider.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(android.widget.SeekBar bar, int progress, boolean user) {
+                label.setText(getString(title, min + progress));
+                bar.setContentDescription(label.getText());
+            }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar bar) { }
+            @Override public void onStopTrackingTouch(android.widget.SeekBar bar) { }
+        });
+        body.addView(slider);
+        return slider;
+    }
+
+    private void savePanorama(Library.Entry entry, WideOptions options) {
+        entry.panorama = options;
+        Library.update(this, entry);
+        GameLaunchState.forgetScreen(this, entry.path);
+        reload();
     }
 
     private void pickCover(Library.Entry e)

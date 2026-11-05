@@ -48,6 +48,68 @@ public class ExperienceTest {
         if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){View found=label(((ViewGroup)v).getChildAt(i),label);if(found!=null)return found;}
         return null;
     }
+    @Test public void widescreenCrashOffersOriginalWithTheSameEngine() throws Exception {
+        RuntimeEnvironment.setQualifiers("es-rES-w960dp-h540dp-land-mdpi");
+        File game = java.nio.file.Files.createTempDirectory(app.getCacheDir().toPath(), "wide-crash").toFile();
+        File data = new File(game, "Data");
+        assertTrue(data.mkdir());
+        File scripts = new File(data, "Scripts.rxdata");
+        java.nio.file.Files.write(scripts.toPath(), new byte[]{1});
+        String path = game.getAbsolutePath();
+        String version = GameLaunchState.inspect(game).version;
+        String id = GameLaunchState.begin(app, path, version, EssentiaSettings.ENGINE_MODERN,
+            EssentiaSettings.SCREEN_WIDE, EssentiaSettings.SCREEN_WIDE, false, false);
+        Activity origin = Robolectric.buildActivity(Activity.class).setup().get();
+        ReportActivity.openCrash(origin, path, "widescreen.rb:409: SystemStackError occured.\n\nstack level too deep",
+            id, true);
+        Intent report = Shadows.shadowOf(origin).getNextStartedActivity();
+        Activity screen = Robolectric.buildActivity(ReportActivity.class, report).setup().get();
+        View decor = screen.getWindow().getDecorView();
+        View retry = label(decor, screen.getString(R.string.launch_retry_original));
+        assertNotNull(retry);
+        assertNull(label(decor, screen.getString(R.string.launch_retry_classic)));
+        shot("panorama-recuperacion", decor, 960, 540);
+        retry.performClick();
+        Intent launch = Shadows.shadowOf(screen).getNextStartedActivity();
+        assertNotNull(launch);
+        assertEquals(MainActivity.class.getName(), launch.getComponent().getClassName());
+        assertEquals(path, launch.getStringExtra(MainActivity.EXTRA_GAME_PATH));
+        assertEquals(Saves.dirFor(app, game, Games.readTitle(game)).getAbsolutePath(),
+            launch.getStringExtra(MainActivity.EXTRA_DATA_DIR));
+        assertEquals(EssentiaSettings.ENGINE_MODERN, launch.getStringExtra(MainActivity.EXTRA_ENGINE));
+        assertEquals(EssentiaSettings.SCREEN_ORIGINAL, launch.getStringExtra(MainActivity.EXTRA_SCREEN_MODE));
+        assertFalse(launch.getBooleanExtra(MainActivity.EXTRA_AUTO_ENGINE, true));
+        GameLaunchState.complete(app, path, id, true);
+        assertNull(GameLaunchState.working(app, path));
+        String retryId = launch.getStringExtra(MainActivity.EXTRA_LAUNCH_ID);
+        GameLaunchState.complete(app, path, retryId, true);
+        assertNull(GameLaunchState.interrupted(app, path));
+        GameLaunchState.Attempt working = GameLaunchState.working(app, path);
+        assertEquals(EssentiaSettings.SCREEN_ORIGINAL, working.screen);
+        assertEquals(version, working.version);
+        java.nio.file.Files.write(scripts.toPath(), new byte[]{1, 2});
+        assertFalse(working.matches(GameLaunchState.inspect(game).version, working.requestedScreen));
+    }
+
+    @Test public void preflightRecognizesCustomAndPackedScriptLayouts() throws Exception {
+        File game = java.nio.file.Files.createTempDirectory(app.getCacheDir().toPath(), "script-layout").toFile();
+        assertNotNull(GameLaunchState.inspect(game).missing);
+        File ini = new File(game, "Game.ini");
+        java.nio.file.Files.write(ini.toPath(), "[Game]\nScripts=Custom\\Content.rxdata\n"
+            .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("Custom/Content.rxdata", GameLaunchState.inspect(game).missing);
+        File pack = new File(game, "game.RGSSAD");
+        java.nio.file.Files.write(pack.toPath(), new byte[]{1});
+        assertNull(GameLaunchState.inspect(game).missing);
+        assertTrue(pack.delete());
+        File custom = new File(game, "custom");
+        assertTrue(custom.mkdir());
+        java.nio.file.Files.write(new File(custom, "content.RXDATA").toPath(), new byte[]{1});
+        assertNull(GameLaunchState.inspect(game).missing);
+        assertTrue(GameLaunchState.rubyCompatibilityError("script:1: SyntaxError occured.\n\nInvalid retry"));
+        assertFalse(GameLaunchState.rubyCompatibilityError("script:1: SyntaxError occured.\n\nUnexpected end"));
+    }
+
     private void shot(String name,View v,int w,int h)throws Exception {shot(name,v,w,h,null);}
     private void shot(String name,View v,int w,int h,View behind)throws Exception {
         v.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));v.layout(0,0,w,h);

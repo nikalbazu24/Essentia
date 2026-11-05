@@ -57,8 +57,10 @@ public class MainActivity extends SDLActivity
     /** Ruby engine: modern (Ruby 3.1) or classic (Ruby 1.8). */
     public static final String EXTRA_ENGINE = "essentia.ENGINE";
     public static final String EXTRA_ENGINE_REASON = "essentia.ENGINE_REASON";
-    /** Automatic engine: switch to the classic one if the game needs it. */
+    /** Offer classic Ruby if the modern engine reports a recognized compatibility error. */
     public static final String EXTRA_AUTO_ENGINE = "essentia.AUTO_ENGINE";
+    static final String EXTRA_LAUNCH_ID = "essentia.LAUNCH_ID";
+    private volatile boolean mReachedFrame;
     public static final String EXTRA_FROM_FRONTEND = "essentia.FROM_FRONTEND";
     public static final String EXTRA_TRANSLATE = "essentia.TRANSLATE";
     public static final String EXTRA_TRANSLATION_LANGUAGE = "essentia.TRANSLATION_LANGUAGE";
@@ -217,13 +219,6 @@ public class MainActivity extends SDLActivity
             android.system.Os.setenv("ESSENTIA_TR_FILE", trFile, true);
             android.system.Os.setenv("ESSENTIA_TR_REQ", trReq, true);
 
-            // Automatic engine: the engine writes here when the game needs Ruby 1.8
-            java.io.File fallback = new java.io.File(getCacheDir(), "engine_fallback.txt");
-            //noinspection ResultOfMethodCallIgnored
-            fallback.delete();
-            boolean autoEngine = in != null && in.getBooleanExtra(EXTRA_AUTO_ENGINE, false);
-            android.system.Os.setenv("ESSENTIA_AUTO_FALLBACK", autoEngine ? fallback.getAbsolutePath() : "", true);
-
             // Live map for the second screen (written by essentia_live.rb)
             //noinspection ResultOfMethodCallIgnored
             new java.io.File(getCacheDir(), "essentia_live.txt").delete();
@@ -270,7 +265,12 @@ public class MainActivity extends SDLActivity
             getWindowManager().getDefaultDisplay().getRealMetrics(dm);
             float aspect = (float) Math.max(dm.widthPixels, dm.heightPixels)
                 / Math.max(1, Math.min(dm.widthPixels, dm.heightPixels));
-            android.system.Os.setenv("ESSENTIA_ASPECT", String.format(Locale.ROOT, "%.4f", aspect), true);
+            WideOptions panorama = WideOptions.from(in);
+            android.system.Os.setenv("ESSENTIA_ASPECT",
+                String.format(Locale.ROOT, "%.4f", panorama.aspect(aspect)), true);
+            android.system.Os.setenv("ESSENTIA_WIDE_BATTLES", panorama.battles ? "1" : "0", true);
+            android.system.Os.setenv("ESSENTIA_WIDE_CAMERA", Integer.toString(panorama.camera), true);
+            android.system.Os.setenv("ESSENTIA_WIDE_SPREAD", Integer.toString(panorama.spread), true);
 
             // RPG Maker RTP (graphics/sounds that old games expect to be installed)
             android.system.Os.setenv("ESSENTIA_RTP", findRtp(new java.io.File(GAME_PATH)), true);
@@ -414,7 +414,7 @@ public class MainActivity extends SDLActivity
         if(mPhoneDialog!=null)mPhoneDialog.dismiss();
         if (mTranslator != null) mTranslator.stop();
         Diagnostics.event(this,gamePath(),"activity_destroyed");
-        if (!retryWithClassicEngine()) offerReport();
+        if (!offerReport()) GameLaunchState.complete(this, gamePath(), getIntent().getStringExtra(EXTRA_LAUNCH_ID), mReachedFrame);
         CloudBackup.afterSession(this, gamePath());
         super.onDestroy();
 
@@ -991,55 +991,27 @@ public class MainActivity extends SDLActivity
         applyOrientationLayout();
     }
 
-    // Essentia: automatic engine. The game stopped with an error typical of Ruby 1.8
-    // games: open it again with the classic engine (the launcher remembers it).
     private Translator mTranslator;
 
-    /** The game stopped with an error: offer to send a report. */
-    private void offerReport()
+    /** The game stopped with a Ruby error: pass the original trace to recovery. */
+    private boolean offerReport()
     {
-        try {
-            java.io.File f = new java.io.File(getCacheDir(), "game_error.txt");
-            if (!f.isFile() || f.length() == 0) return;
-            byte[] b = new byte[(int) Math.min(f.length(), 64 * 1024)];
-            try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
-                int n = in.read(b);
-                if (n <= 0) return;
-                b = java.util.Arrays.copyOf(b, n);
-            }
-            //noinspection ResultOfMethodCallIgnored
-            f.delete();
+        File file = new File(getCacheDir(), "game_error.txt");
+        if (!file.isFile() || file.length() == 0) return false;
+        try (java.io.InputStream in = new java.io.FileInputStream(file)) {
+            byte[] bytes = new byte[(int) Math.min(file.length(), 64 * 1024)];
+            int size = in.read(bytes);
             String path = gamePath();
-            if (path != null) {Diagnostics.error(this,path,new String(b,"UTF-8"));ReportActivity.open(this, path, new String(b, "UTF-8"));}
+            if (size <= 0 || path == null) return true;
+            String error = new String(bytes, 0, size, java.nio.charset.StandardCharsets.UTF_8);
+            Diagnostics.error(this, path, error);
+            ReportActivity.openCrash(this, path, error, getIntent().getStringExtra(EXTRA_LAUNCH_ID),
+                !mReachedFrame && getIntent().getBooleanExtra(EXTRA_AUTO_ENGINE, false));
+            file.delete();
         } catch (Exception e) {
-            Log.w(TAG, "Report: " + e);
+            Log.w(TAG, "Could not open crash recovery", e);
         }
-    }
-
-    private boolean retryWithClassicEngine()
-    {
-        try {
-            java.io.File f = new java.io.File(getCacheDir(), "engine_fallback.txt");
-            if (!f.isFile() || f.length() == 0) return false;
-            Diagnostics.event(this,gamePath(),"fallback_requested");
-            try(java.io.FileInputStream input=new java.io.FileInputStream(f)) {
-                Diagnostics.error(this,gamePath(),"Solicitud de motor clásico: "+new String(SaveTransaction.read(input,8192),"UTF-8"));
-            }
-            f.delete();
-            new java.io.File(getCacheDir(), "game_error.txt").delete();
-            String path = gamePath();
-            if (path == null) return false;
-            Intent i = new Intent(this, LauncherActivity.class);
-            i.putExtra("path", path);
-            i.putExtra(LauncherActivity.EXTRA_RETRY_CLASSIC, true);
-            i.putExtra(EXTRA_FROM_FRONTEND, getIntent().getBooleanExtra(EXTRA_FROM_FRONTEND, false));
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(i);
-            return true;
-        } catch (Exception e) {
-            Log.w(TAG, "Classic engine retry: " + e);
-            return false;
-        }
+        return true;
     }
 
     // Essentia: play time for the library (counted while the game is on screen)
@@ -1126,7 +1098,11 @@ public class MainActivity extends SDLActivity
     @SuppressWarnings("unused")
     private static void onGameReady()
     {
-        if(mSingleton instanceof MainActivity)Diagnostics.event(mSingleton,((MainActivity)mSingleton).gamePath(),"first_frame");
+        if (mSingleton instanceof MainActivity) {
+            MainActivity game = (MainActivity) mSingleton;
+            game.mReachedFrame = true;
+            Diagnostics.event(game, game.gamePath(), "first_frame");
+        }
         if (mMainHandler != null) {
             mMainHandler.post(() -> {
                 if (mLoading != null) mLoading.finish();

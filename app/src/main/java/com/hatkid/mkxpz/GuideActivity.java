@@ -67,7 +67,7 @@ public class GuideActivity extends ControllerActivity {
                         button("Revisar traducciones",R.drawable.ic_e_note,()->startActivity(scoped(TranslationReviewActivity.class)));
                         button("Revisar selección automática del motor",R.drawable.ic_e_settings,()->new AlertDialog.Builder(this).setTitle("Motor automático de este juego")
                             .setMessage("Motor clásico aprendido: "+(EssentiaSettings.learnedClassic(this,path)?"sí":"no")+". Puedes olvidar solo este aprendizaje; no cambia tu elección manual ni las recomendaciones del perfil, y no toca partidas.")
-                            .setNegativeButton("Cerrar",null).setPositiveButton("Olvidar aprendizaje",(d,w)->EssentiaSettings.setLearnedClassic(this,path,false)).show());
+                            .setNegativeButton("Cerrar",null).setPositiveButton("Olvidar aprendizaje",(d,w)->EssentiaSettings.forgetLearnedClassic(this,path)).show());
                         button("Reportar un problema",R.drawable.ic_e_help,()->ReportActivity.open(this,path,null));
                         button("Ver la guía de Essentia",()->startActivity(new Intent(this,GuideActivity.class)));
                     }
