@@ -1,5 +1,6 @@
 package com.hatkid.mkxpz;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -158,7 +159,7 @@ public class SettingsActivity extends ControllerActivity
         String[] hints={"Hazlo tuyo. Los cambios de aspecto conservan tus juegos.","Pantalla principal y acompañante de juego.","Mando, pantalla táctil y accesos durante la partida.","Juegos, partidas y recursos en un solo lugar.","Conexiones opcionales entre tus dispositivos Android.","Cambia una opción a la vez y compara en el mismo juego.","Actualizaciones, ayuda y créditos de Essentia."};
         TextView hint=Ui.text(this,hints[cat],14,Ui.TEXT_DIM,false);hint.setPadding(0,0,0,Ui.dp(this,16));mList.addView(hint);
         switch (cat) {
-            case 0: buildTheme(); buildMusic(); break;
+            case 0: buildLanguage(); buildTheme(); buildMusic(); break;
             case 1: buildScreen(); break;
             case 2: buildControls(); buildTurbo(); break;
             case 3: buildGames(); buildSaves(); buildGameUpdates(); buildRtp(); break;
@@ -170,6 +171,26 @@ public class SettingsActivity extends ControllerActivity
     }
 
     // ------------------------------------------------------------ sections
+
+    private void buildLanguage()
+    {
+        String[] codes = {"", "es", "en"};
+        String[] labels = {getString(R.string.language_device), "Español", "English"};
+        int selected = java.util.Arrays.asList(codes).indexOf(AppLanguage.selection(this));
+        Button language = Ui.button(this, getString(R.string.interface_language, labels[Math.max(0, selected)]), false);
+        language.setOnClickListener(v -> new AlertDialog.Builder(this, Ui.dialogTheme())
+            .setTitle(R.string.language_title)
+            .setSingleChoiceItems(labels, selected, (dialog, choice) -> {
+                dialog.dismiss();
+                if (choice != selected) {
+                    AppLanguage.select(this, codes[choice]);
+                    recreate();
+                }
+            })
+            .setNegativeButton(R.string.cancel, null)
+            .show());
+        mList.addView(language);
+    }
 
     private void buildTheme()
     {

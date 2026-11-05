@@ -16,7 +16,7 @@ public class TranslationReviewActivity extends ControllerActivity {
         String path=getIntent().getStringExtra(MainActivity.EXTRA_GAME_PATH);
         Library.Entry e=path==null?null:Library.find(this,path);
         if(e==null){finish();return;}
-        file=new File(Translator.folder(e.displayTitle()),"es.tsv");
+        file=Translator.translationFile(e.displayTitle(), e.translationLanguage);
         ScrollView scroll=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(1);
         int p=Ui.dp(this,18);list.setPadding(p,p,p,p);list.setBackgroundColor(Ui.BG);scroll.addView(list);setContentView(scroll);
         Button back=Ui.button(this,"‹ Volver",false);back.setOnClickListener(v->finish());list.addView(back);

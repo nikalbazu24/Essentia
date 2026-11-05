@@ -31,6 +31,7 @@ public final class Library
         public String engine = "";
         /** Translate this game to Spanish automatically. */
         public boolean translate = false;
+        public String translationLanguage = "es";
 
         Entry(String path, String title, long lastPlayed)
         {
@@ -66,6 +67,7 @@ public final class Library
                 e.screenMode = o.optString("screenMode", e.widescreen ? EssentiaSettings.SCREEN_WIDE : "");
                 e.engine = o.optString("engine", "");
                 e.translate = o.optBoolean("translate", false);
+                e.translationLanguage = TranslationLanguage.normalize(o.optString("translationLanguage", "es"));
                 out.add(e);
             }
         } catch (Exception ignored) { }
@@ -91,6 +93,7 @@ public final class Library
                 o.put("screenMode", e.screenMode);
                 o.put("engine", e.engine);
                 o.put("translate", e.translate);
+                o.put("translationLanguage", e.translationLanguage);
                 arr.put(o);
             }
         } catch (Exception ignored) { }
@@ -136,16 +139,16 @@ public final class Library
         save(c, list);
     }
 
-    public static synchronized void markPlayed(Context c, String path)
+    public static synchronized Entry markPlayed(Context c, String path)
     {
         List<Entry> list = load(c);
-        boolean found = false;
-        for (Entry e : list) {
-            if (e.path.equals(path)) {
-                e.lastPlayed = System.currentTimeMillis();
-                found = true;
+        for (Entry entry : list) {
+            if (entry.path.equals(path)) {
+                entry.lastPlayed = System.currentTimeMillis();
+                save(c, list);
+                return entry;
             }
         }
-        if (found) save(c, list);
+        return null;
     }
 }

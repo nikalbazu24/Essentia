@@ -14,14 +14,9 @@ public final class LibraryTour {
     private static final String KEY="experience_tour_seen";
     private static final int REVISION=1;
     private static final java.util.WeakHashMap<Activity,Dialog> ACTIVE=new java.util.WeakHashMap<>();
-    private static final String[][] STEPS={
-        {"tour-brand","Tu aventura empieza aquí","Este frasco es Essentia. Biblioteca, Descubrir y Ajustes organizan tus juegos y herramientas."},
-        {"tour-add","Trae tus juegos","Añadir abre una carpeta de juego. Si tienes un ZIP, RAR o 7z, la instalación está en Descubrir. Conserva siempre los archivos del creador."},
-        {"tour-search","Encuentra lo que quieres jugar","Busca por nombre. Los botones de vista y orden cambian cómo recorres tu biblioteca, con mando o con los dedos."},
-        {"tour-game","Todo al lado de tu juego","Jugar abre la aventura seleccionada. Opciones reúne pantalla, controles, partidas y herramientas. Si aún no añadiste juegos, aquí aparecerá el primero."},
-        {"tour-nav-1","Descubre nuevas aventuras","Explora las fichas, consulta su procedencia y visita a sus creadores. Las actualizaciones de juegos también están aquí."},
-        {"tour-nav-2","Hazlo tuyo","Cambia el tema, los controles y las opciones de pantalla. Durante el juego, el acompañante reúne notas y accesos compatibles, en teléfono o Thor. Puedes repetir este tour desde Biblioteca o Ajustes → Información."}
-    };
+    private static final String[] TARGETS = {"tour-brand", "tour-add", "tour-search", "tour-game", "tour-nav-1", "tour-nav-2"};
+    private static final int[] TITLES = {R.string.tour_title_0, R.string.tour_title_1, R.string.tour_title_2, R.string.tour_title_3, R.string.tour_title_4, R.string.tour_title_5};
+    private static final int[] BODIES = {R.string.tour_body_0, R.string.tour_body_1, R.string.tour_body_2, R.string.tour_body_3, R.string.tour_body_4, R.string.tour_body_5};
     private LibraryTour(){}
     public static boolean needed(Context c){return c.getSharedPreferences(EssentiaSettings.PREFS,0).getInt(KEY,0)<REVISION;}
     public static void open(Activity a){
@@ -39,15 +34,15 @@ public final class LibraryTour {
         int pad=Ui.dp(a,18);card.setPadding(pad,pad,pad,pad);card.setBackground(Ui.rounded(a,Ui.SURFACE,24));card.setElevation(Ui.dp(a,12));
         LinearLayout heading=new LinearLayout(a);heading.setGravity(Gravity.CENTER_VERTICAL);heading.addView(Ui.brand(a,46),new LinearLayout.LayoutParams(Ui.dp(a,46),Ui.dp(a,46)));
         LinearLayout identity=new LinearLayout(a);identity.setOrientation(LinearLayout.VERTICAL);identity.setPadding(Ui.dp(a,12),0,0,0);
-        identity.addView(Ui.text(a,"CONOCE ESSENTIA",11,Ui.ACCENT_LIGHT,true));TextView count=Ui.text(a,"",14,Ui.TEXT_DIM,false);identity.addView(count);heading.addView(identity);card.addView(heading);
+        identity.addView(Ui.text(a,a.getString(R.string.tour_heading),11,Ui.ACCENT_LIGHT,true));TextView count=Ui.text(a,"",14,Ui.TEXT_DIM,false);identity.addView(count);heading.addView(identity);card.addView(heading);
         LinearLayout markers=new LinearLayout(a);markers.setPadding(0,Ui.dp(a,14),0,Ui.dp(a,12));card.addView(markers);
-        for(int i=0;i<STEPS.length;i++){View marker=new View(a);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,Ui.dp(a,4),1);lp.rightMargin=Ui.dp(a,4);markers.addView(marker,lp);}
+        for(int i=0;i<TARGETS.length;i++){View marker=new View(a);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,Ui.dp(a,4),1);lp.rightMargin=Ui.dp(a,4);markers.addView(marker,lp);}
         TextView title=Ui.text(a,"",24,Ui.TEXT,true);card.addView(title);
         ScrollView scroll=new ScrollView(a);TextView text=Ui.text(a,"",15,Ui.TEXT_DIM,false);text.setPadding(0,Ui.dp(a,8),0,Ui.dp(a,12));scroll.addView(text);
         LinearLayout.LayoutParams bodyLp=new LinearLayout.LayoutParams(-1,0,1);card.addView(scroll,bodyLp);
-        LinearLayout buttons=new LinearLayout(a);Button previous=Ui.button(a,"Atrás",false);Button next=Ui.button(a,"Siguiente",true);
+        LinearLayout buttons=new LinearLayout(a);Button previous=Ui.button(a,a.getString(R.string.tour_back),false);Button next=Ui.button(a,a.getString(R.string.tour_next),true);
         LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,Ui.dp(a,48),1);bp.rightMargin=Ui.dp(a,8);buttons.addView(previous,bp);buttons.addView(next,new LinearLayout.LayoutParams(0,Ui.dp(a,48),1));card.addView(buttons);
-        LinearLayout links=new LinearLayout(a);Button skip=Ui.button(a,"Omitir",false);Button guide=Ui.button(a,"Guía completa",false,R.drawable.ic_e_help);
+        LinearLayout links=new LinearLayout(a);Button skip=Ui.button(a,a.getString(R.string.tour_skip),false);Button guide=Ui.button(a,a.getString(R.string.tour_guide),false,R.drawable.ic_e_help);
         links.addView(skip,new LinearLayout.LayoutParams(0,Ui.dp(a,48),1));links.addView(guide,new LinearLayout.LayoutParams(0,Ui.dp(a,48),1));
         LinearLayout.LayoutParams linksLp=new LinearLayout.LayoutParams(-1,-2);linksLp.topMargin=Ui.dp(a,6);card.addView(links,linksLp);
         android.util.DisplayMetrics metrics=a.getResources().getDisplayMetrics();
@@ -55,7 +50,7 @@ public final class LibraryTour {
         cardLp.setMargins(Ui.dp(a,12),Ui.dp(a,16),Ui.dp(a,12),Ui.dp(a,16));stage.addView(card,cardLp);
         final int[] page={0};
         Runnable place=()->{
-            View target=a.findViewById(android.R.id.content).findViewWithTag(STEPS[page[0]][0]);
+            View target=a.findViewById(android.R.id.content).findViewWithTag(TARGETS[page[0]]);
             if(target==null||!target.isShown())target=a.findViewById(android.R.id.content).findViewWithTag("tour-add");
             spotlight.target=target;spotlight.invalidate();
             int w=stage.getWidth(),h=stage.getHeight();if(w<=0||h<=0)return;
@@ -70,15 +65,15 @@ public final class LibraryTour {
             lp.setMargins(Ui.dp(a,12),Ui.dp(a,16),Ui.dp(a,12),Ui.dp(a,16));card.setLayoutParams(lp);
         };
         Runnable render=()->{
-            title.setText(STEPS[page[0]][1]);text.setText(STEPS[page[0]][2]);scroll.scrollTo(0,0);
-            count.setText("Paso "+(page[0]+1)+" de "+STEPS.length);previous.setEnabled(page[0]>0);previous.setAlpha(page[0]>0?1:.4f);
-            next.setText(page[0]==STEPS.length-1?"Terminar":"Siguiente");
+            title.setText(a.getString(TITLES[page[0]]));text.setText(a.getString(BODIES[page[0]]));scroll.scrollTo(0,0);
+            count.setText(a.getString(R.string.tour_step, page[0]+1, TARGETS.length));previous.setEnabled(page[0]>0);previous.setAlpha(page[0]>0?1:.4f);
+            next.setText(page[0]==TARGETS.length-1?a.getString(R.string.tour_finish):a.getString(R.string.tour_next));
             for(int i=0;i<markers.getChildCount();i++)markers.getChildAt(i).setBackground(Ui.rounded(a,i<=page[0]?Ui.ACCENT:Ui.SURFACE_HI,3));
-            place.run();title.announceForAccessibility(STEPS[page[0]][1]);
+            place.run();title.announceForAccessibility(a.getString(TITLES[page[0]]));
         };
         Runnable finish=()->{a.getSharedPreferences(EssentiaSettings.PREFS,0).edit().putInt(KEY,REVISION).apply();d.dismiss();};
         previous.setOnClickListener(v->{if(page[0]>0){page[0]--;render.run();}});
-        next.setOnClickListener(v->{if(page[0]==STEPS.length-1)finish.run();else{page[0]++;render.run();}});
+        next.setOnClickListener(v->{if(page[0]==TARGETS.length-1)finish.run();else{page[0]++;render.run();}});
         skip.setOnClickListener(v->finish.run());
         guide.setOnClickListener(v->{d.dismiss();a.startActivity(new Intent(a,GuideActivity.class));});
         d.setOnKeyListener((dialog,key,e)->{

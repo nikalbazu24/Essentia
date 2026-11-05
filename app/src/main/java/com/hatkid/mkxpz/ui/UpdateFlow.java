@@ -31,7 +31,7 @@ public final class UpdateFlow
     /** Before opening a game, look again after this long (not on every launch). */
     private static final long RECHECK_MS = 60L * 60 * 1000;
     /** Don't keep the player waiting if the internet is slow. */
-    private static final long CHECK_TIMEOUT_MS = 6000;
+    private static final long CHECK_TIMEOUT_MS = 3000;
 
     private UpdateFlow() { }
 
@@ -78,7 +78,7 @@ public final class UpdateFlow
             if (done[0]) return;
             done[0] = true;
             if (checking.isShowing()) checking.dismiss();
-            launch.run();
+            if (!a.isFinishing() && !a.isDestroyed()) launch.run();
         };
         checking.setOnShowListener(d -> checking.getButton(AlertDialog.BUTTON_NEGATIVE)
             .setOnClickListener(v -> proceed.run()));
@@ -91,7 +91,7 @@ public final class UpdateFlow
             try { info = GameUpdater.check(dir); } catch (Exception ignored) { }
             final GameUpdater.Info result = info;
             main.post(() -> {
-                if (done[0]) return; // too slow: the game is already open
+                if (done[0] || a.isFinishing() || a.isDestroyed()) return;
                 prefs(a).edit().putLong(key + ":time", System.currentTimeMillis()).apply();
                 String skipped = prefs(a).getString(key + ":skip", "");
                 if (result == null || !result.newer() || result.links.isEmpty() || result.latest.equals(skipped)) {

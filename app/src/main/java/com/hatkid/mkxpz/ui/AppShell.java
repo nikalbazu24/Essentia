@@ -39,7 +39,7 @@ public final class AppShell {
             View brand=Ui.brand(a,56);
             LinearLayout.LayoutParams brandLp=new LinearLayout.LayoutParams(Ui.dp(a,56),Ui.dp(a,56));brandLp.bottomMargin=Ui.dp(a,20);brandLp.topMargin=Ui.dp(a,8);nav.addView(brand,brandLp);
         }
-        String[] labels={"Biblioteca","Descubrir","Ajustes"};
+        String[] labels={a.getString(R.string.nav_library),a.getString(R.string.nav_discover),a.getString(R.string.lib_settings)};
         int[] icons={R.drawable.ic_e_grid,R.drawable.ic_e_store,R.drawable.ic_e_settings};
         Class<?>[] screens={LibraryActivity.class,StoreActivity.class,SettingsActivity.class};
         for(int i=0;i<labels.length;i++) {

@@ -31,10 +31,16 @@ import java.io.File;
 
 import org.libsdl.app.SDLActivity;
 import com.hatkid.mkxpz.gamepad.Gamepad;
+import com.hatkid.mkxpz.ui.GameKeyboard;
 import com.hatkid.mkxpz.gamepad.GamepadConfig;
 
 public class MainActivity extends SDLActivity
 {
+
+    @Override protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(com.hatkid.mkxpz.AppLanguage.wrap(base));
+    }
+
     // This activity inherits from SDLActivity activity.
     // Put your Java-side stuff here.
 
@@ -55,7 +61,9 @@ public class MainActivity extends SDLActivity
     public static final String EXTRA_AUTO_ENGINE = "essentia.AUTO_ENGINE";
     public static final String EXTRA_FROM_FRONTEND = "essentia.FROM_FRONTEND";
     public static final String EXTRA_TRANSLATE = "essentia.TRANSLATE";
+    public static final String EXTRA_TRANSLATION_LANGUAGE = "essentia.TRANSLATION_LANGUAGE";
     private boolean mClassicEngine = false;
+    private java.util.concurrent.FutureTask<File> mNetworkTrust;
     private static final String GAME_PATH_DEFAULT = Environment.getExternalStorageDirectory() + "/mkxp-z";
     private static String GAME_PATH = GAME_PATH_DEFAULT;
     private static String OBB_MAIN_FILENAME;
@@ -133,6 +141,10 @@ public class MainActivity extends SDLActivity
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
+        long loadingStarted = android.os.SystemClock.elapsedRealtime();
+        mNetworkTrust = new java.util.concurrent.FutureTask<>(() -> NetworkTrust.prepare(getApplicationContext()));
+        new Thread(mNetworkTrust, "EssentiaNetworkTrust").start();
+
         // Essentia: the game folder comes from LauncherActivity. It must be set before
         // SDL starts the native thread, which reads GAME_PATH through JNI.
         String requestedPath = getIntent() != null ? getIntent().getStringExtra(EXTRA_GAME_PATH) : null;
@@ -171,7 +183,9 @@ public class MainActivity extends SDLActivity
             android.system.Os.setenv("ESSENTIA_ORIENTATION", EssentiaSettings.orientation(this), true);
 
             // Faster start: compiled game scripts are kept here (per Essentia version)
-            android.system.Os.setenv("ESSENTIA_ISEQ_DIR", scriptCacheDir().getAbsolutePath(), true);
+            File scriptDirectory = scriptCacheDir();
+            scriptDirectory.mkdirs();
+            android.system.Os.setenv("ESSENTIA_ISEQ_DIR", scriptDirectory.getAbsolutePath(), true);
 
             // Errors, for the "send report" button
             java.io.File errorFile = new java.io.File(getCacheDir(), "game_error.txt");
@@ -190,9 +204,15 @@ public class MainActivity extends SDLActivity
             String trFile = "", trReq = "";
             if (in != null && in.getBooleanExtra(EXTRA_TRANSLATE, false)) {
                 String t = in.getStringExtra(EXTRA_TITLE);
-                mTranslator = Translator.start(this, t != null ? t : "Juego");
-                trFile = mTranslator.translationsFile().getAbsolutePath();
-                trReq = mTranslator.requestFile().getAbsolutePath();
+                try {
+                    mTranslator = Translator.start(this, t != null ? t : getString(R.string.app_name),
+                        TranslationLanguage.normalize(in.getStringExtra(EXTRA_TRANSLATION_LANGUAGE)));
+                    trFile = mTranslator.translationsFile().getAbsolutePath();
+                    trReq = mTranslator.requestFile().getAbsolutePath();
+                } catch (Exception ignored) {
+                    android.widget.Toast.makeText(this, R.string.translation_unavailable,
+                        android.widget.Toast.LENGTH_LONG).show();
+                }
             }
             android.system.Os.setenv("ESSENTIA_TR_FILE", trFile, true);
             android.system.Os.setenv("ESSENTIA_TR_REQ", trReq, true);
@@ -203,12 +223,6 @@ public class MainActivity extends SDLActivity
             fallback.delete();
             boolean autoEngine = in != null && in.getBooleanExtra(EXTRA_AUTO_ENGINE, false);
             android.system.Os.setenv("ESSENTIA_AUTO_FALLBACK", autoEngine ? fallback.getAbsolutePath() : "", true);
-
-            try {
-                String trust = NetworkTrust.prepare(this).getAbsolutePath();
-                android.system.Os.setenv("ESSENTIA_CA_FILE", trust, true);
-                android.system.Os.setenv("SSL_CERT_FILE", trust, true);
-            } catch (Exception e) { Log.w(TAG,"No se pudo preparar la conexión segura"); }
 
             // Live map for the second screen (written by essentia_live.rb)
             //noinspection ResultOfMethodCallIgnored
@@ -247,7 +261,7 @@ public class MainActivity extends SDLActivity
             shots.mkdirs();
             android.system.Os.setenv("ESSENTIA_SHOTS_DIR", shots.getAbsolutePath(), true);
 
-            android.system.Os.setenv("ESSENTIA_LANG", Locale.getDefault().getLanguage(), true);
+            android.system.Os.setenv("ESSENTIA_LANG", getResources().getConfiguration().locale.getLanguage(), true);
             android.system.Os.setenv("ESSENTIA_DIAGONAL",
                 EssentiaSettings.flag(this, EssentiaSettings.DIAGONAL, false) ? "1" : "0", true);
 
@@ -360,11 +374,11 @@ public class MainActivity extends SDLActivity
         // Essentia: loading screen until the game draws its first frame
         String title = getIntent() != null ? getIntent().getStringExtra(EXTRA_TITLE) : null;
         mLoading = new com.hatkid.mkxpz.ui.LoadingScreen(this, title != null ? title : "", GAME_PATH,
-            EssentiaSettings.flag(this, EssentiaSettings.PERF_LOAD_TIMES, true));
+            EssentiaSettings.flag(this, EssentiaSettings.PERF_LOAD_TIMES, true), loadingStarted);
         mLayout.addView(mLoading, new android.widget.RelativeLayout.LayoutParams(
             LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
-        mMainHandler.postDelayed(mAnswerPoll, 1000);
+
     }
 
     @Override
@@ -394,6 +408,8 @@ public class MainActivity extends SDLActivity
     @Override
     protected void onDestroy()
     {
+        closeKeyboard();
+        if (mNetworkTrust != null) mNetworkTrust.cancel(true);
         stopPlayClock();
         if(mPhoneDialog!=null)mPhoneDialog.dismiss();
         if (mTranslator != null) mTranslator.stop();
@@ -419,13 +435,17 @@ public class MainActivity extends SDLActivity
         if (mExitDialog != null && mExitDialog.isShowing())
             return;
 
-        String[] items = {"Continuar jugando","Acompañante · mapa, notas y progreso","Controles del juego","Diagnóstico local","Salir del juego"};
-        mExitDialog=new AlertDialog.Builder(this).setTitle("Tu partida")
+        int[] menu = {R.string.lib_continue, R.string.game_companion, R.string.lib_controls,
+            R.string.btn_keyboard, R.string.game_local_diagnostics, R.string.exit_title};
+        String[] items = new String[menu.length];
+        for (int i = 0; i < menu.length; i++) items[i] = getString(menu[i]);
+        mExitDialog=new AlertDialog.Builder(this).setTitle(R.string.game_session_menu)
             .setItems(items,(d,which)->{
                 if(which==1)showPhoneCompanion();
                 else if(which==2)com.hatkid.mkxpz.ui.ControlsGuide.showDialog(this);
-                else if(which==3)Diagnostics.show(this,gamePath());
-                else if(which==4)confirmExit();
+                else if(which==3)mMainHandler.post(this::toggleKeyboard);
+                else if(which==4)Diagnostics.show(this,gamePath());
+                else if(which==5)confirmExit();
             }).create();
         mExitDialog.show();
     }
@@ -588,22 +608,60 @@ public class MainActivity extends SDLActivity
         mAutoKeys.clear();
     }
 
-    /** Android's keyboard, to type names in games that accept typing. */
+    private GameKeyboard mKeyboard;
+    private int mKeyboardKey = KeyEvent.KEYCODE_UNKNOWN;
+    private boolean mKeyboardShift;
+    private static native void enqueueKeyboardText(byte[] utf8);
+
     public void toggleKeyboard()
     {
-        try {
-            if (SDLActivity.isScreenKeyboardShown()) {
-                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager)
-                    getSystemService(INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
-                mScreenKeyboardShown = false;
-                if (mSurface != null) mSurface.requestFocus();
-            } else {
-                SDLActivity.showTextInput(0, 0, 1, 1);
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Keyboard: " + e);
+        if (mKeyboard != null) {
+            closeKeyboard();
+            return;
         }
+        if (mBrokenLibraries || mLayout == null || mSDLThread == null) return;
+        if (mPhoneDialog != null && mPhoneDialog.isShowing()) mPhoneDialog.dismiss();
+        boolean lower = mPanel != null && mPanel.isShowing();
+        mKeyboard = new GameKeyboard(lower ? mPanel.getContext() : this,
+            this::pressKeyboardKey, this::closeKeyboard);
+        if (lower) {
+            mPanel.attachKeyboard(mKeyboard);
+        } else {
+            android.widget.RelativeLayout.LayoutParams lp = new android.widget.RelativeLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+            lp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_BOTTOM);
+            mLayout.addView(mKeyboard, lp);
+        }
+    }
+
+    private final Runnable mReleaseKeyboardKey = () -> {
+        if (mKeyboardKey != KeyEvent.KEYCODE_UNKNOWN) SDLActivity.onNativeKeyUp(mKeyboardKey);
+        if (mKeyboardShift) SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_SHIFT_LEFT);
+        mKeyboardKey = KeyEvent.KEYCODE_UNKNOWN;
+        mKeyboardShift = false;
+    };
+
+    private void pressKeyboardKey(int key, String text, boolean shift)
+    {
+        mMainHandler.removeCallbacks(mReleaseKeyboardKey);
+        mReleaseKeyboardKey.run();
+        if (text != null) enqueueKeyboardText(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        if (key == KeyEvent.KEYCODE_UNKNOWN) return;
+        mKeyboardKey = key;
+        mKeyboardShift = shift;
+        if (shift) SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_SHIFT_LEFT);
+        SDLActivity.onNativeKeyDown(key);
+        mMainHandler.postDelayed(mReleaseKeyboardKey, 95);
+    }
+
+    private void closeKeyboard()
+    {
+        if (mKeyboard == null) return;
+        mMainHandler.removeCallbacks(mReleaseKeyboardKey);
+        mReleaseKeyboardKey.run();
+        if (mKeyboard.getParent() == mLayout) mLayout.removeView(mKeyboard);
+        else if (mPanel != null) mPanel.detachKeyboard(mKeyboard);
+        mKeyboard = null;
     }
 
     /** Essentia actions set on controller buttons (ButtonMap). */
@@ -846,35 +904,36 @@ public class MainActivity extends SDLActivity
         super.onResume();
         applyImmersive();
         showGamePanel();
+        if (mMainHandler != null) {
+            mMainHandler.removeCallbacks(mAnswerPoll);
+            mMainHandler.post(mAnswerPoll);
+        }
         startPlayClock();
     }
 
-    /** Compiled scripts for this version of Essentia (older versions' are removed). */
-    private java.io.File scriptCacheDir()
-    {
-        java.io.File base = new java.io.File(getCacheDir(), "scripts");
-        String name = "v" + BuildConfig.VERSION_CODE;
-        java.io.File[] old = base.listFiles();
-        if (old != null) {
-            for (java.io.File d : old) {
-                if (d.getName().equals(name)) continue;
-                java.io.File[] files = d.listFiles();
-                if (files != null) for (java.io.File f : files) //noinspection ResultOfMethodCallIgnored
-                    f.delete();
-                //noinspection ResultOfMethodCallIgnored
-                d.delete();
+    private File scriptCacheDir() {
+        return new File(getCacheDir(), "scripts/v" + BuildConfig.VERSION_CODE);
+    }
+
+    /** Cache maintenance runs on SDL's startup thread before Ruby reads the directory. */
+    private void pruneScriptCache() {
+        File active = scriptCacheDir();
+        File[] versions = active.getParentFile().listFiles();
+        if (versions != null) {
+            for (File version : versions) {
+                if (active.equals(version)) continue;
+                File[] files = version.listFiles();
+                if (files != null) for (File file : files) file.delete();
+                version.delete();
             }
         }
-        java.io.File dir = new java.io.File(base, name);
-        //noinspection ResultOfMethodCallIgnored
-        dir.mkdirs();
-        // keep it reasonable: start over past 200 MB
-        long total = 0;
-        java.io.File[] files = dir.listFiles();
-        if (files != null) for (java.io.File f : files) total += f.length();
-        if (total > 200L * 1024 * 1024 && files != null) for (java.io.File f : files) //noinspection ResultOfMethodCallIgnored
-            f.delete();
-        return dir;
+        File[] files = active.listFiles();
+        if (files == null) return;
+        long bytes = 0;
+        for (File file : files) bytes += file.length();
+        if (bytes > 200L * 1024 * 1024) {
+            for (File file : files) file.delete();
+        }
     }
 
     // Essentia: orientation of the game screen
@@ -1011,6 +1070,8 @@ public class MainActivity extends SDLActivity
     @Override
     protected void onStop()
     {
+        closeKeyboard();
+        if (mMainHandler != null) mMainHandler.removeCallbacks(mAnswerPoll);
         stopPlayClock();
         super.onStop();
         if (mPanel != null) {
@@ -1076,7 +1137,7 @@ public class MainActivity extends SDLActivity
     @Override
     public void onBackPressed()
     {
-        showExitDialog();
+        if (mKeyboard != null) closeKeyboard(); else showExitDialog();
     }
 
     @Override
@@ -1096,8 +1157,7 @@ public class MainActivity extends SDLActivity
 
         // Android Back (navigation bar, Thor's back key...) -> exit menu
         if (code == KeyEvent.KEYCODE_BACK) {
-            if (!down && !evt.isCanceled())
-                showExitDialog();
+            if (!down && !evt.isCanceled()) onBackPressed();
             return true;
         }
 
@@ -1190,6 +1250,14 @@ public class MainActivity extends SDLActivity
     @Override
     protected String[] getArguments()
     {
+        pruneScriptCache();
+        try {
+            String trust = mNetworkTrust.get().getAbsolutePath();
+            android.system.Os.setenv("ESSENTIA_CA_FILE", trust, true);
+            android.system.Os.setenv("SSL_CERT_FILE", trust, true);
+        } catch (Exception ignored) {
+            Log.w(TAG, "Could not prepare trusted roots for the game");
+        }
         String[] args;
 
         if (DEBUG) {

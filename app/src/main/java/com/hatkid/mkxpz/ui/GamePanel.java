@@ -20,6 +20,7 @@ public final class GamePanel extends Presentation {
     }
     private final boolean black;private final String title,path;private final File live;
     private final Keys keys;private final Actions actions;private CompanionView content;
+    private android.widget.FrameLayout panelRoot;
     private GamePanel(Context c,Display display,boolean black,String title,String path,File live,Keys keys,Actions actions) {
         super(c,display);this.black=black;this.title=title;this.path=path;this.live=live;this.keys=keys;this.actions=actions;
     }
@@ -31,7 +32,17 @@ public final class GamePanel extends Presentation {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);SecondScreen.notFocusable(this);
         content=new CompanionView(getContext(),black,title,path,live,keys,withNotes(actions,()->editNotes(getContext(),path)));
-        setContentView(content);
+        panelRoot = new android.widget.FrameLayout(getContext());
+        panelRoot.addView(content, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        setContentView(panelRoot);
+    }
+    public void attachKeyboard(GameKeyboard keyboard) {
+        content.setVisibility(android.view.View.GONE);
+        panelRoot.addView(keyboard, new android.widget.FrameLayout.LayoutParams(-1, -1));
+    }
+    public void detachKeyboard(GameKeyboard keyboard) {
+        panelRoot.removeView(keyboard);
+        content.setVisibility(android.view.View.VISIBLE);
     }
     @Override protected void onStop(){if(content!=null)content.dispose();super.onStop();}
     public void setTurbo(boolean on,int speed){if(content!=null)content.setTurbo(on,speed);}
@@ -43,7 +54,7 @@ public final class GamePanel extends Presentation {
         CompanionView view=new CompanionView(a,false,title,path,live,keys,withNotes(actions,()->editNotes(a,path)));
         view.setTag("phone-companion");
         android.widget.LinearLayout root=new android.widget.LinearLayout(a);root.setOrientation(1);root.setBackgroundColor(Ui.BG);
-        android.widget.Button close=Ui.button(a,"Volver al juego",false);close.setOnClickListener(v->dialog.dismiss());root.addView(close);
+        android.widget.Button close=Ui.button(a,a.getString(com.hatkid.mkxpz.R.string.panel_return),false);close.setOnClickListener(v->dialog.dismiss());root.addView(close);
         root.addView(view,new android.widget.LinearLayout.LayoutParams(-1,0,1f));dialog.setContentView(root);
         dialog.setOnDismissListener(d->view.dispose());
         // Touch panel must not pause SDL: actions are processed by the running game loop.

@@ -72,3 +72,14 @@ Las capturas previas componían Biblioteca manualmente: ahora esa composición e
 comprobar primero el tema, el formato de ventana y el alfa renderizado. Se añade
 regresión Android 13 para temas claro/oscuro y ambas orientaciones. Validación de CI,
 APK y confirmación física pendientes; consultar PR de la corrección antes de anunciar.
+
+Revisión competitiva Android: referencia pública Kirin 0.4.0-beta (teclado asignable,
+traducción y optimización de carga). Essentia incorpora teclado táctil en pausa,
+acompañante y mando; usa la pantalla inferior si está disponible. El idioma de la
+interfaz se selecciona entre sistema, español e inglés. Traducción por juego a nueve
+idiomas, archivos separados y conservación de es.tsv. La cola de diálogos se activa
+por archivos publicados atómicamente, sin descargar toda la caché en el arranque.
+Se acortan las esperas de biblioteca y comprobaciones previas; los certificados y la
+limpieza de caché se preparan fuera de la interfaz. Las mediciones comienzan al
+entrar a la actividad del juego. Las pruebas sintéticas y la compilación se registran
+en el PR; faltan contraste de tiempos, texto real y proveedor en Thor.

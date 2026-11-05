@@ -1,6 +1,6 @@
 # essentia_translate.rb — Essentia (GPLv2, like the rest of Essentia)
 #
-# Automatic translation of games that aren't in Spanish (optional, per game).
+# Automatic translation of supported game dialogue (optional, per game).
 # The game's texts go through Pokémon Essentials' message system; here they
 # are looked up in a translations file kept by Essentia. Texts not translated
 # yet are asked for (Essentia translates them in the background: official
@@ -14,9 +14,14 @@ module EssentiaTranslate
   @map = {}
   @done = {}
   @pending = {}
+  @queue = []
+  @sequence = 0
+  @last_flush = 0
+  @last_load = 0
   @pos = 0
   @frame = 0
   @hooked = {}
+  @originals = []
 
   class << self
     def utf8(s)
@@ -53,6 +58,7 @@ module EssentiaTranslate
         next if b.nil? || a.nil? || a.empty?
         o = unesc(a)
         t = unesc(b)
+        @pending.delete(o)
         @map[o] = t
         @done[t] = true
       end
@@ -60,32 +66,57 @@ module EssentiaTranslate
     end
 
     def request(text)
-      return if @pending[text] || REQ.empty?
-      @pending[text] = true
-      File.open(REQ, 'ab') { |f| f.write(esc(text) + "\n") }
-    rescue Exception
+      return false if REQ.empty? || (text.respond_to?(:bytesize) ? text.bytesize : text.size) > 9000
+      now = Time.now.to_f
+      return false if @pending[text] && now - @pending[text] < 18
+      @pending.delete_if { |_key, stamp| now - stamp >= 18 } if @pending.size >= 512
+      return false if @pending.size >= 512
+      @pending[text] = now
+      @queue << text
+      flush if @queue.size >= 16 || now - @last_flush >= 0.25
+      true
+    rescue StandardError
+      false
     end
 
-    # The translation of a text, or the text itself (asking for it).
-    # wait: seconds to wait for a translation that isn't there yet.
+    def flush
+      return if @queue.empty? || REQ.empty?
+      @sequence += 1
+      name = "%s/%010d" % [REQ, @sequence]
+      File.open(name + ".tmp", 'wb') { |f| @queue.each { |text| f.write(esc(text) + "\n") } }
+      File.rename(name + ".tmp", name + ".req")
+      @queue.clear
+      @last_flush = Time.now.to_f
+    rescue StandardError
+      # Allow a later lookup to retry if the mailbox is temporarily unavailable.
+      @queue.each { |text| @pending.delete(text) }
+      @queue.clear
+    end
+
+    def load_if_due
+      now = Time.now.to_f
+      return if now - @last_load < 0.12
+      @last_load = now
+      load_new
+    end
+
     def lookup(text, wait = 0)
-      return text unless text.is_a?(String)
-      return text if text.empty? || @done[text]
-      return text unless text =~ /[A-Za-z]{2}/
-      t = @map[text]
-      return t if t
-      request(text)
-      if wait > 0
+      return text unless text.is_a?(String) && !text.empty?
+      return text unless text =~ /[A-Za-z]/ || (text.respond_to?(:ascii_only?) ? !text.ascii_only? : text.unpack('C*').any? { |byte| byte >= 128 })
+      load_if_due
+      return @map[text] if @map.has_key?(text)
+      return text if @done[text]
+      if request(text) && wait > 0
+        flush
         deadline = Time.now + wait
         while Time.now < deadline
-          sleep(0.05)
+          sleep(0.04)
           load_new
-          t = @map[text]
-          return t if t
+          return @map[text] if @map.has_key?(text)
         end
       end
       text
-    rescue Exception
+    rescue StandardError
       text
     end
 
@@ -106,33 +137,35 @@ module EssentiaTranslate
 
     # ------------------------------------------------------------ hooks
 
-    def wrap_top(name, wait, kind)
-      targets = []
-      targets << Object if Object.private_method_defined?(name) || Object.method_defined?(name)
-      meta = class << Kernel; self; end
-      targets << meta if meta.method_defined?(name)
-      targets.each do |t|
-        current = t.instance_method(name)
-        next if @hooked[[t, name]] == current
-        raw = "essentia_tr_raw_#{name}".to_sym
-        t.send(:alias_method, raw, name)
-        if kind == :message
-          t.send(:define_method, name) do |*args, &block|
-            args[1] = EssentiaTranslate.lookup(args[1], wait) if args.length > 1
-            __send__(raw, *args, &block)
-          end
-        else # :commands
-          t.send(:define_method, name) do |*args, &block|
-            if args.length > 1 && args[1].is_a?(Array)
-              args[1] = args[1].map { |c| EssentiaTranslate.lookup(c, wait) }
-            end
-            __send__(raw, *args, &block)
-          end
+    def invoke(index, receiver, args, block)
+      original, argument, wait, kind = @originals[index]
+      if kind == :commands
+        if args[argument].is_a?(Array)
+          args[argument] = args[argument].map { |text| lookup(text) }
         end
-        t.send(:private, name) if t == Object
-        @hooked[[t, name]] = t.instance_method(name)
+      elsif args.length > argument
+        args[argument] = lookup(args[argument], wait)
       end
-    rescue Exception
+      original.bind(receiver).call(*args, &block)
+    end
+
+    def wrap_top(name, argument, wait, kind)
+      meta = class << Kernel; self; end
+      [Object, Kernel, meta].each do |owner|
+        next unless owner.method_defined?(name) || owner.private_method_defined?(name)
+        current = owner.instance_method(name)
+        next if current.respond_to?(:owner) && current.owner != owner
+        next if @hooked[[owner, name]] == current
+        private_method = owner.private_method_defined?(name)
+        index = @originals.size
+        @originals << [current, argument, wait, kind]
+        # Ruby 1.8 accepts &block on a method definition, but not in define_method's block.
+        owner.class_eval("def #{name}(*args, &block); EssentiaTranslate.invoke(#{index}, self, args, block); end")
+        owner.send(:ruby2_keywords, name) if owner.respond_to?(:ruby2_keywords, true)
+        owner.send(:private, name) if private_method
+        @hooked[[owner, name]] = owner.instance_method(name)
+      end
+    rescue StandardError
     end
 
     def wrap_messages
@@ -143,15 +176,13 @@ module EssentiaTranslate
         next unless meta.method_defined?(name)
         current = meta.instance_method(name)
         next if @hooked[[meta, name]] == current
-        raw = "essentia_tr_raw_#{m}".to_sym
-        meta.send(:alias_method, raw, name)
         if m == 'getFromMapHash'
           meta.send(:define_method, name) do |*args|
-            EssentiaTranslate.lookup(__send__(raw, *args), 0)
+            EssentiaTranslate.lookup(current.bind(self).call(*args), 0)
           end
         else
           meta.send(:define_method, name) do |*args|
-            r = __send__(raw, *args)
+            r = current.bind(self).call(*args)
             EssentiaTranslate.keep_type?(args[0]) ? r : EssentiaTranslate.lookup(r, 0)
           end
         end
@@ -161,20 +192,42 @@ module EssentiaTranslate
     end
 
     def install
-      wrap_top(:pbMessageDisplay, 2.5, :message)
-      wrap_top(:pbShowCommands, 1.5, :commands)
-      wrap_messages
+      return if @installing
+      @installing = true
+      begin
+        wrap_top(:pbMessage, 0, 2.0, :message)
+        wrap_top(:pbMessageDisplay, 1, 2.0, :message)
+        wrap_top(:pbShowCommands, 1, 0, :commands)
+        wrap_messages
+      ensure
+        @installing = false
+      end
     end
 
     def tick
       @frame += 1
       install if @frame == 1 || (@frame % 120).zero?
-      load_new if (@frame % 15).zero?
+      if (@frame % 15).zero?
+        load_if_due
+        flush
+      end
     end
   end
 end
 
 EssentiaTranslate.load_new
+EssentiaTranslate.install
+
+class << Object
+  alias_method :essentia_translation_method_added, :method_added
+  def method_added(name)
+    essentia_translation_method_added(name)
+    case name.to_s
+    when 'pbMessage', 'pbMessageDisplay', 'pbShowCommands'
+      EssentiaTranslate.install
+    end
+  end
+end
 
 module Graphics
   class << self

@@ -70,6 +70,42 @@ public class ExperienceTest {
         int dim=Color.alpha(overlay.getPixel(1,1));
         assertTrue("The surrounding library must remain visible, alpha="+dim,dim>0&&dim<150);
     }
+    @Test public void keyboardCanEnterLettersAccentsAndBackspace() throws Exception {
+        RuntimeEnvironment.setQualifiers("es-rES-w960dp-h540dp-land-mdpi");
+        Activity a = Robolectric.buildActivity(GuideActivity.class).setup().get();
+        List<String> presses = new ArrayList<>();
+        GameKeyboard keyboard = new GameKeyboard(a, (key, value, shift) -> presses.add(key + ":" + value + ":" + shift), () -> {});
+        a.setContentView(keyboard);
+        shot("game-keyboard-thor", keyboard, 960, 540);
+        label(keyboard, "a").performClick();
+        label(keyboard, "⇧").performClick();
+        label(keyboard, "B").performClick();
+        label(keyboard, "123 ñ").performClick();
+        label(keyboard, "Ñ").performClick();
+        label(keyboard, "⌫").performClick();
+        assertEquals(Arrays.asList(KeyEvent.KEYCODE_A + ":a:false", KeyEvent.KEYCODE_B + ":B:true",
+            KeyEvent.KEYCODE_UNKNOWN + ":Ñ:true", KeyEvent.KEYCODE_DEL + ":null:false"), presses);
+        shot("game-keyboard-accents", keyboard, 390, 480);
+        a.finish();
+    }
+
+    @Test public void interfaceLanguageAndTranslationCacheAreIndependent() throws Exception {
+        RuntimeEnvironment.setQualifiers("es-rES-w390dp-h844dp-port-mdpi");
+        AppLanguage.select(app, "en");
+        Activity a = Robolectric.buildActivity(LibraryActivity.class).setup().get();
+        assertNotNull(label(a.findViewById(android.R.id.content), "Library"));
+        assertEquals("en", a.getResources().getConfiguration().locale.getLanguage());
+        assertEquals("es.tsv", Translator.translationFile("Fixture", "es").getName());
+        assertEquals("pt.tsv", Translator.translationFile("Fixture", "pt").getName());
+        assertEquals("es.tsv", Translator.translationFile("Fixture", "../test").getName());
+        List<String> codes = new ArrayList<>();
+        String protectedText = Translator.protect("Hello {1}", codes);
+        assertEquals("Hello ⟦0⟧", protectedText);
+        assertEquals("Olá {1}", Translator.restore("Olá ⟦ 0 ⟧", codes));
+        assertNull(Translator.restore("Olá", codes));
+        a.finish();
+    }
+
     @Test public void phoneNavigationAndLibrary()throws Exception {
         RuntimeEnvironment.setQualifiers("es-rES-w390dp-h844dp-port-mdpi");
         org.json.JSONArray entries=new org.json.JSONArray();

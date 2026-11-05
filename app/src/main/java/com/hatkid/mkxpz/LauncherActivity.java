@@ -24,6 +24,11 @@ import java.io.InputStreamReader;
  */
 public class LauncherActivity extends Activity
 {
+
+    @Override protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(com.hatkid.mkxpz.AppLanguage.wrap(base));
+    }
+
     private static final String TAG = "Essentia[Launcher]";
     private static final int REQ_ALL_FILES = 1;
     /** From the game screen: the automatic engine found the game needs Ruby 1.8. */
@@ -82,14 +87,12 @@ public class LauncherActivity extends Activity
             if (!frontend) startActivity(new Intent(this, LibraryActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
             Games.startGame(this, dir, frontend);
-            finish();
             return;
         }
 
         // A new official version of the game? Offer it before playing.
         com.hatkid.mkxpz.ui.UpdateFlow.beforeLaunch(this, dir, Games.readTitle(dir), () -> {
             Games.startGame(this, dir, true);
-            finish();
         });
     }
 

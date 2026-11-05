@@ -59,6 +59,20 @@
 
 #include <string.h>
 
+#ifdef MKXPZ_BUILD_ANDROID
+extern "C" JNIEXPORT void JNICALL
+Java_com_hatkid_mkxpz_MainActivity_enqueueKeyboardText(JNIEnv *env, jclass, jbyteArray utf8)
+{
+    if (!SDL_WasInit(SDL_INIT_EVENTS)) return;
+    SDL_Event event = {};
+    const jsize size = env->GetArrayLength(utf8);
+    if (size <= 0 || size >= static_cast<jsize>(sizeof(event.text.text))) return;
+    event.type = SDL_TEXTINPUT;
+    env->GetByteArrayRegion(utf8, 0, size, reinterpret_cast<jbyte *>(event.text.text));
+    if (!env->ExceptionCheck()) SDL_PushEvent(&event);
+}
+#endif
+
 typedef void (ALC_APIENTRY *LPALCDEVICEPAUSESOFT) (ALCdevice *device);
 typedef void (ALC_APIENTRY *LPALCDEVICERESUMESOFT) (ALCdevice *device);
 

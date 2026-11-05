@@ -17,23 +17,38 @@ public final class CloudResume {
         if(!EssentiaSettings.flag(a,EssentiaSettings.CLOUD_BACKUP,false)||!Cloud.backupsReady(a)||Games.isGameRunning(a)){
             guardedPlay.run();return;
         }
-        AtomicBoolean completed=new AtomicBoolean();Handler ui=new Handler(Looper.getMainLooper());
-        Runnable fallback=()->{if(completed.compareAndSet(false,true)&&!a.isFinishing()&&!a.isDestroyed())guardedPlay.run();};
-        ui.postDelayed(fallback,8500);
+        AtomicBoolean completed = new AtomicBoolean();
+        Handler ui = new Handler(Looper.getMainLooper());
+        AlertDialog checking = new AlertDialog.Builder(a)
+            .setMessage(R.string.cloud_checking_play)
+            .setNegativeButton(R.string.upd_play_now, null)
+            .create();
+        Runnable fallback = () -> {
+            if (!completed.compareAndSet(false, true)) return;
+            checking.dismiss();
+            guardedPlay.run();
+        };
+        checking.setOnShowListener(d -> checking.getButton(AlertDialog.BUTTON_NEGATIVE)
+            .setOnClickListener(v -> fallback.run()));
+        checking.setOnCancelListener(d -> completed.set(true));
+        checking.show();
+        ui.postDelayed(fallback, 4500);
         new Thread(()->{
             try{
                 String path=game.getAbsolutePath();Library.Entry e=Library.find(a,path);
                 String title=e==null?Games.readTitle(game):e.displayTitle();
                 long latest=CloudBackup.lastBackup(a,path);
                 for(File f:Saves.findIn(Saves.dirFor(a,game,title)))latest=Math.max(latest,f.lastModified());
-                List<String[]> backups=CloudBackup.list(a,path,8000);
+                List<String[]> backups=CloudBackup.list(a,path,4200);
                 if(backups.isEmpty()){ui.post(fallback);return;}
                 String id=backups.get(0)[0];SimpleDateFormat format=new SimpleDateFormat("yyyyMMdd-HHmmss",Locale.US);
                 format.setTimeZone(TimeZone.getTimeZone("UTC"));format.setLenient(false);
                 long remote=format.parse(id).getTime();
                 if(remote<=latest+2000){ui.post(fallback);return;}
                 ui.post(()->{
-                    if(!completed.compareAndSet(false,true)||generation!=GENERATION.get()||a.isFinishing()||a.isDestroyed())return;
+                    if (!completed.compareAndSet(false, true)) return;
+                    checking.dismiss();
+                    if (generation != GENERATION.get() || a.isFinishing() || a.isDestroyed()) return;
                     ui.removeCallbacks(fallback);
                     new AlertDialog.Builder(a).setTitle("Hay una copia más reciente en la nube")
                         .setMessage(title+"\n"+CloudBackup.readable(id)+"\n\nPuede venir de tu otro dispositivo Android. La fecha corresponde a la subida; revisa cuál partida quieres usar. No se reemplazará nada sin tu confirmación.")
