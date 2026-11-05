@@ -150,7 +150,10 @@ public class ExperienceTest {
         view.updateCapabilities("party,bag,save,shot,speed","map");
         View party=label(view,a.getString(R.string.act_party));assertNotNull(party);assertTrue(((View)party.getParent()).isEnabled());
         label(view,"Acciones").performClick();shot("context-map",view,640,480);
-        View lastTab=label(view,"Ayudas");android.graphics.Rect visible=new android.graphics.Rect();assertTrue(lastTab.getGlobalVisibleRect(visible));assertEquals(lastTab.getWidth(),visible.width());
+        // The snapshot lays out this subtree, not the Robolectric window. Check actual viewport clipping locally.
+        View lastTab=label(view,"Ayudas");ViewGroup viewport=(ViewGroup)lastTab.getParent().getParent();
+        android.graphics.Rect visible=new android.graphics.Rect(0,0,lastTab.getWidth(),lastTab.getHeight());viewport.offsetDescendantRectToMyCoords(lastTab,visible);
+        assertTrue(visible.left>=0);assertTrue(visible.right<=viewport.getWidth());
         view.updateCapabilities("party,bag,save,shot,speed","battle");
         party=label(view,a.getString(R.string.act_party));assertFalse(((View)party.getParent()).isEnabled());shot("context-battle",view,640,480);
         view.updateCapabilities("shot,speed","map");assertNull(label(view,a.getString(R.string.act_party)));shot("context-other-game",view,640,480);

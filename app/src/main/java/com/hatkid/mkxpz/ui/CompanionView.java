@@ -326,7 +326,8 @@ public final class CompanionView extends FrameLayout
     }
 
     private View buildTabs(Context c) {
-        HorizontalScrollView scroll=new HorizontalScrollView(c);scroll.setHorizontalScrollBarEnabled(false);
+        boolean wide=c.getResources().getConfiguration().screenWidthDp>=600;
+        HorizontalScrollView scroll=new HorizontalScrollView(c);scroll.setHorizontalScrollBarEnabled(false);scroll.setFillViewport(wide);
         LinearLayout row=new LinearLayout(c);row.setGravity(Gravity.CENTER_VERTICAL);
         String[] labels={"Resumen","Mapa","Notas","Acciones","Teclas","Ayudas"};
         for(int i=0;i<labels.length;i++) {
@@ -334,7 +335,7 @@ public final class CompanionView extends FrameLayout
             tabIcon(tab,new int[]{R.drawable.ic_p_party,R.drawable.ic_e_compass,R.drawable.ic_e_note,R.drawable.ic_e_spark,R.drawable.ic_e_gamepad,R.drawable.ic_p_heal}[i],Ui.ACCENT_LIGHT);
             tab.setGravity(Gravity.CENTER);tab.setFocusable(true);tab.setClickable(true);
             tab.setPadding(Ui.dp(c,8),0,Ui.dp(c,8),0);tab.setOnClickListener(v->showPage(page));
-            mTabs[i]=tab;LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,Ui.dp(c,56));
+            mTabs[i]=tab;LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(wide?0:-2,Ui.dp(c,56),wide?1f:0f);
             lp.rightMargin=Ui.dp(c,6);row.addView(tab,lp);
         }
         scroll.addView(row);return scroll;
