@@ -28,6 +28,9 @@ public class ExperienceTest {
     @Implements(Community.class) public static class OfflineCommunity {
         @Implementation public static void refresh(Context c){}
     }
+    @Implements(Games.class) public static class GrantedStorage {
+        @Implementation public static boolean hasAllFilesAccess(){return true;}
+    }
     private Context app;
     @Before public void setup()throws Exception {
         app=RuntimeEnvironment.getApplication();
@@ -52,6 +55,20 @@ public class ExperienceTest {
         Bitmap bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(bitmap);canvas.drawColor(Ui.BG);if(behind!=null)behind.draw(canvas);v.draw(canvas);
         File folder=new File("build/reports/ui");folder.mkdirs();
         try(FileOutputStream out=new FileOutputStream(new File(folder,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}
+    }
+    private void shotTour(String name,Dialog dialog,int w,int h,View library)throws Exception {
+        // A manually composited screenshot must not hide an opaque Android window again.
+        android.content.res.TypedArray attrs=dialog.getContext().obtainStyledAttributes(new int[]{android.R.attr.windowIsTranslucent});
+        try {assertTrue("Tour window must preserve the library underneath",attrs.getBoolean(0,false));}
+        finally {attrs.recycle();}
+        Window window=dialog.getWindow();
+        assertEquals(PixelFormat.TRANSLUCENT,window.getAttributes().format);
+        assertEquals(0,window.getAttributes().flags&WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+        assertEquals(0f,window.getAttributes().dimAmount,0f);
+        View decor=window.getDecorView();shot(name,decor,w,h,library);
+        Bitmap overlay=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);decor.draw(new Canvas(overlay));
+        int dim=Color.alpha(overlay.getPixel(1,1));
+        assertTrue("The surrounding library must remain visible, alpha="+dim,dim>0&&dim<150);
     }
     @Test public void phoneNavigationAndLibrary()throws Exception {
         RuntimeEnvironment.setQualifiers("es-rES-w390dp-h844dp-port-mdpi");
@@ -170,9 +187,9 @@ public class ExperienceTest {
             assertTrue(LibraryTour.needed(a));label(root,"Tour").performClick();Dialog d=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertNotNull(d);
             assertTrue(LibraryTour.needed(a));d.dismiss();assertTrue(LibraryTour.needed(a));
             d=LibraryTour.show(a);View dialog=d.getWindow().getDecorView();
-            shot("tour-"+size[0]+"-welcome",dialog,size[0],size[1],root);
+            shotTour("tour-"+size[0]+"-welcome",d,size[0],size[1],root);
             for(int i=0;i<5;i++)label(dialog,"Siguiente").performClick();
-            assertTrue(text(dialog).contains("Hazlo tuyo"));shot("tour-"+size[0]+"-last",dialog,size[0],size[1],root);
+            assertTrue(text(dialog).contains("Hazlo tuyo"));shotTour("tour-"+size[0]+"-last",d,size[0],size[1],root);
             label(dialog,"Atrás").performClick();assertTrue(text(dialog).contains("Descubre nuevas aventuras"));
             label(dialog,"Siguiente").performClick();label(dialog,"Terminar").performClick();assertFalse(LibraryTour.needed(a));
             d=LibraryTour.show(a);assertTrue(d.isShowing());d.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,android.view.KeyEvent.KEYCODE_BUTTON_B));assertFalse(d.isShowing());
@@ -182,6 +199,32 @@ public class ExperienceTest {
             d.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,android.view.KeyEvent.KEYCODE_BUTTON_A));assertFalse(d.isShowing());
             app.getSharedPreferences(EssentiaSettings.PREFS,0).edit().remove("experience_tour_seen").commit();a.finish();
         }
+    }
+
+    @Test @Config(sdk=33,shadows={GrantedStorage.class}) public void tourPreservesLibraryAtAndroid13AndLeavesAddVisible()throws Exception {
+        for(String theme:new String[]{"esencia","noche"})for(int[] size:new int[][]{{390,844},{960,540}}){
+            RuntimeEnvironment.setQualifiers("es-rES-w"+size[0]+"dp-h"+size[1]+"dp-mdpi");Ui.setTheme(app,theme);
+            Activity a=Robolectric.buildActivity(LibraryActivity.class).setup().get();View root=a.findViewById(android.R.id.content);
+            shot("tour13-"+theme+"-"+size[0]+"-library",root,size[0],size[1]);
+            Dialog d=LibraryTour.show(a);View decor=d.getWindow().getDecorView();
+            for(int page=0;page<6;page++){
+                shotTour("tour13-"+theme+"-"+size[0]+"-step"+(page+1),d,size[0],size[1],root);
+                if(page==1){
+                    View add=root.findViewWithTag("tour-add"),card=decor.findViewWithTag("tour-card");
+                    // Compare the two rendered viewports; this JVM does not compose WindowManager screen offsets.
+                    Rect targetBounds=new Rect(0,0,add.getWidth(),add.getHeight());((ViewGroup)root).offsetDescendantRectToMyCoords(add,targetBounds);
+                    Rect cardBounds=new Rect(0,0,card.getWidth(),card.getHeight());((ViewGroup)decor).offsetDescendantRectToMyCoords(card,cardBounds);
+                    assertFalse("Tour card must not cover Añadir: "+targetBounds+" / "+cardBounds,Rect.intersects(targetBounds,cardBounds));
+                    View spotlight=decor.findViewWithTag("tour-spotlight");Rect origin=new Rect(0,0,spotlight.getWidth(),spotlight.getHeight());
+                    ((ViewGroup)decor).offsetDescendantRectToMyCoords(spotlight,origin);
+                    Bitmap mask=Bitmap.createBitmap(size[0],size[1],Bitmap.Config.ARGB_8888);spotlight.draw(new Canvas(mask));
+                    assertEquals("Highlighted control must be unobscured",0,Color.alpha(mask.getPixel(targetBounds.centerX()-origin.left,targetBounds.centerY()-origin.top)));
+                }
+                label(decor,page==5?"Terminar":"Siguiente").performClick();
+            }
+            assertFalse(d.isShowing());a.finish();
+        }
+        Ui.setTheme(app,"esencia");
     }
 
     @Test public void automaticRetryKeepsPreviousErrorWithoutAttributingItToClassic(){
