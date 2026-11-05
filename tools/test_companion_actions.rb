@@ -42,3 +42,17 @@ check(EssentiaActions.companion_actions==cap,'Stable capabilities during battle;
 $game_temp.in_battle=false;$game_temp.in_menu=true
 check(EssentiaActions.companion_context=='busy','Menu context')
 puts 'Companion: unknown and supported games, locks, map/battle/menu states and read-only probes passed'
+require 'tmpdir'
+Dir.mktmpdir('essentia-companion') do |dir|
+  ENV['ESSENTIA_LIVE_FILE']=File.join(dir,'live.tsv')
+  ENV['ESSENTIA_PROGRESS_FILE']=''
+  load File.expand_path('../app/src/main/assets/essentia_preload/essentia_live.rb',__dir__)
+  $game_map=Struct.new(:map_id,:width,:height).new(7,20,10)
+  $game_player=Struct.new(:x,:y).new(2,3)
+  15.times { Essentia.live_update }
+  fields=File.read(ENV['ESSENTIA_LIVE_FILE']).split("\t",-1)
+  check(fields.length==16,'Telemetry keeps original fields and appends two capability fields')
+  check(fields[0..2]==%w[7 2 3],'Map coordinates remain compatible')
+  check(fields[14].split(',').include?('party') && fields[15]=='busy','Actual capabilities and current scene reach the panel')
+end
+puts 'Companion wire protocol: existing fields preserved; capabilities/context appended'
