@@ -33,3 +33,10 @@ Prioridad explícita del dueño: GS Vitro. La revisión del diagnóstico detect�
 motor clásico borraba el error que había disparado el fallback. Se conserva ahora como
 «Error del intento anterior», separado de la sesión actual, acotado y con la redacción de
 credenciales existente. No equivale a identificar ni corregir el cierre del juego.
+
+
+Confirmación física del dueño: GS Vitro funciona al seleccionar Pantalla Original. El fallo
+anterior mostraba SystemStackError en una cadena que incluye el hook panorámico de Essentia.
+Original es una alternativa comprobada en su prueba, no una corrección del panorámico ni una
+validación exhaustiva del juego. Investigar reenvolturas y aliases de initialize con fixtures
+originales; no publicar adjuntos privados ni atribuir el fallo a un motor sin evidencia.
