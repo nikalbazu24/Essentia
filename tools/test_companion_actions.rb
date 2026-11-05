@@ -1,6 +1,9 @@
 # Original fixtures only. No third-party game code or saved-game deserialization.
 ENV['ESSENTIA_CMD_FILE']='';ENV['ESSENTIA_ACK_FILE']=''
 module Graphics
+  class << self
+    attr_accessor :frame_rate
+  end
   def self.update; end
 end
 load File.expand_path('../app/src/main/assets/essentia_preload/essentia_actions.rb',__dir__)
