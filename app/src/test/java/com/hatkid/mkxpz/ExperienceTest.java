@@ -176,7 +176,9 @@ public class ExperienceTest {
             label(dialog,"Atrás").performClick();assertTrue(text(dialog).contains("Descubre nuevas aventuras"));
             label(dialog,"Siguiente").performClick();label(dialog,"Terminar").performClick();assertFalse(LibraryTour.needed(a));
             d=LibraryTour.show(a);assertTrue(d.isShowing());d.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,android.view.KeyEvent.KEYCODE_BUTTON_B));assertFalse(d.isShowing());
-            d=LibraryTour.show(a);label(d.getWindow().getDecorView(),"Omitir").requestFocus();
+            d=LibraryTour.show(a);View skip=label(d.getWindow().getDecorView(),"Omitir");
+            // Arrange controller focus explicitly: this JVM window begins in touch mode.
+            skip.setFocusableInTouchMode(true);assertTrue("Omitir accepts focus",skip.requestFocus());assertSame("Focused option",skip,d.getCurrentFocus());
             d.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,android.view.KeyEvent.KEYCODE_BUTTON_A));assertFalse(d.isShowing());
             app.getSharedPreferences(EssentiaSettings.PREFS,0).edit().remove("experience_tour_seen").commit();a.finish();
         }
