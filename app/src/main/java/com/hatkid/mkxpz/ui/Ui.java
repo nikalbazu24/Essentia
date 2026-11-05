@@ -108,9 +108,13 @@ public final class Ui
     public static GradientDrawable rounded(Context c, int color, float radiusDp)
     {
         GradientDrawable d = new GradientDrawable();
-        d.setColor(color);
+        if(color==SURFACE||color==SURFACE_HI) {
+            d.setOrientation(GradientDrawable.Orientation.TL_BR);
+            d.setColors(new int[]{alpha(color,LIGHT?245:240),alpha(color,LIGHT?206:218)});
+            d.setStroke(dp(c,1),LIGHT?0xE6FFFFFF:0x506E7C90);
+        }else d.setColor(color);
         d.setCornerRadius(dp(c, radiusDp));
-        if(LIGHT&&(color==SURFACE||color==SURFACE_HI))d.setStroke(dp(c,1),0xFFE5E0ED);
+
         return d;
     }
 

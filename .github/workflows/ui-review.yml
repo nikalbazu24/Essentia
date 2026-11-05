@@ -17,6 +17,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+      - name: Comprobar capacidades de juego sin ejecutar juegos privados
+        run: ruby tools/test_companion_actions.rb
       - name: Pruebas de navegación, acompañante y capturas Android
         run: ./gradlew --no-daemon testReleaseUnitTest -x externalNativeBuildRelease --tests com.hatkid.mkxpz.ExperienceTest --tests com.hatkid.mkxpz.AndroidToolsTest
       - name: Guardar pantallas renderizadas y resultados

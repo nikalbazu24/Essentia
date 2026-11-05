@@ -157,6 +157,7 @@ jobs:
         run: |
           find app/src/main/assets/essentia_preload -name '*.rb' -exec ruby -c {} \;
           ruby tools/test_live_progress.rb
+          ruby tools/test_companion_actions.rb
           ruby tools/test_help_backup.rb
           ruby tools/test_load_network.rb
           ruby tools/test_diagnostics.rb
